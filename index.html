@@ -58,6 +58,7 @@
       const [pinInput, setPinInput] = useState('');
       const [loginError, setLoginError] = useState('');
 
+      // Default Active Tab is 'dashboard' after login
       const [activeTab, setActiveTab] = useState('dashboard');
       const [roleRights, setRoleRights] = useState(defaultRoleRights);
       const [searchQuery, setSearchQuery] = useState('');
@@ -73,6 +74,10 @@
 
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
+
+      const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+      const [issuingItem, setIssuingItem] = useState(null);
+      const [issueForm, setIssueForm] = useState({ qty: 1, recipient: '', dept: '' });
 
       const lineChartRef = useRef(null);
       const donutChartRef = useRef(null);
@@ -125,6 +130,7 @@
         return () => clearInterval(interval);
       }, []);
 
+      // Render Dashboard Charts whenever activeTab switches to 'dashboard'
       useEffect(() => {
         if (activeTab === 'dashboard' && isLoggedIn) {
           setTimeout(() => {
@@ -217,24 +223,7 @@
         const autoMonth = getCurrentMonthYear();
         if (asset) {
           setEditingAsset(asset);
-          setFormData({
-            group: asset.group || '',
-            particulars: asset.particulars || '',
-            brand: asset.brand || '',
-            serialNo: asset.serialNo || '',
-            vendor: asset.vendor || '',
-            invoiceNo: asset.invoiceNo || '',
-            warranty: asset.warranty || '',
-            openingQty: asset.openingQty || 0,
-            newPurchase: asset.newPurchase || 0,
-            issueItems: asset.issueItems || 0,
-            shortItems: asset.shortItems || 0,
-            deadItems: asset.deadItems || 0,
-            category: asset.category || 'Consumable',
-            location: asset.location || '',
-            minAlert: asset.minAlert || 2,
-            entryMonth: asset.entryMonth || autoMonth
-          });
+          setFormData({ ...asset, entryMonth: asset.entryMonth || autoMonth });
         } else {
           setEditingAsset(null);
           setFormData({
@@ -294,21 +283,6 @@
           alert("Error saving entry.");
         } finally {
           setLoading(false);
-        }
-      };
-
-      const handleDeleteAsset = async (asset) => {
-        if (window.confirm("Are you sure you want to delete this asset record?")) {
-          setLoading(true);
-          try {
-            const deleteUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${asset.firebaseKey}.json`;
-            await fetch(deleteUrl, { method: 'DELETE' });
-            await fetchCloudData();
-          } catch (err) {
-            console.error(err);
-          } finally {
-            setLoading(false);
-          }
         }
       };
 
@@ -373,7 +347,7 @@
       return (
         <div className="flex h-screen overflow-hidden bg-slate-100">
           
-          <!-- Left Dark Neon Sidebar Panel -->
+          {/* Left Dark Neon Sidebar Panel */}
           <aside className="w-64 neon-sidebar text-slate-300 flex flex-col justify-between p-4 shadow-2xl border-r border-slate-900 relative">
             <div>
               <div className="text-center pt-2 pb-5 border-b border-slate-800/60">
@@ -388,6 +362,7 @@
                 </span>
               </div>
 
+              {/* Fully Clickable Interactive Navigation Links */}
               <nav className="mt-5 space-y-2">
                 {[
                   { id: 'dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -439,7 +414,7 @@
             </div>
           </aside>
 
-          <!-- Main Dynamic View -->
+          {/* Main Dynamic View */}
           <main className="flex-1 flex flex-col overflow-hidden p-4 space-y-3">
             
             {/* VIEW 1: DASHBOARD PAGE */}
@@ -464,6 +439,7 @@
                   </div>
                 </header>
 
+                {/* 3 Gradient Cards */}
                 <div className="grid grid-cols-3 gap-5">
                   <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden flex justify-between items-center">
                     <div className="space-y-1 z-10">
@@ -505,6 +481,7 @@
                   </div>
                 </div>
 
+                {/* Donut Chart, Line Chart & Quick Add */}
                 <div className="grid grid-cols-12 gap-5">
                   <div className="col-span-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
                     <h3 className="font-bold text-slate-900 text-sm">Asset Overview</h3>
@@ -633,13 +610,12 @@
                           <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900">Dead</th>
                           <th className="border-r border-slate-800 px-2 py-2">Category</th>
                           <th className="px-2 py-2">Location</th>
-                          <th className="text-center">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 text-slate-800">
                         {currentItems.length === 0 ? (
                           <tr>
-                            <td colSpan="17" className="p-8 text-center text-slate-400 font-medium">
+                            <td colSpan="16" className="p-8 text-center text-slate-400 font-medium">
                               {loading ? 'Cloud database syncing records...' : 'No inventory records found.'}
                             </td>
                           </tr>
@@ -654,7 +630,7 @@
                                 <td className="border-r border-slate-200 font-semibold text-slate-400 text-center">{serialNumber}</td>
                                 <td className="border-r border-slate-200 font-bold text-slate-800">{item.group}</td>
                                 <td className="border-r border-slate-200 font-semibold text-slate-900">
-                                  <button onClick={() => handleOpenModal(item)} className="hover:text-blue-600 text-left flex items-center gap-1.5 cursor-pointer" title="Click to Edit Asset Details">
+                                  <button onClick={() => handleOpenModal(item)} className="hover:text-blue-600 text-left flex items-center gap-1.5 cursor-pointer">
                                     {item.particulars}
                                     {isLowStock && <span className="px-1.5 py-0.5 bg-rose-600 text-white font-extrabold text-[8px] rounded-md tracking-wider uppercase">LOW</span>}
                                   </button>
@@ -675,10 +651,7 @@
                                     {item.category || 'Consumable'}
                                   </span>
                                 </td>
-                                <td className="border-r border-slate-200 text-slate-400 text-center">{item.location || '- -'}</td>
-                                <td className="text-center font-bold">
-                                  <button onClick={() => handleDeleteAsset(item)} className="text-rose-600 hover:text-rose-800 text-[10px]">Del</button>
-                                </td>
+                                <td className="text-slate-400 text-center">{item.location || '- -'}</td>
                               </tr>
                             );
                           })
@@ -687,6 +660,7 @@
                     </table>
                   </div>
 
+                  {/* Status Bar + Rows Per View Dropdown */}
                   <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
                     <div className="flex items-center space-x-5">
                       <div className="flex items-center space-x-2">
@@ -764,100 +738,33 @@
 
           </main>
 
-          <!-- Complete Full Fields Modal (Add & Edit All Parameters) -->
+          {/* Edit Modal */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200">
                 <h3 className="text-sm font-bold text-slate-900 mb-4 border-b border-slate-200 pb-2">
                   {editingAsset ? 'Edit Stock Register Record' : 'Register New Asset Entry'}
                 </h3>
                 <form onSubmit={handleSaveAsset} className="grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Stock Group (Category)</label>
-                    <input type="text" value={formData.group} onChange={(e) => setFormData({...formData, group: e.target.value})} placeholder="e.g. MOUSE, KEYBOARD" className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-blue-600" required />
+                    <label className="block font-semibold text-slate-700 mb-1">Stock Group</label>
+                    <input type="text" value={formData.group} onChange={(e) => setFormData({...formData, group: e.target.value})} placeholder="e.g. MOUSE" className="w-full p-2 border border-slate-300 rounded-lg outline-none" required />
                   </div>
-
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Asset Particulars</label>
-                    <input type="text" value={formData.particulars} onChange={(e) => setFormData({...formData, particulars: e.target.value})} placeholder="e.g. USB MOUSE DELL" className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-blue-600" required />
+                    <input type="text" value={formData.particulars} onChange={(e) => setFormData({...formData, particulars: e.target.value})} placeholder="e.g. USB MOUSE" className="w-full p-2 border border-slate-300 rounded-lg outline-none" required />
                   </div>
-
                   <div>
                     <label className="block font-semibold text-blue-600 mb-1">Brand Name</label>
-                    <input type="text" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} placeholder="e.g. DELL, HP, LENOVO" className="w-full p-2 border border-blue-200 rounded-lg bg-blue-50/20 outline-none" />
+                    <input type="text" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} placeholder="e.g. DELL" className="w-full p-2 border border-blue-200 rounded-lg bg-blue-50/20 outline-none" />
                   </div>
-
                   <div>
-                    <label className="block font-semibold text-emerald-700 mb-1">Entry Period (Month)</label>
-                    <input type="text" value={formData.entryMonth} onChange={(e) => setFormData({...formData, entryMonth: e.target.value})} className="w-full p-2 border border-emerald-200 rounded-lg bg-emerald-50/30 font-semibold text-emerald-800 outline-none" required />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Serial Number / Asset Tag</label>
-                    <input type="text" value={formData.serialNo} onChange={(e) => setFormData({...formData, serialNo: e.target.value})} placeholder="e.g. SN-99281-XYZ" className="w-full p-2 border border-slate-300 rounded-lg outline-none font-mono" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Procurement Vendor Name</label>
-                    <input type="text" value={formData.vendor} onChange={(e) => setFormData({...formData, vendor: e.target.value})} placeholder="e.g. Tech Solutions Ltd" className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Invoice / Bill Reference No.</label>
-                    <input type="text" value={formData.invoiceNo} onChange={(e) => setFormData({...formData, invoiceNo: e.target.value})} placeholder="e.g. INV-2026-05" className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Category Classification</label>
-                    <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none">
-                      <option value="Consumable">Consumable</option>
-                      <option value="Non-Consumable">Non-Consumable</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Low Stock Alert Limit</label>
-                    <input type="number" value={formData.minAlert} onChange={(e) => setFormData({...formData, minAlert: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Opening Quantity Stock (OP)</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Opening Stock (OP)</label>
                     <input type="number" value={formData.openingQty} onChange={(e) => setFormData({...formData, openingQty: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
                   </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">New Purchase Quantity (Purch.)</label>
-                    <input type="number" value={formData.newPurchase} onChange={(e) => setFormData({...formData, newPurchase: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Issued Quantity Total</label>
-                    <input type="number" value={formData.issueItems} onChange={(e) => setFormData({...formData, issueItems: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Shortage Quantity</label>
-                    <input type="number" value={formData.shortItems} onChange={(e) => setFormData({...formData, shortItems: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Dead / Faulty Quantity</label>
-                    <input type="number" value={formData.deadItems} onChange={(e) => setFormData({...formData, deadItems: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Warranty Expiry Date</label>
-                    <input type="date" value={formData.warranty} onChange={(e) => setFormData({...formData, warranty: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block font-semibold text-slate-700 mb-1">Installation Location / User Allocation</label>
-                    <input type="text" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} placeholder="e.g. B Block, Dr. Jha Room, Shampa HR" className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
                   <div className="col-span-2 flex justify-end space-x-2 pt-4 border-t border-slate-200">
                     <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 font-semibold cursor-pointer">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md cursor-pointer">Save Asset Record</button>
+                    <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-md cursor-pointer">Save Record</button>
                   </div>
                 </form>
               </div>
