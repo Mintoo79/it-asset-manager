@@ -122,6 +122,7 @@
 
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
+      const [activeGroupModal, setActiveGroupModal] = useState(null);
 
       // Biomedical User Creation State (for Admin)
       const [newUserForm, setNewUserForm] = useState({
@@ -359,21 +360,29 @@
       const groupSummaryMap = filteredAssets.reduce((acc, item) => {
         const grp = (item.group || 'OTHER').toUpperCase().trim();
         if (!acc[grp]) {
-          acc[grp] = { groupName: grp, count: 0, lowStockCount: 0, items: [] };
+          acc[grp] = [];
         }
-        acc[grp].count += 1;
-        acc[grp].items.push(item);
-
-        const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
-        const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
-        if (phy <= Number(item.minAlert || 2)) {
-          acc[grp].lowStockCount += 1;
-        }
+        acc[grp].push(item);
         return acc;
       }, {});
 
+      const groupsMap = groupSummaryMap;
+
+      const groupSummaryList = Object.keys(groupSummaryMap).map(grp => {
+        const items = groupSummaryMap[grp];
+        let lowStockCount = 0;
+        items.forEach(item => {
+          const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
+          const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
+          if (phy <= Number(item.minAlert || 2)) {
+            lowStockCount += 1;
+          }
+        });
+        return { groupName: grp, count: items.length, lowStockCount, items };
+      });
+
       // Alphabetical sorting of groups
-      const sortedGroupSummaryList = Object.values(groupSummaryMap).sort((a, b) => 
+      const sortedGroupSummaryList = groupSummaryList.sort((a, b) => 
         a.groupName.localeCompare(b.groupName)
       );
 
@@ -578,7 +587,7 @@
                           
                           {/* Group Header Banner */}
                           <div 
-                            onClick={() => setSelectedGroupFilter(isExpanded ? '' : grp.groupName)}
+                            onClick={() => setActiveGroupModal(grp.groupName)}
                             className={`p-4 bg-gradient-to-r ${theme.bg} flex items-center justify-between cursor-pointer select-none`}
                           >
                             <div className="flex items-center space-x-3">
@@ -590,7 +599,7 @@
                                   {grp.groupName}
                                 </h3>
                                 <p className="text-[11px] font-semibold text-slate-500">
-                                  {grp.count} Items Registered
+                                  {grp.count} Items Registered (Click to view list)
                                 </p>
                               </div>
                             </div>
@@ -604,83 +613,9 @@
                               <span className={`px-3 py-1 rounded-xl text-xs font-bold ${theme.badge} shadow-sm`}>
                                 Total: {grp.count}
                               </span>
-                              <svg className={`w-5 h-5 ${theme.text} transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                              <svg className={`w-5 h-5 ${theme.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"></path></svg>
                             </div>
                           </div>
-
-                          {/* Group Detail Table List (Opens only when Group is Clicked) */}
-                          {isExpanded && (
-                            <div className="border-t border-slate-100 p-2 bg-slate-50/50">
-                              <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap table-compact">
-                                <thead className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider">
-                                  <tr>
-                                    <th className="px-2 py-2 text-amber-400">Dept</th>
-                                    <th className="px-2 py-2">Asset Particulars</th>
-                                    <th className="px-2 py-2 text-blue-400">Brand</th>
-                                    <th className="px-2 py-2">Serial / Tag</th>
-                                    <th className="px-2 py-2 text-center">OP</th>
-                                    <th className="px-2 py-2 text-center">Purch</th>
-                                    <th className="px-2 py-2 text-center text-emerald-400">Issued</th>
-                                    <th className="px-2 py-2 text-center text-blue-400 font-bold">Balance</th>
-                                    <th className="px-2 py-2">Category</th>
-                                    <th className="px-2 py-2">Location</th>
-                                    <th className="text-center">Action</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200 bg-white">
-                                  {grp.items.map((item, idx) => {
-                                    const balanceStock = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
-                                    const isLowStock = balanceStock <= Number(item.minAlert || 2);
-                                    const itemText = `${item.particulars || ''}`.toLowerCase();
-                                    const isImportant = ['mouse', 'keyboard', 'ram', 'ssd', 'hdd', 'web camera', 'camera', 'monitor', 'ventilator', 'oximeter', 'ecg'].some(k => itemText.includes(k));
-
-                                    return (
-                                      <tr key={item.firebaseKey || idx} className={`hover:bg-slate-50 transition ${isImportant ? 'bg-blue-50/30' : ''}`}>
-                                        <td className="px-2 py-1.5 font-bold">
-                                          <span className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${item.department === 'Biomedical' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-blue-100 text-blue-800 border border-blue-200'}`}>
-                                            {item.department === 'Biomedical' ? 'BIOMED' : 'IT'}
-                                          </span>
-                                        </td>
-                                        <td className="px-2 py-1.5 font-bold text-slate-900">
-                                          <button onClick={() => handleOpenModal(item)} className="hover:text-blue-600 text-left flex items-center gap-1.5 cursor-pointer">
-                                            {isImportant && <span className="text-amber-500 font-extrabold text-xs">★</span>}
-                                            <span>{item.particulars}</span>
-                                            {item.cableLength && (
-                                              <span className="px-1.5 py-0.2 bg-slate-100 text-slate-700 font-bold text-[9px] rounded border border-slate-300">
-                                                {item.cableLength} {item.unit || 'Piece'}
-                                              </span>
-                                            )}
-                                            {isLowStock && <span className="px-1.5 py-0.5 bg-rose-600 text-white font-extrabold text-[8px] rounded-md uppercase">LOW</span>}
-                                          </button>
-                                        </td>
-                                        <td className="px-2 py-1.5 font-bold text-blue-600">{item.brand || '-'}</td>
-                                        <td className="px-2 py-1.5 text-slate-400 text-[10px]">{item.serialNo || '-'}</td>
-                                        <td className="px-2 py-1.5 text-center font-bold text-slate-700">{item.openingQty || 0}</td>
-                                        <td className="px-2 py-1.5 text-center font-bold text-slate-700">{item.newPurchase || 0}</td>
-                                        <td className="px-2 py-1.5 text-center font-bold text-emerald-600">{item.issueItems || 0}</td>
-                                        <td className="px-2 py-1.5 text-center font-bold text-blue-700 bg-blue-50/40">{balanceStock}</td>
-                                        <td className="px-2 py-1.5">
-                                          <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full border ${
-                                            item.category === 'Fixed Assets' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-blue-100 text-blue-700 border-blue-200'
-                                          }`}>
-                                            {item.category || 'Consumable'}
-                                          </span>
-                                        </td>
-                                        <td className="px-2 py-1.5 text-slate-400">{item.location || '- -'}</td>
-                                        <td className="text-center font-bold">
-                                          {userRights.canDelete ? (
-                                            <button onClick={() => handleDeleteAsset(item)} className="text-rose-600 hover:text-rose-800 text-[10px]">Del</button>
-                                          ) : (
-                                            <span className="text-slate-300 text-[10px]">Locked</span>
-                                          )}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
                         </div>
                       );
                     })
