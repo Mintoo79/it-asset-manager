@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IT Asset & Inventory Management System</title>
+  <title>IT & Biomedical Asset Management System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -41,8 +41,8 @@
   <div id="root">
     <div style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #020617; color: white; font-family: Inter, sans-serif;">
       <div style="text-align: center;">
-        <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">Loading IT Asset Portal...</div>
-        <div style="font-size: 12px; color: #94a3b8;">Establishing secure cloud connection</div>
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">Loading Asset Portal...</div>
+        <div style="font-size: 12px; color: #94a3b8;">Syncing Enterprise Infrastructure</div>
       </div>
     </div>
   </div>
@@ -52,14 +52,24 @@
 
     const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
 
-    // User Directory with Roles & Department Allocations
-    const USER_ACCOUNTS = {
-      '1234': { name: 'Super Admin', role: 'Admin', dept: 'Management' },
-      '2222': { name: 'Rajesh Sharma', role: 'IT Manager', dept: 'IT Infrastructure' },
-      '3333': { name: 'Dr. Suresh Verma', role: 'Biomedical Manager', dept: 'Biomedical' },
-      '4444': { name: 'Amit Tech', role: 'Technician', dept: 'IT Infrastructure' },
-      '5555': { name: 'Biomed Tech', role: 'Technician', dept: 'Biomedical' },
-      '0000': { name: 'Guest Staff', role: 'Viewer', dept: 'General' }
+    // Dynamic Color Palette generator for Alphabetical Groups
+    const GROUP_COLOR_PALETTES = [
+      { bg: 'from-blue-500/10 to-indigo-500/10', border: 'border-blue-500/30', text: 'text-blue-600', badge: 'bg-blue-600 text-white' },
+      { bg: 'from-emerald-500/10 to-teal-500/10', border: 'border-emerald-500/30', text: 'text-emerald-600', badge: 'bg-emerald-600 text-white' },
+      { bg: 'from-purple-500/10 to-violet-500/10', border: 'border-purple-500/30', text: 'text-purple-600', badge: 'bg-purple-600 text-white' },
+      { bg: 'from-amber-500/10 to-orange-500/10', border: 'border-amber-500/30', text: 'text-amber-600', badge: 'bg-amber-600 text-white' },
+      { bg: 'from-rose-500/10 to-pink-500/10', border: 'border-rose-500/30', text: 'text-rose-600', badge: 'bg-rose-600 text-white' },
+      { bg: 'from-cyan-500/10 to-sky-500/10', border: 'border-cyan-500/30', text: 'text-cyan-600', badge: 'bg-cyan-600 text-white' }
+    ];
+
+    // Initial Default User Directory with Roles & Department Allocations
+    const INITIAL_USER_ACCOUNTS = {
+      '1234': { name: 'Super Admin', role: 'Admin', dept: 'Management', pin: '1234' },
+      '2222': { name: 'Rajesh Sharma', role: 'IT Manager', dept: 'IT Infrastructure', pin: '2222' },
+      '3333': { name: 'Dr. Suresh Verma', role: 'Biomedical Manager', dept: 'Biomedical', pin: '3333' },
+      '4444': { name: 'Amit Tech', role: 'Technician', dept: 'IT Infrastructure', pin: '4444' },
+      '5555': { name: 'Biomed Tech', role: 'Technician', dept: 'Biomedical', pin: '5555' },
+      '0000': { name: 'Guest Staff', role: 'Viewer', dept: 'General', pin: '0000' }
     };
 
     // Role Rights & View Access Matrix
@@ -92,6 +102,7 @@
     };
 
     function App() {
+      const [userAccounts, setUserAccounts] = useState(INITIAL_USER_ACCOUNTS);
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [currentUser, setCurrentUser] = useState({ name: 'Admin', role: 'Admin', dept: 'Management' });
       const [pinInput, setPinInput] = useState('');
@@ -104,8 +115,6 @@
       const [monthFilter, setMonthFilter] = useState('');
       const [departmentFilter, setDepartmentFilter] = useState('');
 
-      const [currentPage, setCurrentPage] = useState(1);
-      const [itemsPerPage, setItemsPerPage] = useState(10);
       const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
 
       const [assets, setAssets] = useState([]);
@@ -113,6 +122,14 @@
 
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
+
+      // Biomedical User Creation State (for Admin)
+      const [newUserForm, setNewUserForm] = useState({
+        name: '',
+        pin: '',
+        role: 'Biomedical Manager',
+        dept: 'Biomedical'
+      });
 
       const lineChartRef = useRef(null);
       const donutChartRef = useRef(null);
@@ -168,92 +185,43 @@
         return () => clearInterval(interval);
       }, []);
 
-      useEffect(() => {
-        if (activeTab === 'dashboard' && isLoggedIn) {
-          setTimeout(() => {
-            const lineCtx = document.getElementById('trendLineChart');
-            if (lineCtx) {
-              if (lineChartRef.current) lineChartRef.current.destroy();
-              lineChartRef.current = new Chart(lineCtx, {
-                type: 'line',
-                data: {
-                  labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
-                  datasets: [
-                    {
-                      label: 'Entries',
-                      data: [40, 55, 60, 65, assets.length || 76],
-                      borderColor: '#2563eb',
-                      backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                      tension: 0.3,
-                      fill: true,
-                      pointRadius: 4
-                    },
-                    {
-                      label: 'Issued',
-                      data: [25, 38, 42, 50, assets.reduce((acc, i) => acc + Number(i.issueItems || 0), 0) || 53],
-                      borderColor: '#10b981',
-                      backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                      tension: 0.3,
-                      fill: true,
-                      pointRadius: 4
-                    }
-                  ]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: { legend: { display: false } },
-                  scales: {
-                    y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
-                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-                  }
-                }
-              });
-            }
-
-            const donutCtx = document.getElementById('overviewDonutChart');
-            if (donutCtx) {
-              if (donutChartRef.current) donutChartRef.current.destroy();
-              const consumable = visibleAssets.filter(i => i.category === 'Consumable').length || 25;
-              const nonConsumable = visibleAssets.filter(i => i.category === 'Non-Consumable').length || 35;
-              const fixedAssets = visibleAssets.filter(i => i.category === 'Fixed Assets').length || 16;
-
-              donutChartRef.current = new Chart(donutCtx, {
-                type: 'doughnut',
-                data: {
-                  labels: ['Fixed Assets', 'Non-Consumables', 'Consumables'],
-                  datasets: [{
-                    data: [fixedAssets, nonConsumable, consumable],
-                    backgroundColor: ['#d97706', '#10b981', '#2563eb'],
-                    borderWidth: 2,
-                    borderColor: '#ffffff'
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  cutout: '72%',
-                  plugins: { legend: { display: false } }
-                }
-              });
-            }
-          }, 100);
-        }
-      }, [activeTab, isLoggedIn, assets, currentUser]);
-
       const handleLogin = (e) => {
         e.preventDefault();
-        const foundUser = USER_ACCOUNTS[pinInput];
+        const foundUser = userAccounts[pinInput];
         if (foundUser) {
           setCurrentUser(foundUser);
           setIsLoggedIn(true);
           setLoginError('');
-          // Default tab setting based on user role permissions
           const rights = DEFAULT_ROLE_RIGHTS[foundUser.role] || DEFAULT_ROLE_RIGHTS.Viewer;
           setActiveTab(rights.tabs[0] || 'inventory');
         } else {
-          setLoginError('Invalid PIN! Try PIN: 1234 (Admin), 2222 (IT Mgr), 3333 (Biomed Mgr)');
+          setLoginError('Invalid Security PIN Code!');
         }
+      };
+
+      const handleCreateUser = (e) => {
+        e.preventDefault();
+        if (!newUserForm.pin || !newUserForm.name) {
+          alert("Please fill in User Name and Security PIN!");
+          return;
+        }
+        if (userAccounts[newUserForm.pin]) {
+          alert("User PIN already exists! Choose a unique PIN.");
+          return;
+        }
+
+        setUserAccounts(prev => ({
+          ...prev,
+          [newUserForm.pin]: {
+            name: newUserForm.name,
+            role: newUserForm.role,
+            dept: newUserForm.dept,
+            pin: newUserForm.pin
+          }
+        }));
+
+        alert(`Success: ${newUserForm.dept} user "${newUserForm.name}" created with PIN ${newUserForm.pin}!`);
+        setNewUserForm({ name: '', pin: '', role: 'Biomedical Manager', dept: 'Biomedical' });
       };
 
       const handleLogout = () => {
@@ -263,7 +231,6 @@
 
       const userRights = roleRights[currentUser.role] || DEFAULT_ROLE_RIGHTS.Viewer;
 
-      // Filter assets based on User Department Access Rights
       const visibleAssets = assets.filter(item => {
         if (currentUser.role === 'Admin' || currentUser.role === 'Viewer') return true;
         const itemDept = item.department || 'IT Infrastructure';
@@ -384,19 +351,19 @@
                               (item.brand || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesLocation = locationFilter === '' || (item.location || '').toLowerCase().includes(locationFilter.toLowerCase());
         const matchesMonth = monthFilter === '' || (item.entryMonth || '').toLowerCase().includes(monthFilter.toLowerCase());
-        const matchesGroup = selectedGroupFilter === '' || (item.group || '').toLowerCase() === selectedGroupFilter.toLowerCase();
         const matchesDept = departmentFilter === '' || (item.department || 'IT Infrastructure') === departmentFilter;
-        return matchesSearch && matchesLocation && matchesMonth && matchesGroup && matchesDept;
+        return matchesSearch && matchesLocation && matchesMonth && matchesDept;
       });
 
-      // Stock Group Summary Stats
-      const groupSummaryMap = visibleAssets.reduce((acc, item) => {
+      // Group Summaries mapped & Alphabetically Sorted
+      const groupSummaryMap = filteredAssets.reduce((acc, item) => {
         const grp = (item.group || 'OTHER').toUpperCase().trim();
         if (!acc[grp]) {
-          acc[grp] = { groupName: grp, count: 0, lowStockCount: 0 };
+          acc[grp] = { groupName: grp, count: 0, lowStockCount: 0, items: [] };
         }
         acc[grp].count += 1;
-        
+        acc[grp].items.push(item);
+
         const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
         const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
         if (phy <= Number(item.minAlert || 2)) {
@@ -404,20 +371,13 @@
         }
         return acc;
       }, {});
-      const groupSummaryList = Object.values(groupSummaryMap);
 
-      const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
-      const indexOfLastItem = currentPage * itemsPerPage;
-      const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-      const currentItems = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
+      // Alphabetical sorting of groups
+      const sortedGroupSummaryList = Object.values(groupSummaryMap).sort((a, b) => 
+        a.groupName.localeCompare(b.groupName)
+      );
 
       const totalRecords = visibleAssets.length;
-      const lowStockItems = visibleAssets.filter(item => {
-        const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
-        const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
-        return phy <= Number(item.minAlert || 2);
-      });
-      const currentMonthRecords = visibleAssets.filter(i => (i.entryMonth || '').toLowerCase() === getCurrentMonthYear().toLowerCase()).length;
 
       if (!isLoggedIn) {
         return (
@@ -436,7 +396,7 @@
                   <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Enter Security PIN Code</label>
                   <input 
                     type="password" 
-                    placeholder="Enter PIN (e.g. 1234, 2222, 3333)" 
+                    placeholder="Enter Security PIN" 
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 outline-none transition"
@@ -445,12 +405,10 @@
                 </div>
 
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600 space-y-1">
-                  <p className="font-bold text-slate-800">Demo User Credentials:</p>
-                  <p>• <b>1234</b> : Admin (Full Control)</p>
-                  <p>• <b>2222</b> : IT Manager (IT Dept Access)</p>
-                  <p>• <b>3333</b> : Biomedical Manager (Biomedical Access)</p>
-                  <p>• <b>4444</b> : Technician (Limited Edit)</p>
-                  <p>• <b>0000</b> : Viewer (Read-only)</p>
+                  <p className="font-bold text-slate-800">Active User Logins:</p>
+                  {Object.keys(userAccounts).map(p => (
+                    <p key={p}>• <b>{p}</b> : {userAccounts[p].name} ({userAccounts[p].role} - {userAccounts[p].dept})</p>
+                  ))}
                 </div>
 
                 {loginError && <p className="text-xs text-rose-500 font-medium">{loginError}</p>}
@@ -469,7 +427,7 @@
         { id: 'inventory', label: '1. Stock Register', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
         { id: 'analytics', label: '2. Analytics Board', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
         { id: 'reports', label: '3. Audit & Reports', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-        { id: 'rights', label: '4. Privilege Control', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }
+        { id: 'rights', label: '4. Privilege & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }
       ].filter(t => userRights.tabs.includes(t.id));
 
       return (
@@ -536,156 +494,26 @@
 
           <main className="flex-1 flex flex-col overflow-hidden p-4 space-y-3">
             
-            {activeTab === 'dashboard' && userRights.tabs.includes('dashboard') && (
-              <div className="flex-1 overflow-auto space-y-5">
-                <header className="px-2 py-2 flex justify-between items-center">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                    </div>
-                    <div>
-                      <h1 className="text-lg font-extrabold text-slate-900 tracking-tight leading-none">
-                        {currentUser.dept} Executive Dashboard
-                      </h1>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">Role Level: {currentUser.role} • Dept Access: {userRights.allowedDepts.join(', ')}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-1 px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-semibold text-slate-700">
-                      <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                      <span>{getCurrentMonthYear()}</span>
-                    </div>
-                  </div>
-                </header>
-
-                <div className="grid grid-cols-3 gap-5">
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden flex justify-between items-center">
-                    <div className="space-y-1 z-10">
-                      <p className="text-xs font-semibold text-blue-100 uppercase tracking-wider">Total Department Assets</p>
-                      <div className="flex items-baseline gap-2">
-                        <h2 className="text-4xl font-extrabold tracking-tight">{totalRecords}</h2>
-                        <span className="text-xs font-bold text-blue-200 flex items-center">↑ Active</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                    </div>
-                  </div>
-
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-emerald-950 shadow-lg shadow-emerald-500/20 relative overflow-hidden flex justify-between items-center">
-                    <div className="space-y-1 z-10">
-                      <p className="text-xs font-bold text-emerald-900 uppercase tracking-wider">This Month Entries ({getCurrentMonthYear()})</p>
-                      <div className="flex items-baseline gap-2">
-                        <h2 className="text-4xl font-extrabold tracking-tight">{currentMonthRecords}</h2>
-                        <span className="text-xs font-bold text-emerald-800 flex items-center">↑ Active</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-white/30 rounded-2xl backdrop-blur-md">
-                      <svg className="w-8 h-8 text-emerald-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    </div>
-                  </div>
-
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-400 text-white shadow-lg shadow-rose-500/20 relative overflow-hidden flex justify-between items-center">
-                    <div className="space-y-1 z-10">
-                      <p className="text-xs font-semibold text-rose-100 uppercase tracking-wider">Low Stock Alerts</p>
-                      <div className="flex items-baseline gap-2">
-                        <h2 className="text-4xl font-extrabold tracking-tight">{lowStockItems.length}</h2>
-                        <span className="text-xs font-bold text-rose-200 flex items-center">Warning</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-12 gap-5">
-                  <div className="col-span-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                    <h3 className="font-bold text-slate-900 text-sm">Asset Overview</h3>
-                    <div className="relative h-44 my-2">
-                      <canvas id="overviewDonutChart"></canvas>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-2xl font-extrabold text-slate-900">{totalRecords}</span>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
-                      <div className="flex justify-between items-center font-semibold text-slate-700">
-                        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span> Fixed Assets</span>
-                        <span>{visibleAssets.filter(i => i.category === 'Fixed Assets').length}</span>
-                      </div>
-                      <div className="flex justify-between items-center font-semibold text-slate-700">
-                        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Non-Consumables</span>
-                        <span>{visibleAssets.filter(i => i.category === 'Non-Consumable').length}</span>
-                      </div>
-                      <div className="flex justify-between items-center font-semibold text-slate-700">
-                        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Consumables</span>
-                        <span>{visibleAssets.filter(i => i.category === 'Consumable').length}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="col-span-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-slate-900 text-sm">Monthly Trend</h3>
-                      <div className="flex items-center space-x-3 text-xs font-semibold">
-                        <span className="flex items-center gap-1 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Entries</span>
-                        <span className="flex items-center gap-1 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Issued</span>
-                      </div>
-                    </div>
-                    <div className="h-52 w-full mt-3">
-                      <canvas id="trendLineChart"></canvas>
-                    </div>
-                  </div>
-
-                  <div className="col-span-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
-                    <h3 className="font-bold text-slate-900 text-sm mb-4">Quick Actions</h3>
-                    {userRights.canAdd ? (
-                      <button 
-                        onClick={() => handleOpenModal()} 
-                        className="w-full py-6 bg-blue-50 hover:bg-blue-100/80 text-blue-600 border border-blue-200 rounded-2xl transition flex flex-col items-center justify-center gap-2 group shadow-sm cursor-pointer"
-                      >
-                        <div className="p-3 bg-blue-600 text-white rounded-full group-hover:scale-110 transition duration-200">
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        </div>
-                        <span className="font-bold text-xs text-slate-800">Add Asset</span>
-                      </button>
-                    ) : (
-                      <div className="p-4 bg-slate-100 text-slate-500 text-xs font-medium rounded-xl">
-                        ReadOnly Access: Adding assets disabled for {currentUser.role}.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {activeTab === 'inventory' && userRights.tabs.includes('inventory') && (
               <>
-                <header className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-3 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
+                <header className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-3.5 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-blue-600/30 border border-blue-500/40 rounded-lg text-blue-400">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     </div>
                     <div>
-                      <h1 className="text-sm font-extrabold tracking-wide uppercase">Stock Register & Inventory Ledger</h1>
-                      {selectedGroupFilter && (
-                        <p className="text-[10px] text-blue-300 font-medium">
-                          Filtering Group: <span className="font-bold uppercase text-white">{selectedGroupFilter}</span>
-                          <button onClick={() => setSelectedGroupFilter('')} className="ml-2 text-rose-400 hover:underline">Clear Filter ✕</button>
-                        </p>
-                      )}
+                      <h1 className="text-sm font-extrabold tracking-wide uppercase">Group-Wise Stock Register</h1>
+                      <p className="text-[10px] text-slate-400 font-medium">Categorized Alphabetically with Dynamic Color Coding</p>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-2">
                     <select 
                       value={departmentFilter} 
-                      onChange={(e) => { setDepartmentFilter(e.target.value); setCurrentPage(1); }}
+                      onChange={(e) => setDepartmentFilter(e.target.value)}
                       className="px-3 py-1.5 text-xs bg-slate-800/80 border border-slate-700 rounded-lg text-white outline-none font-bold text-amber-300"
                     >
-                      <option value="">Dept: All Depts</option>
+                      <option value="">Filter Dept: All</option>
                       <option value="IT Infrastructure">IT Infrastructure</option>
                       <option value="Biomedical">Biomedical Dept</option>
                     </select>
@@ -693,10 +521,10 @@
                     <div className="relative">
                       <input 
                         type="text" 
-                        placeholder="Search Items..." 
+                        placeholder="Search Group or Asset..." 
                         value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                        className="w-36 px-3 py-1.5 pl-8 text-xs bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-44 px-3 py-1.5 pl-8 text-xs bg-slate-800/80 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <svg className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
@@ -712,247 +540,311 @@
                   </div>
                 </header>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                      Stock Groups Summary (Click box to open group list)
-                    </span>
-                    {selectedGroupFilter && (
-                      <button 
-                        onClick={() => { setSelectedGroupFilter(''); setCurrentPage(1); }} 
-                        className="text-[11px] text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer"
-                      >
-                        Show All Groups ({visibleAssets.length} items)
-                      </button>
-                    )}
-                  </div>
+                {/* Pure Dynamic Alphabetical Colored Group Grid */}
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                  {sortedGroupSummaryList.length === 0 ? (
+                    <div className="p-12 bg-white rounded-2xl border border-slate-200 text-center text-slate-400 font-medium">
+                      {loading ? 'Syncing cloud data...' : 'No inventory groups found for selected filter.'}
+                    </div>
+                  ) : (
+                    sortedGroupSummaryList.map((grp, colorIdx) => {
+                      const theme = GROUP_COLOR_PALETTES[colorIdx % GROUP_COLOR_PALETTES.length];
+                      const isExpanded = selectedGroupFilter.toLowerCase() === grp.groupName.toLowerCase();
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 max-h-36 overflow-y-auto pr-1">
-                    {groupSummaryList.length === 0 ? (
-                      <div className="col-span-full p-3 bg-white rounded-xl text-center text-xs text-slate-400 font-medium">
-                        No Groups Available
-                      </div>
-                    ) : (
-                      groupSummaryList.map(grp => {
-                        const isSelected = selectedGroupFilter.toLowerCase() === grp.groupName.toLowerCase();
-                        return (
+                      return (
+                        <div key={grp.groupName} className={`rounded-2xl border ${theme.border} bg-white shadow-sm overflow-hidden transition-all duration-200`}>
+                          
+                          {/* Group Header Banner */}
                           <div 
-                            key={grp.groupName}
-                            onClick={() => {
-                              setSelectedGroupFilter(isSelected ? '' : grp.groupName);
-                              setCurrentPage(1);
-                            }}
-                            className={`p-2.5 rounded-xl border transition duration-150 cursor-pointer select-none flex flex-col justify-between ${
-                              isSelected 
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/30 ring-2 ring-blue-300' 
-                                : 'bg-white hover:bg-blue-50/50 text-slate-800 border-slate-200 hover:border-blue-300 shadow-sm'
-                            }`}
+                            onClick={() => setSelectedGroupFilter(isExpanded ? '' : grp.groupName)}
+                            className={`p-4 bg-gradient-to-r ${theme.bg} flex items-center justify-between cursor-pointer select-none`}
                           >
-                            <div className="flex justify-between items-start mb-1">
-                              <h4 className={`font-extrabold text-[11px] truncate tracking-wide ${isSelected ? 'text-white' : 'text-slate-800'}`}>
-                                {grp.groupName}
-                              </h4>
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-8 h-8 rounded-xl bg-white shadow-sm flex items-center justify-center font-black ${theme.text} text-sm`}>
+                                {grp.groupName.charAt(0)}
+                              </div>
+                              <div>
+                                <h3 className={`font-black text-sm tracking-wider uppercase ${theme.text}`}>
+                                  {grp.groupName}
+                                </h3>
+                                <p className="text-[11px] font-semibold text-slate-500">
+                                  {grp.count} Items Registered
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-3">
                               {grp.lowStockCount > 0 && (
-                                <span className={`px-1 py-0.2 text-[8px] font-black rounded ${isSelected ? 'bg-rose-500 text-white' : 'bg-rose-100 text-rose-700 border border-rose-200'}`}>
-                                  {grp.lowStockCount} LOW
+                                <span className="px-2.5 py-1 text-[10px] font-black rounded-full bg-rose-600 text-white shadow-sm animate-pulse">
+                                  ⚠️ {grp.lowStockCount} LOW STOCK
                                 </span>
                               )}
-                            </div>
-
-                            <div className="flex items-baseline justify-between mt-1">
-                              <span className={`text-[10px] font-medium ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>Items Count:</span>
-                              <span className={`text-base font-extrabold ${isSelected ? 'text-white' : 'text-blue-600'}`}>
-                                {grp.count}
+                              <span className={`px-3 py-1 rounded-xl text-xs font-bold ${theme.badge} shadow-sm`}>
+                                Total: {grp.count}
                               </span>
+                              <svg className={`w-5 h-5 ${theme.text} transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                           </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
 
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col justify-between">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap table-compact">
-                      <thead className="bg-slate-950 text-white font-bold border-b border-slate-800 text-[10px] uppercase tracking-wider">
-                        <tr>
-                          <th className="border-r border-slate-800 text-center w-7 py-2">#</th>
-                          <th className="border-r border-slate-800 px-2 py-2 text-amber-400">Dept</th>
-                          <th className="border-r border-slate-800 px-2 py-2">Stock Group</th>
-                          <th className="border-r border-slate-800 px-2 py-2">Asset Particulars</th>
-                          <th className="border-r border-slate-800 px-2 py-2 text-blue-400">Brand</th>
-                          <th className="border-r border-slate-800 px-2 py-2">Serial / Tag</th>
-                          <th className="border-r border-slate-800 px-2 py-2 text-slate-300">Month</th>
-                          <th className="border-r border-slate-800 px-2 py-2">Vendor</th>
-                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900">OP</th>
-                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900">Purch.</th>
-                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900 text-emerald-400">Issued</th>
-                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900 text-blue-400 font-bold">Bal</th>
-                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900 font-bold">Dead</th>
-                          <th className="border-r border-slate-800 px-2 py-2">Category</th>
-                          <th className="px-2 py-2">Location</th>
-                          <th className="text-center">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 text-slate-800">
-                        {currentItems.length === 0 ? (
-                          <tr>
-                            <td colSpan="16" className="p-8 text-center text-slate-400 font-medium">
-                              {loading ? 'Cloud database syncing records...' : 'No inventory records found for this view.'}
-                            </td>
-                          </tr>
-                        ) : (
-                          currentItems.map((item, index) => {
-                            const serialNumber = indexOfFirstItem + index + 1;
-                            const balanceStock = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
-                            const isLowStock = balanceStock <= Number(item.minAlert || 2);
+                          {/* Group Detail Table List (Opens only when Group is Clicked) */}
+                          {isExpanded && (
+                            <div className="border-t border-slate-100 p-2 bg-slate-50/50">
+                              <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap table-compact">
+                                <thead className="bg-slate-900 text-white font-bold text-[10px] uppercase tracking-wider">
+                                  <tr>
+                                    <th className="px-2 py-2 text-amber-400">Dept</th>
+                                    <th className="px-2 py-2">Asset Particulars</th>
+                                    <th className="px-2 py-2 text-blue-400">Brand</th>
+                                    <th className="px-2 py-2">Serial / Tag</th>
+                                    <th className="px-2 py-2 text-center">OP</th>
+                                    <th className="px-2 py-2 text-center">Purch</th>
+                                    <th className="px-2 py-2 text-center text-emerald-400">Issued</th>
+                                    <th className="px-2 py-2 text-center text-blue-400 font-bold">Balance</th>
+                                    <th className="px-2 py-2">Category</th>
+                                    <th className="px-2 py-2">Location</th>
+                                    <th className="text-center">Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200 bg-white">
+                                  {grp.items.map((item, idx) => {
+                                    const balanceStock = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
+                                    const isLowStock = balanceStock <= Number(item.minAlert || 2);
+                                    const itemText = `${item.particulars || ''}`.toLowerCase();
+                                    const isImportant = ['mouse', 'keyboard', 'ram', 'ssd', 'hdd', 'web camera', 'camera', 'monitor', 'ventilator', 'oximeter', 'ecg'].some(k => itemText.includes(k));
 
-                            const itemText = `${item.particulars || ''} ${item.group || ''}`.toLowerCase();
-                            const isImportant = ['mouse', 'keyboard', 'ram', 'ssd', 'hdd', 'web camera', 'camera', 'monitor', 'ventilator', 'oximeter', 'ecg', 'defibrillator'].some(k => itemText.includes(k));
-
-                            return (
-                              <tr key={item.firebaseKey || index} className={`hover:bg-slate-50 transition ${isImportant ? 'bg-blue-50/30' : ''}`}>
-                                <td className="border-r border-slate-200 font-semibold text-slate-400 text-center">{serialNumber}</td>
-                                <td className="border-r border-slate-200 font-bold text-[10px]">
-                                  <span className={`px-1.5 py-0.5 rounded font-bold ${item.department === 'Biomedical' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-blue-100 text-blue-800 border border-blue-200'}`}>
-                                    {item.department === 'Biomedical' ? 'BIOMED' : 'IT'}
-                                  </span>
-                                </td>
-                                <td className="border-r border-slate-200 font-bold text-slate-800">{item.group}</td>
-                                <td className="border-r border-slate-200 font-semibold text-slate-900">
-                                  <button onClick={() => handleOpenModal(item)} className="hover:text-blue-600 text-left flex items-center gap-1.5 cursor-pointer" title="Click to Edit Asset Details">
-                                    {isImportant && <span className="text-amber-500 font-extrabold text-xs" title="Important Asset">★</span>}
-                                    <span>{item.particulars}</span>
-                                    {item.cableLength && (
-                                      <span className="px-1.5 py-0.2 bg-slate-100 text-slate-700 font-bold text-[9px] rounded border border-slate-300">
-                                        {item.cableLength} {item.unit || 'Piece'}
-                                      </span>
-                                    )}
-                                    {isLowStock && <span className="px-1.5 py-0.5 bg-rose-600 text-white font-extrabold text-[8px] rounded-md tracking-wider uppercase">LOW</span>}
-                                  </button>
-                                </td>
-                                <td className="border-r border-slate-200 font-bold text-blue-600">{item.brand || '-'}</td>
-                                <td className="border-r border-slate-200 text-slate-400 text-[10px]">{item.serialNo || '-'}</td>
-                                <td className="border-r border-slate-200 text-slate-600 font-medium">{item.entryMonth || 'Nov 2026'}</td>
-                                <td className="border-r border-slate-200 text-slate-400">{item.vendor || '-'}</td>
-                                <td className="border-r border-slate-200 text-center font-bold text-slate-700 bg-slate-50/50">{item.openingQty || 0}</td>
-                                <td className="border-r border-slate-200 text-center font-bold text-slate-700 bg-slate-50/50">{item.newPurchase || 0}</td>
-                                <td className="border-r border-slate-200 text-center font-bold text-emerald-600">{item.issueItems || 0}</td>
-                                <td className="border-r border-slate-200 text-center font-bold text-blue-700 bg-blue-50/20">{balanceStock}</td>
-                                <td className="border-r border-slate-200 text-center text-slate-500">{item.deadItems || 0}</td>
-                                <td className="border-r border-slate-200">
-                                  <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full border ${
-                                    item.category === 'Fixed Assets' 
-                                      ? 'bg-amber-100 text-amber-800 border-amber-300'
-                                      : item.category === 'Non-Consumable' 
-                                      ? 'bg-purple-100 text-purple-700 border-purple-200' 
-                                      : 'bg-blue-100 text-blue-700 border-blue-200'
-                                  }`}>
-                                    {item.category || 'Consumable'}
-                                  </span>
-                                </td>
-                                <td className="border-r border-slate-200 text-slate-400 text-center">{item.location || '- -'}</td>
-                                <td className="text-center font-bold">
-                                  {userRights.canDelete ? (
-                                    <button onClick={() => handleDeleteAsset(item)} className="text-rose-600 hover:text-rose-800 text-[10px]">Del</button>
-                                  ) : (
-                                    <span className="text-slate-300 text-[10px] cursor-not-allowed">Locked</span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-5">
-                      <div className="flex items-center space-x-2">
-                        <div className="p-1 bg-emerald-500 rounded-full text-white">
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
+                                    return (
+                                      <tr key={item.firebaseKey || idx} className={`hover:bg-slate-50 transition ${isImportant ? 'bg-blue-50/30' : ''}`}>
+                                        <td className="px-2 py-1.5 font-bold">
+                                          <span className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${item.department === 'Biomedical' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-blue-100 text-blue-800 border border-blue-200'}`}>
+                                            {item.department === 'Biomedical' ? 'BIOMED' : 'IT'}
+                                          </span>
+                                        </td>
+                                        <td className="px-2 py-1.5 font-bold text-slate-900">
+                                          <button onClick={() => handleOpenModal(item)} className="hover:text-blue-600 text-left flex items-center gap-1.5 cursor-pointer">
+                                            {isImportant && <span className="text-amber-500 font-extrabold text-xs">★</span>}
+                                            <span>{item.particulars}</span>
+                                            {item.cableLength && (
+                                              <span className="px-1.5 py-0.2 bg-slate-100 text-slate-700 font-bold text-[9px] rounded border border-slate-300">
+                                                {item.cableLength} {item.unit || 'Piece'}
+                                              </span>
+                                            )}
+                                            {isLowStock && <span className="px-1.5 py-0.5 bg-rose-600 text-white font-extrabold text-[8px] rounded-md uppercase">LOW</span>}
+                                          </button>
+                                        </td>
+                                        <td className="px-2 py-1.5 font-bold text-blue-600">{item.brand || '-'}</td>
+                                        <td className="px-2 py-1.5 text-slate-400 text-[10px]">{item.serialNo || '-'}</td>
+                                        <td className="px-2 py-1.5 text-center font-bold text-slate-700">{item.openingQty || 0}</td>
+                                        <td className="px-2 py-1.5 text-center font-bold text-slate-700">{item.newPurchase || 0}</td>
+                                        <td className="px-2 py-1.5 text-center font-bold text-emerald-600">{item.issueItems || 0}</td>
+                                        <td className="px-2 py-1.5 text-center font-bold text-blue-700 bg-blue-50/40">{balanceStock}</td>
+                                        <td className="px-2 py-1.5">
+                                          <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full border ${
+                                            item.category === 'Fixed Assets' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-blue-100 text-blue-700 border-blue-200'
+                                          }`}>
+                                            {item.category || 'Consumable'}
+                                          </span>
+                                        </td>
+                                        <td className="px-2 py-1.5 text-slate-400">{item.location || '- -'}</td>
+                                        <td className="text-center font-bold">
+                                          {userRights.canDelete ? (
+                                            <button onClick={() => handleDeleteAsset(item)} className="text-rose-600 hover:text-rose-800 text-[10px]">Del</button>
+                                          ) : (
+                                            <span className="text-slate-300 text-[10px]">Locked</span>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 leading-tight">Access Role</p>
-                          <p className="text-emerald-600 font-bold leading-tight">{currentUser.role}</p>
-                        </div>
-                      </div>
-
-                      <div className="h-6 w-px bg-slate-300"></div>
-
-                      <div className="flex items-center space-x-2">
-                        <div className="p-1 text-blue-600">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path></svg>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 leading-tight">Visible Records</p>
-                          <p className="font-bold text-slate-800 leading-tight">{totalRecords} Assets</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                      <label className="flex items-center gap-1.5 font-bold text-slate-700 text-xs">
-                        View Records:
-                        <select 
-                          value={itemsPerPage} 
-                          onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                          className="px-2 py-0.5 bg-white border border-slate-300 rounded-lg font-bold text-blue-700 outline-none cursor-pointer shadow-sm"
-                        >
-                          <option value="10">10 per page</option>
-                          <option value="25">25 per page</option>
-                          <option value="50">50 per page</option>
-                        </select>
-                      </label>
-
-                      <div className="flex items-center space-x-1.5">
-                        <button 
-                          disabled={currentPage === 1}
-                          onClick={() => setCurrentPage(prev => prev - 1)}
-                          className="px-2.5 py-1 border border-slate-300 rounded bg-white font-semibold text-slate-600 disabled:opacity-40 shadow-sm cursor-pointer"
-                        >
-                          ◀ Prev
-                        </button>
-                        <span className="font-bold text-slate-800 px-2">{currentPage} / {totalPages}</span>
-                        <button 
-                          disabled={currentPage === totalPages}
-                          onClick={() => setCurrentPage(prev => prev + 1)}
-                          className="px-2.5 py-1 border border-slate-300 rounded bg-white font-semibold text-slate-600 disabled:opacity-40 shadow-sm cursor-pointer"
-                        >
-                          Next ▶
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                      );
+                    })
+                  )}
                 </div>
               </>
             )}
 
-            {/* Privilege Control View for Admins */}
+            {/* Admin Privilege Control & Biomedical User Account Manager Panel */}
             {activeTab === 'rights' && userRights.tabs.includes('rights') && (
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                <h2 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-3">Role-Based Access Control (RBAC) Settings</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {Object.keys(roleRights).map(rName => (
-                    <div key={rName} className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
-                      <h4 className="font-bold text-sm text-blue-600">{rName} Role Permissions</h4>
-                      <div className="text-xs space-y-1 text-slate-600">
-                        <p>• Allowed Departments: <b>{roleRights[rName].allowedDepts.join(', ')}</b></p>
-                        <p>• Can Add Asset: <b>{roleRights[rName].canAdd ? 'YES' : 'NO'}</b></p>
-                        <p>• Can Edit Asset: <b>{roleRights[rName].canEdit ? 'YES' : 'NO'}</b></p>
-                        <p>• Can Delete Asset: <b>{roleRights[rName].canDelete ? 'YES' : 'NO'}</b></p>
+              <div className="flex-1 overflow-y-auto space-y-6">
+                
+                {/* Biomedical & IT User Creator Section (Admin Only) */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                  <div className="flex items-center space-x-3 border-b border-slate-200 pb-3">
+                    <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900">Biomedical & Department User Account Generator</h2>
+                      <p className="text-xs text-slate-500">Create login PIN/password and assign roles for Biomedical department users</p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleCreateUser} className="grid grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Target Department *</label>
+                      <select 
+                        value={newUserForm.dept} 
+                        onChange={(e) => setNewUserForm({...newUserForm, dept: e.target.value})}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg bg-white font-bold text-emerald-800 outline-none"
+                      >
+                        <option value="Biomedical">Biomedical Dept</option>
+                        <option value="IT Infrastructure">IT Infrastructure</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">User Full Name *</label>
+                      <input 
+                        type="text" 
+                        value={newUserForm.name}
+                        onChange={(e) => setNewUserForm({...newUserForm, name: e.target.value})}
+                        placeholder="e.g. Dr. Anil Kumar"
+                        className="w-full p-2.5 border border-slate-300 rounded-lg bg-white outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Assign User Role *</label>
+                      <select 
+                        value={newUserForm.role} 
+                        onChange={(e) => setNewUserForm({...newUserForm, role: e.target.value})}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg bg-white outline-none"
+                      >
+                        <option value="Biomedical Manager">Biomedical Manager (Add/Edit Access)</option>
+                        <option value="Technician">Biomedical Technician (Stock Update Only)</option>
+                        <option value="Viewer">Biomedical Viewer (Read-Only)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Create Security PIN (Password) *</label>
+                      <div className="flex space-x-2">
+                        <input 
+                          type="text" 
+                          value={newUserForm.pin}
+                          onChange={(e) => setNewUserForm({...newUserForm, pin: e.target.value})}
+                          placeholder="e.g. 7777"
+                          className="w-full p-2.5 border border-slate-300 rounded-lg bg-white font-mono font-bold text-blue-700 outline-none"
+                          required
+                        />
+                        <button type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-md transition cursor-pointer">
+                          Create
+                        </button>
                       </div>
                     </div>
-                  ))}
+                  </form>
+
+                  {/* Active Users Directory List */}
+                  <div className="pt-2">
+                    <h3 className="font-bold text-xs text-slate-800 mb-2">Registered System Accounts</h3>
+                    <div className="grid grid-cols-3 gap-3 text-xs">
+                      {Object.keys(userAccounts).map(pKey => (
+                        <div key={pKey} className="p-3 bg-white rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                          <div>
+                            <p className="font-bold text-slate-900">{userAccounts[pKey].name}</p>
+                            <p className="text-[10px] text-blue-600 font-semibold">{userAccounts[pKey].role} • {userAccounts[pKey].dept}</p>
+                          </div>
+                          <span className="px-2 py-1 bg-slate-100 text-slate-700 font-mono font-bold rounded border border-slate-300">
+                            PIN: {pKey}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
+
               </div>
             )}
 
           </main>
 
+          {/* GROUP ASSET MODAL LIST VIEW */}
+          {activeGroupModal && (
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full p-6 border border-slate-200 max-h-[85vh] flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-3">
+                    <div>
+                      <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">Group Particulars List</span>
+                      <h3 className="text-base font-black text-slate-900 uppercase">{activeGroupModal}</h3>
+                    </div>
+                    <button 
+                      onClick={() => setActiveGroupModal(null)} 
+                      className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs"
+                    >
+                      Close ✕
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto max-h-[60vh]">
+                    <table className="w-full text-xs text-left border-collapse table-compact whitespace-nowrap">
+                      <thead className="bg-slate-900 text-white font-bold text-[10px] uppercase">
+                        <tr>
+                          <th className="p-2">Particular Name</th>
+                          <th className="p-2 text-blue-400">Brand</th>
+                          <th className="p-2">Cable / Spec</th>
+                          <th className="p-2">Serial No</th>
+                          <th className="p-2 text-center">Opening</th>
+                          <th className="p-2 text-center">Purchased</th>
+                          <th className="p-2 text-center text-emerald-400">Issued</th>
+                          <th className="p-2 text-center text-blue-400 font-bold">Balance</th>
+                          <th className="p-2 text-center text-rose-400">Dead</th>
+                          <th className="p-2">Location</th>
+                          <th className="p-2 text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 text-slate-800">
+                        {groupsMap[activeGroupModal].map((item, idx) => {
+                          const balanceStock = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50">
+                              <td className="p-2 font-bold">{item.particulars}</td>
+                              <td className="p-2 text-blue-600 font-semibold">{item.brand || '-'}</td>
+                              <td className="p-2 text-slate-500">{item.cableLength ? `${item.cableLength} ${item.unit}` : '-'}</td>
+                              <td className="p-2 text-slate-400 font-mono text-[10px]">{item.serialNo || '-'}</td>
+                              <td className="p-2 text-center font-semibold">{item.openingQty || 0}</td>
+                              <td className="p-2 text-center font-semibold">{item.newPurchase || 0}</td>
+                              <td className="p-2 text-center font-bold text-emerald-600">{item.issueItems || 0}</td>
+                              <td className="p-2 text-center font-extrabold text-blue-700 bg-blue-50/50">{balanceStock}</td>
+                              <td className="p-2 text-center text-rose-600 font-bold">{item.deadItems || 0}</td>
+                              <td className="p-2 text-slate-500">{item.location || '-'}</td>
+                              <td className="p-2 text-center">
+                                <button 
+                                  onClick={() => { setActiveGroupModal(null); handleOpenModal(item); }} 
+                                  className="text-blue-600 font-bold hover:underline"
+                                >
+                                  Edit
+                                </button>
+                                {userRights.canDelete && (
+                                  <button 
+                                    onClick={() => handleDeleteAsset(item)} 
+                                    className="ml-2 text-rose-600 font-bold hover:underline"
+                                  >
+                                    Del
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                <div className="pt-3 border-t border-slate-200 text-right">
+                  <button onClick={() => setActiveGroupModal(null)} className="px-4 py-1.5 bg-blue-600 text-white font-bold text-xs rounded-xl shadow">Done</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ADD / EDIT ASSET MODAL FORM */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
@@ -975,7 +867,7 @@
 
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Stock Group (Category)</label>
-                    <input type="text" value={formData.group} onChange={(e) => setFormData({...formData, group: e.target.value})} placeholder="e.g. MOUSE, VENTILATOR" className="w-full p-2 border border-slate-300 rounded-lg outline-none" required />
+                    <input type="text" value={formData.group} onChange={(e) => setFormData({...formData, group: e.target.value})} placeholder="e.g. MOUSE, VENTILATOR" className="w-full p-2 border border-slate-300 rounded-lg outline-none uppercase font-bold" required />
                   </div>
 
                   <div className="col-span-2">
@@ -990,7 +882,7 @@
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-700 mb-1">Measurement Unit</label>
-                      <select value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="w-full p-1.5 border border-slate-300 rounded-lg bg-white outline-none">
+                      <select value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="w-full p-1.5 border border-slate-300 rounded-lg bg-white outline-none font-bold">
                         <option value="Piece">Piece</option>
                         <option value="Meter">Meter</option>
                       </select>
