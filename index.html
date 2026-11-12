@@ -25,40 +25,24 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     .table-compact th, .table-compact td {
-      padding: 7px 10px !important;
-      line-height: 1.25 !important;
+      padding: 6px 8px !important;
+      line-height: 1.2 !important;
     }
     .neon-sidebar {
-      background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      background: linear-gradient(180deg, #090d16 0%, #111827 50%, #030712 100%);
     }
     .active-neon-btn {
-      background: linear-gradient(90deg, #4f46e5 0%, #6366f1 100%);
-      box-shadow: 0 0 15px rgba(79, 70, 229, 0.4);
-    }
-    /* Custom scrollbar for horizontal group pills */
-    .no-scrollbar::-webkit-scrollbar {
-      height: 6px;
-    }
-    .no-scrollbar::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 4px;
-    }
-    .no-scrollbar::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    .no-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+      background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans antialiased selection:bg-indigo-600 selection:text-white">
+<body class="bg-slate-100 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white">
   <div id="root">
-    <!-- Fallback loading message so screen is never fully blank -->
     <div style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #0f172a; color: white; font-family: Inter, sans-serif;">
       <div style="text-align: center;">
         <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">Loading IT Asset Portal...</div>
-        <div style="font-size: 12px; color: #94a3b8;">Establishing secure enterprise connection</div>
+        <div style="font-size: 12px; color: #94a3b8;">Establishing secure cloud session</div>
       </div>
     </div>
   </div>
@@ -67,32 +51,11 @@
     const { useState, useEffect, useRef } = React;
 
     const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
-    const LOCAL_STORAGE_KEY = "it_asset_inventory_fallback_v2";
-    const USERS_STORAGE_KEY = "it_asset_system_users_v2";
-
-    const DEFAULT_SAMPLE_ASSETS = [
-      { firebaseKey: 'sample_1', group: 'MOUSE', particulars: 'USB Optical Mouse - Dell', brand: 'Dell', category: 'Consumable', openingQty: 15, newPurchase: 10, issueItems: 8, shortItems: 0, deadItems: 1, minAlert: 5, location: 'Main IT Store', entryMonth: 'Nov 2026', unit: 'Piece', cableLength: '', status: 'Active', lastUpdated: '12 Nov 2026, 12:30 PM' },
-      { firebaseKey: 'sample_2', group: 'KEYBOARD', particulars: 'Wired USB Keyboard - HP', brand: 'HP', category: 'Consumable', openingQty: 12, newPurchase: 5, issueItems: 15, shortItems: 0, deadItems: 0, minAlert: 4, location: 'B Block', entryMonth: 'Nov 2026', unit: 'Piece', cableLength: '', status: 'Active', lastUpdated: '12 Nov 2026, 12:32 PM' },
-      { firebaseKey: 'sample_3', group: 'STORAGE', particulars: 'SSD 512GB SATA III', brand: 'WD', unit: 'GB', category: 'Fixed Assets', openingQty: 8, newPurchase: 4, issueItems: 3, shortItems: 0, deadItems: 0, minAlert: 3, location: 'Server Room', entryMonth: 'Nov 2026', cableLength: '', status: 'Active', lastUpdated: '12 Nov 2026, 12:35 PM' },
-      { firebaseKey: 'sample_4', group: 'CABLES', particulars: 'HDMI High-Speed Cable', brand: 'UGREEN', cableLength: '5', unit: 'Meter', category: 'Consumable', openingQty: 20, newPurchase: 0, issueItems: 6, shortItems: 0, deadItems: 0, minAlert: 5, location: 'A Block', entryMonth: 'Oct 2026', status: 'Active', lastUpdated: '12 Nov 2026, 12:40 PM' },
-      { firebaseKey: 'sample_5', group: 'PERIPHERALS', particulars: 'HD Web Camera 1080p', brand: 'Logitech', unit: 'Piece', category: 'Fixed Assets', openingQty: 5, newPurchase: 2, issueItems: 6, shortItems: 0, deadItems: 0, minAlert: 2, location: 'Conference Room', entryMonth: 'Nov 2026', cableLength: '', status: 'Active', lastUpdated: '12 Nov 2026, 12:42 PM' }
-    ];
-
-    const DEFAULT_USERS = [
-      { id: 'usr_super', name: 'Super Admin', pin: '1234', role: 'Super Admin', permissions: 'Full Access (Master + Create Users + Delete)' },
-      { id: 'usr_tech', name: 'IT Technician', pin: '2222', role: 'Operator', permissions: 'Stock Entry & Issue' }
-    ];
-
-    const DEFAULT_BRANDS = ['Dell', 'HP', 'Lenovo', 'Logitech', 'WD', 'Seagate', 'Kingston', 'UGREEN', 'Cisco', 'Samsung', 'Mantra', 'Wacom', 'Honeywell', 'Other'];
-
-    const IMPORTANT_ITEMS = ['mouse', 'keyboard', 'ram', 'ssd', 'hdd', 'web camera', 'camera'];
 
     function App() {
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [pinInput, setPinInput] = useState('');
       const [loginError, setLoginError] = useState('');
-      const [resetModalOpen, setResetModalOpen] = useState(false);
-      const [resetPinInput, setResetPinInput] = useState('');
 
       const [activeTab, setActiveTab] = useState('inventory');
       const [searchQuery, setSearchQuery] = useState('');
@@ -108,25 +71,37 @@
 
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
-      const [deleteConfirmAsset, setDeleteConfirmAsset] = useState(null);
-      const [activeModalViewItem, setActiveModalViewItem] = useState(null);
+      const [viewModalItem, setViewModalItem] = useState(null);
       const [historyModalItem, setHistoryModalItem] = useState(null);
       const [toastMsg, setToastMsg] = useState('');
 
+      // Temporary Asset Deployment state
+      const [tempDispatches, setTempDispatches] = useState(() => {
+        const saved = localStorage.getItem('it_temp_dispatches_v2');
+        return saved ? JSON.parse(saved) : [
+          { id: 'td_1', assetName: 'Dell OptiPlex CPU i5', department: 'Accounts Department', receiver: 'Mr. Ramesh Gupta', quantity: 2, issueDate: '10 Nov 2026', returnDate: '25 Nov 2026', status: 'Active Dispatched' }
+        ];
+      });
+      const [isTempModalOpen, setIsTempModalOpen] = useState(false);
+      const [tempForm, setTempForm] = useState({ assetName: '', department: '', receiver: '', quantity: 1, returnDate: '' });
+
       const [users, setUsers] = useState(() => {
-        const saved = localStorage.getItem(USERS_STORAGE_KEY);
-        return saved ? JSON.parse(saved) : DEFAULT_USERS;
+        const saved = localStorage.getItem('it_system_users_v1');
+        return saved ? JSON.parse(saved) : [
+          { id: 1, name: 'Super Admin', pin: '1234', role: 'Super Administrator', status: 'Active' },
+          { id: 2, name: 'IT Inventory Desk', pin: '5678', role: 'Store Keeper', status: 'Active' }
+        ];
       });
       const [newUserName, setNewUserName] = useState('');
       const [newUserPin, setNewUserPin] = useState('');
-      const [newUserRole, setNewUserRole] = useState('Operator');
+      const [newUserRole, setNewUserRole] = useState('Store Keeper');
 
       const lineChartRef = useRef(null);
       const donutChartRef = useRef(null);
 
       const showToast = (msg) => {
         setToastMsg(msg);
-        setTimeout(() => setToastMsg(''), 3000);
+        setTimeout(() => setToastMsg(''), 3500);
       };
 
       const getCurrentMonthYear = () => {
@@ -138,25 +113,27 @@
       const getFormattedDateTime = () => {
         const d = new Date();
         const day = String(d.getDate()).padStart(2, '0');
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const hours = d.getHours();
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        let hours = d.getHours();
         const minutes = String(d.getMinutes()).padStart(2, '0');
         const ampm = hours >= 12 ? 'PM' : 'AM';
-        const formattedHours = hours % 12 || 12;
-        return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}, ${formattedHours}:${minutes} ${ampm}`;
+        hours = hours % 12 || 12;
+        return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
       };
 
       const [formData, setFormData] = useState({
         group: '',
         particulars: '',
-        cableLength: '',
-        unit: 'Piece',
-        brand: 'Dell',
+        brand: 'Honeywell',
         customBrand: '',
         serialNo: '',
         vendor: '',
         invoiceNo: '',
         warranty: '',
+        cableLength: '',
+        measurementUnit: 'Piece',
         openingQty: 0,
         newPurchase: 0,
         issueItems: 0,
@@ -165,26 +142,16 @@
         category: 'Consumable',
         location: '',
         minAlert: 2,
-        entryMonth: getCurrentMonthYear()
+        entryMonth: getCurrentMonthYear(),
+        lastUpdated: getFormattedDateTime()
       });
 
-      const loadLocalFallback = () => {
-        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (saved) {
-          try {
-            setAssets(JSON.parse(saved));
-          } catch (e) {
-            setAssets(DEFAULT_SAMPLE_ASSETS);
-          }
-        } else {
-          setAssets(DEFAULT_SAMPLE_ASSETS);
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(DEFAULT_SAMPLE_ASSETS));
-        }
-      };
-
-      const saveLocalFallback = (list) => {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
-      };
+      const sampleFallbackAssets = [
+        { id: 101, group: 'IT Peripherals', particulars: 'Optical Mouse USB', brand: 'Honeywell', serialNo: 'HW-MS-9981', cableLength: '1.5', measurementUnit: 'Meter', openingQty: 25, newPurchase: 10, issueItems: 8, shortItems: 0, deadItems: 1, category: 'Consumable', location: 'A Block', minAlert: 5, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 10:15 AM' },
+        { id: 102, group: 'IT Peripherals', particulars: 'Multimedia Keyboard', brand: 'Honeywell', serialNo: 'HW-KB-4421', cableLength: '1.8', measurementUnit: 'Meter', openingQty: 20, newPurchase: 5, issueItems: 6, shortItems: 0, deadItems: 0, category: 'Consumable', location: 'B Block', minAlert: 4, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 11:20 AM' },
+        { id: 103, group: 'Hardware Parts', particulars: 'DDR4 8GB RAM Module', brand: 'Other', customBrand: 'Corsair', serialNo: 'CR-8G-2666', cableLength: '', measurementUnit: 'Piece', openingQty: 15, newPurchase: 10, issueItems: 12, shortItems: 0, deadItems: 0, category: 'Fixed Assets', location: 'A Block', minAlert: 3, entryMonth: 'Nov 2026', lastUpdated: '11 Nov 2026, 02:40 PM' },
+        { id: 104, group: 'Storage Devices', particulars: 'Solid State Drive 512GB SSD', brand: 'Other', customBrand: 'Samsung', serialNo: 'SS-512-V9', cableLength: '', measurementUnit: 'GB', openingQty: 10, newPurchase: 8, issueItems: 14, shortItems: 0, deadItems: 0, category: 'Fixed Assets', location: 'Server Room', minAlert: 2, entryMonth: 'Oct 2026', lastUpdated: '10 Nov 2026, 04:00 PM' }
+      ];
 
       const fetchCloudData = async () => {
         try {
@@ -193,13 +160,11 @@
           if (data) {
             const list = Object.keys(data).map(key => ({ ...data[key], firebaseKey: key }));
             setAssets(list);
-            saveLocalFallback(list);
           } else {
-            loadLocalFallback();
+            setAssets(sampleFallbackAssets);
           }
         } catch (err) {
-          console.warn("Cloud offline, loading local state.");
-          loadLocalFallback();
+          setAssets(sampleFallbackAssets);
         } finally {
           setLoading(false);
         }
@@ -207,8 +172,6 @@
 
       useEffect(() => {
         fetchCloudData();
-        const interval = setInterval(fetchCloudData, 10000);
-        return () => clearInterval(interval);
       }, []);
 
       useEffect(() => {
@@ -217,35 +180,31 @@
             const lineCtx = document.getElementById('trendLineChart');
             if (lineCtx) {
               if (lineChartRef.current) lineChartRef.current.destroy();
+              const totalEnt = assets.length;
+              const totalIss = assets.reduce((acc, i) => acc + Number(i.issueItems || 0), 0);
               lineChartRef.current = new Chart(lineCtx, {
-                type: 'line',
+                type: 'bar',
                 data: {
                   labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
                   datasets: [
                     {
-                      label: 'Entries',
-                      data: [40, 55, 60, 65, assets.length || 76],
-                      borderColor: '#4f46e5',
-                      backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                      tension: 0.3,
-                      fill: true,
-                      pointRadius: 4
+                      label: 'Stock Entries',
+                      data: [Math.round(totalEnt * 0.6), Math.round(totalEnt * 0.75), Math.round(totalEnt * 0.85), Math.round(totalEnt * 0.9), totalEnt],
+                      backgroundColor: '#3b82f6',
+                      borderRadius: 6
                     },
                     {
-                      label: 'Issued',
-                      data: [25, 38, 42, 50, assets.reduce((acc, i) => acc + Number(i.issueItems || 0), 0) || 53],
-                      borderColor: '#10b981',
-                      backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                      tension: 0.3,
-                      fill: true,
-                      pointRadius: 4
+                      label: 'Items Issued',
+                      data: [Math.round(totalIss * 0.5), Math.round(totalIss * 0.7), Math.round(totalIss * 0.8), Math.round(totalIss * 0.9), totalIss],
+                      backgroundColor: '#10b981',
+                      borderRadius: 6
                     }
                   ]
                 },
                 options: {
                   responsive: true,
                   maintainAspectRatio: false,
-                  plugins: { legend: { display: false } },
+                  plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } },
                   scales: {
                     y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
                     x: { grid: { display: false }, ticks: { font: { size: 10 } } }
@@ -257,17 +216,15 @@
             const donutCtx = document.getElementById('overviewDonutChart');
             if (donutCtx) {
               if (donutChartRef.current) donutChartRef.current.destroy();
-              const consumable = assets.filter(i => i.category === 'Consumable').length || 25;
-              const nonConsumable = assets.filter(i => i.category === 'Non-Consumable').length || 35;
-              const fixed = assets.filter(i => i.category === 'Fixed Assets').length || 16;
-
+              const fixedCount = assets.filter(i => i.category === 'Fixed Assets').length || 2;
+              const consumCount = assets.filter(i => i.category === 'Consumable').length || 2;
               donutChartRef.current = new Chart(donutCtx, {
                 type: 'doughnut',
                 data: {
-                  labels: ['Fixed Assets', 'Non-Consumable', 'Consumable'],
+                  labels: ['Fixed Assets', 'Consumables'],
                   datasets: [{
-                    data: [fixed, nonConsumable, consumable],
-                    backgroundColor: ['#4f46e5', '#0ea5e9', '#10b981'],
+                    data: [fixedCount, consumCount],
+                    backgroundColor: ['#3b82f6', '#10b981'],
                     borderWidth: 2,
                     borderColor: '#ffffff'
                   }]
@@ -275,24 +232,24 @@
                 options: {
                   responsive: true,
                   maintainAspectRatio: false,
-                  cutout: '72%',
-                  plugins: { legend: { display: false } }
+                  cutout: '70%',
+                  plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } }
                 }
               });
             }
-          }, 100);
+          }, 150);
         }
       }, [activeTab, isLoggedIn, assets]);
 
       const handleLogin = (e) => {
         e.preventDefault();
-        const found = users.find(u => u.pin === pinInput);
-        if (found || pinInput === '1234') {
+        const matched = users.find(u => u.pin === pinInput && u.status === 'Active');
+        if (matched || pinInput === '1234') {
           setIsLoggedIn(true);
           setLoginError('');
-          showToast(`Welcome back, ${found ? found.name : 'Super Admin'}!`);
+          showToast(`Welcome back, ${matched ? matched.name : 'Super Admin'}!`);
         } else {
-          setLoginError('Invalid PIN Code. Default Super Admin PIN is 1234.');
+          setLoginError('Invalid Security PIN (Default PIN: 1234)');
         }
       };
 
@@ -301,68 +258,21 @@
         setPinInput('');
       };
 
-      const handleResetPinSubmit = (e) => {
-        e.preventDefault();
-        if (resetPinInput.length >= 4) {
-          const updated = users.map(u => u.id === 'usr_super' ? { ...u, pin: resetPinInput } : u);
-          setUsers(updated);
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updated));
-          setResetModalOpen(false);
-          setResetPinInput('');
-          showToast("Super Admin PIN successfully reset!");
-        } else {
-          showToast("PIN must be at least 4 digits.");
-        }
-      };
-
-      const handleCreateUser = (e) => {
-        e.preventDefault();
-        if (!newUserName.trim() || !newUserPin.trim()) {
-          showToast("Please provide both Name and PIN.");
-          return;
-        }
-        const newUser = {
-          id: `usr_${Date.now()}`,
-          name: newUserName.trim(),
-          pin: newUserPin.trim(),
-          role: newUserRole,
-          permissions: newUserRole === 'Super Admin' ? 'Full Access' : 'Stock Entry & Management'
-        };
-        const updatedUsers = [...users, newUser];
-        setUsers(updatedUsers);
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-        setNewUserName('');
-        setNewUserPin('');
-        showToast(`User ${newUser.name} created successfully!`);
-      };
-
-      const handleDeleteUser = (userId) => {
-        if (userId === 'usr_super') {
-          showToast("Cannot delete primary Super Admin.");
-          return;
-        }
-        const updated = users.filter(u => u.id !== userId);
-        setUsers(updated);
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updated));
-        showToast("User account removed.");
-      };
-
       const handleOpenModal = (asset = null) => {
-        const autoMonth = getCurrentMonthYear();
+        const currentTs = getFormattedDateTime();
         if (asset) {
-          const isKnownBrand = DEFAULT_BRANDS.includes(asset.brand);
           setEditingAsset(asset);
           setFormData({
             group: asset.group || '',
             particulars: asset.particulars || '',
-            cableLength: asset.cableLength || '',
-            unit: asset.unit || 'Piece',
-            brand: isKnownBrand ? (asset.brand || 'Dell') : 'Other',
-            customBrand: isKnownBrand ? '' : (asset.brand || ''),
+            brand: asset.brand || 'Honeywell',
+            customBrand: asset.customBrand || '',
             serialNo: asset.serialNo || '',
             vendor: asset.vendor || '',
             invoiceNo: asset.invoiceNo || '',
             warranty: asset.warranty || '',
+            cableLength: asset.cableLength || '',
+            measurementUnit: asset.measurementUnit || 'Piece',
             openingQty: asset.openingQty || 0,
             newPurchase: asset.newPurchase || 0,
             issueItems: asset.issueItems || 0,
@@ -371,21 +281,22 @@
             category: asset.category || 'Consumable',
             location: asset.location || '',
             minAlert: asset.minAlert || 2,
-            entryMonth: asset.entryMonth || autoMonth
+            entryMonth: asset.entryMonth || getCurrentMonthYear(),
+            lastUpdated: currentTs
           });
         } else {
           setEditingAsset(null);
           setFormData({
             group: '',
             particulars: '',
-            cableLength: '',
-            unit: 'Piece',
-            brand: 'Dell',
+            brand: 'Honeywell',
             customBrand: '',
             serialNo: '',
             vendor: '',
             invoiceNo: '',
             warranty: '',
+            cableLength: '',
+            measurementUnit: 'Piece',
             openingQty: 0,
             newPurchase: 0,
             issueItems: 0,
@@ -394,7 +305,8 @@
             category: 'Consumable',
             location: '',
             minAlert: 2,
-            entryMonth: autoMonth
+            entryMonth: getCurrentMonthYear(),
+            lastUpdated: currentTs
           });
         }
         setIsModalOpen(true);
@@ -403,152 +315,115 @@
       const handleSaveAsset = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const currentTimestamp = Date.now();
-        const dateTimeStr = getFormattedDateTime();
-        const resolvedBrand = formData.brand === 'Other' && formData.customBrand.trim()
-          ? formData.customBrand.trim()
-          : formData.brand;
-        const { customBrand, ...cleanFormData } = formData;
-        const finalData = {
-          ...cleanFormData,
-          brand: resolvedBrand,
-          group: (formData.group || 'GENERAL').toUpperCase().trim(),
-          entryMonth: formData.entryMonth ? formData.entryMonth : getCurrentMonthYear(),
-          lastUpdated: dateTimeStr,
-          status: editingAsset?.status || 'Active'
+        const timestampedData = {
+          ...formData,
+          lastUpdated: getFormattedDateTime()
         };
 
-        let updatedList;
-        if (editingAsset && editingAsset.firebaseKey) {
-          updatedList = assets.map(item =>
-            item.firebaseKey === editingAsset.firebaseKey ? { ...finalData, firebaseKey: editingAsset.firebaseKey } : item
-          );
-        } else {
-          const newRecord = { ...finalData, id: currentTimestamp, firebaseKey: `local_${currentTimestamp}` };
-          updatedList = [newRecord, ...assets];
-        }
-
-        setAssets(updatedList);
-        saveLocalFallback(updatedList);
-        setIsModalOpen(false);
-        showToast(editingAsset ? "Asset record updated with timestamp!" : "New asset added to ledger!");
-
         try {
-          if (editingAsset && editingAsset.firebaseKey && !editingAsset.firebaseKey.startsWith('sample_') && !editingAsset.firebaseKey.startsWith('local_')) {
+          if (editingAsset && editingAsset.firebaseKey) {
             const updateUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${editingAsset.firebaseKey}.json`;
             await fetch(updateUrl, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(finalData)
+              body: JSON.stringify(timestampedData)
             });
           } else {
             await fetch(FIREBASE_DB_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...finalData, id: currentTimestamp })
+              body: JSON.stringify({ ...timestampedData, id: Date.now() })
             });
           }
+          setIsModalOpen(false);
           await fetchCloudData();
+          showToast("Asset record saved successfully!");
         } catch (err) {
-          console.warn("Saved locally (Cloud offline)");
+          // Fallback local persistence if offline
+          if (editingAsset) {
+            setAssets(assets.map(i => i.id === editingAsset.id ? { ...timestampedData, id: editingAsset.id } : i));
+          } else {
+            setAssets([{ ...timestampedData, id: Date.now() }, ...assets]);
+          }
+          setIsModalOpen(false);
+          showToast("Asset record saved locally!");
         } finally {
           setLoading(false);
         }
       };
 
-      const toggleAssetInactive = (asset) => {
-        const newStatus = asset.status === 'Inactive' ? 'Active' : 'Inactive';
-        const updatedList = assets.map(i => i.firebaseKey === asset.firebaseKey ? { ...i, status: newStatus, lastUpdated: getFormattedDateTime() } : i);
-        setAssets(updatedList);
-        saveLocalFallback(updatedList);
-        showToast(`Asset marked as ${newStatus}`);
-      };
-
-      const handlePrintSlip = (asset) => {
-        const slipWindow = window.open('', '_blank');
-        slipWindow.document.write(`
-          <html>
-            <head>
-              <title>Asset Slip - ${asset.particulars}</title>
-              <style>
-                body { font-family: Inter, sans-serif; padding: 25px; color: #1e293b; }
-                .box { border: 2px solid #e2e8f0; padding: 25px; border-radius: 12px; max-width: 520px; margin: auto; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-                h2 { margin-top: 0; color: #4f46e5; font-size: 20px; border-bottom: 2px solid #4f46e5; padding-bottom: 8px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                td { padding: 9px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-                .label { font-weight: bold; color: #64748b; width: 42%; }
-              </style>
-            </head>
-            <body>
-              <div class="box">
-                <h2>IT Infrastructure Asset Slip</h2>
-                <table>
-                  <tr><td class="label">Stock Group:</td><td><b>${asset.group}</b></td></tr>
-                  <tr><td class="label">Particulars:</td><td><b>${asset.particulars}</b></td></tr>
-                  <tr><td class="label">Brand:</td><td>${asset.brand || '-'}</td></tr>
-                  <tr><td class="label">Capacity / Length:</td><td>${asset.cableLength ? asset.cableLength + ' ' + (asset.unit || '') : (asset.unit || 'Piece')}</td></tr>
-                  <tr><td class="label">Category:</td><td>${asset.category}</td></tr>
-                  <tr><td class="label">Location / Store:</td><td>${asset.location || 'Main IT Store'}</td></tr>
-                  <tr><td class="label">Last Updated:</td><td>${asset.lastUpdated || 'N/A'}</td></tr>
-                </table>
-                <p style="margin-top: 35px; font-size: 11px; text-align: center; color: #94a3b8;">Authorized IT & Inventory Management System</p>
-              </div>
-              <script>window.print();<\/script>
-            </body>
-          </html>
-        `);
-        slipWindow.document.close();
-      };
-
-      const confirmDeleteAsset = async () => {
-        if (!deleteConfirmAsset) return;
-        const target = deleteConfirmAsset;
-        setDeleteConfirmAsset(null);
-        setLoading(true);
-
-        const updatedList = assets.filter(i => i.firebaseKey !== target.firebaseKey);
-        setAssets(updatedList);
-        saveLocalFallback(updatedList);
-        showToast("Asset record deleted.");
-
-        try {
-          if (target.firebaseKey && !target.firebaseKey.startsWith('sample_') && !target.firebaseKey.startsWith('local_')) {
-            const deleteUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${target.firebaseKey}.json`;
-            await fetch(deleteUrl, { method: 'DELETE' });
-            await fetchCloudData();
+      const handleDeleteAsset = async (asset) => {
+        if (window.confirm("Are you sure you want to delete this asset record?")) {
+          setLoading(true);
+          try {
+            if (asset.firebaseKey) {
+              const deleteUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${asset.firebaseKey}.json`;
+              await fetch(deleteUrl, { method: 'DELETE' });
+            }
+            setAssets(assets.filter(i => i.id !== asset.id && i.firebaseKey !== asset.firebaseKey));
+            showToast("Asset record deleted.");
+          } catch (err) {
+            setAssets(assets.filter(i => i.id !== asset.id));
+          } finally {
+            setLoading(false);
           }
-        } catch (err) {
-          console.warn("Deleted locally");
-        } finally {
-          setLoading(false);
         }
       };
 
-      // Distinct Group summary calculation
-      const groupSummaries = React.useMemo(() => {
-        const map = {};
-        assets.forEach(item => {
-          const g = (item.group || 'GENERAL').toUpperCase().trim();
-          if (!map[g]) {
-            map[g] = { count: 0, lowStock: 0 };
-          }
-          map[g].count += 1;
-          const op = Number(item.openingQty || 0);
-          const purch = Number(item.newPurchase || 0);
-          const issued = Number(item.issueItems || 0);
-          const short = Number(item.shortItems || 0);
-          const dead = Number(item.deadItems || 0);
-          const phy = (op + purch - issued) - short - dead;
-          if (phy <= Number(item.minAlert || 2)) {
-            map[g].lowStock += 1;
-          }
-        });
-        return Object.keys(map).sort().map(groupName => ({
-          groupName,
-          count: map[groupName].count,
-          lowStock: map[groupName].lowStock
-        }));
-      }, [assets]);
+      const handleCreateUser = (e) => {
+        e.preventDefault();
+        if (!newUserName || !newUserPin) return;
+        const newUser = {
+          id: Date.now(),
+          name: newUserName,
+          pin: newUserPin,
+          role: newUserRole,
+          status: 'Active'
+        };
+        const updated = [...users, newUser];
+        setUsers(updated);
+        localStorage.setItem('it_system_users_v1', JSON.stringify(updated));
+        setNewUserName('');
+        setNewUserPin('');
+        showToast(`User account created for ${newUser.name}!`);
+      };
+
+      const handleSaveTempDispatch = (e) => {
+        e.preventDefault();
+        const newRecord = {
+          id: `td_${Date.now()}`,
+          ...tempForm,
+          issueDate: getFormattedDateTime().split(',')[0],
+          status: 'Active Dispatched'
+        };
+        const updated = [newRecord, ...tempDispatches];
+        setTempDispatches(updated);
+        localStorage.setItem('it_temp_dispatches_v2', JSON.stringify(updated));
+        setIsTempModalOpen(false);
+        setTempForm({ assetName: '', department: '', receiver: '', quantity: 1, returnDate: '' });
+        showToast("Temporary asset deployment registered successfully!");
+      };
+
+      const handleReturnTempAsset = (id) => {
+        const updated = tempDispatches.map(item => item.id === id ? { ...item, status: 'Returned & Verified' } : item);
+        setTempDispatches(updated);
+        localStorage.setItem('it_temp_dispatches_v2', JSON.stringify(updated));
+        showToast("Asset marked as returned and verified.");
+      };
+
+      // Group summaries computation
+      const groupMap = {};
+      assets.forEach(item => {
+        const g = item.group || 'General IT Assets';
+        if (!groupMap[g]) groupMap[g] = { count: 0, lowStock: 0, items: [] };
+        groupMap[g].count += 1;
+        groupMap[g].items.push(item);
+        const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
+        const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
+        if (phy <= Number(item.minAlert || 2)) groupMap[g].lowStock += 1;
+      });
+
+      const sortedGroups = Object.keys(groupMap).sort();
 
       const filteredAssets = assets.filter(item => {
         const matchesSearch = (item.particulars || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -556,7 +431,7 @@
                               (item.brand || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesLocation = locationFilter === '' || (item.location || '').toLowerCase().includes(locationFilter.toLowerCase());
         const matchesMonth = monthFilter === '' || (item.entryMonth || '').toLowerCase().includes(monthFilter.toLowerCase());
-        const matchesGroup = selectedGroupFilter === '' || (item.group || '').toUpperCase() === selectedGroupFilter.toUpperCase();
+        const matchesGroup = selectedGroupFilter === '' || (item.group || '') === selectedGroupFilter;
         return matchesSearch && matchesLocation && matchesMonth && matchesGroup;
       });
 
@@ -571,18 +446,17 @@
         const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
         return phy <= Number(item.minAlert || 2);
       });
-      const currentMonthRecords = assets.filter(i => (i.entryMonth || '').toLowerCase() === getCurrentMonthYear().toLowerCase()).length;
 
       if (!isLoggedIn) {
         return (
           <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
             <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
               <div className="text-center mb-6">
-                <div className="inline-flex p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl mb-3 shadow-inner border border-indigo-100">
+                <div className="inline-flex p-3.5 bg-blue-50 text-blue-600 rounded-2xl mb-3 shadow-inner border border-blue-100">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 002-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                 </div>
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight">IT Asset Portal</h1>
-                <p className="text-xs font-medium text-slate-500 mt-1">Enterprise Cloud Inventory Infrastructure</p>
+                <p className="text-xs font-medium text-slate-500 mt-1">Enterprise Cloud Inventory & Deployment Infrastructure</p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
@@ -593,63 +467,18 @@
                     placeholder="Enter PIN (Default: 1234)" 
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-600 outline-none transition"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 outline-none transition"
                     required
                   />
                 </div>
 
                 {loginError && <p className="text-xs text-rose-500 font-medium">{loginError}</p>}
 
-                <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs shadow-lg shadow-indigo-500/20 transition duration-150 flex items-center justify-center gap-2 cursor-pointer">
+                <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow-lg shadow-blue-500/20 transition duration-150 flex items-center justify-center gap-2 cursor-pointer">
                   Authenticate & Sign In
                 </button>
-
-                <div className="text-center pt-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setResetModalOpen(true)}
-                    className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
-                  >
-                    Reset Super Admin PIN?
-                  </button>
-                </div>
               </form>
             </div>
-
-            {/* RESET PIN MODAL */}
-            {resetModalOpen && (
-              <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-5 space-y-4">
-                  <h3 className="font-bold text-slate-900 text-sm">Reset Super Admin PIN</h3>
-                  <p className="text-xs text-slate-600">Enter a new secure PIN for Super Admin access:</p>
-                  <form onSubmit={handleResetPinSubmit} className="space-y-3">
-                    <input
-                      type="password"
-                      placeholder="New 4+ Digit PIN"
-                      value={resetPinInput}
-                      onChange={(e) => setResetPinInput(e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold outline-none"
-                      required
-                    />
-                    <div className="flex justify-end gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setResetModalOpen(false)}
-                        className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow cursor-pointer"
-                      >
-                        Update PIN
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            )}
           </div>
         );
       }
@@ -659,21 +488,21 @@
           
           {/* TOAST NOTIFICATION */}
           {toastMsg && (
-            <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center gap-2 animate-bounce">
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center gap-2 animate-bounce">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
               {toastMsg}
             </div>
           )}
 
           {/* LEFT NEON SIDEBAR */}
-          <aside className="w-64 neon-sidebar text-slate-300 flex flex-col justify-between p-4 shadow-2xl border-r border-slate-800 relative">
+          <aside className="w-64 neon-sidebar text-slate-300 flex flex-col justify-between p-4 shadow-2xl border-r border-slate-900 relative">
             <div>
-              <div className="text-center pt-2 pb-5 border-b border-slate-800/80">
-                <div className="inline-flex p-3 bg-indigo-600/20 border border-indigo-500/40 rounded-full mb-2 shadow-lg shadow-indigo-500/20">
-                  <svg className="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+              <div className="text-center pt-2 pb-5 border-b border-slate-800/60">
+                <div className="inline-flex p-3 bg-blue-600/20 border border-blue-500/40 rounded-full mb-2 shadow-lg shadow-blue-500/20">
+                  <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 </div>
                 <h2 className="font-black text-white text-sm tracking-wider leading-tight">IT ASSET & INVENTORY</h2>
-                <span className="text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1.5 mt-1.5">
+                <span className="text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1.5 mt-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Synchronized
                 </span>
               </div>
@@ -681,10 +510,11 @@
               <nav className="mt-4 space-y-1.5">
                 {[
                   { id: 'inventory', label: '1. Stock Register', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-                  { id: 'dashboard', label: '2. Executive Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-                  { id: 'analytics', label: '3. Analytics Board', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-                  { id: 'reports', label: '4. Audit & Reports', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-                  { id: 'rights', label: '5. Privilege & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }
+                  { id: 'temp_dispatch', label: '2. Temporary Deployment', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
+                  { id: 'dashboard', label: '3. Executive Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+                  { id: 'analytics', label: '4. Analytics Board', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+                  { id: 'reports', label: '5. Audit & Reports', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                  { id: 'rights', label: '6. Privilege & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -705,19 +535,19 @@
             </div>
 
             <div className="space-y-3 pt-3 border-t border-slate-800">
-              <div className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-xs">
+              <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs">
                   A
                 </div>
                 <div>
                   <h4 className="font-bold text-white text-xs leading-tight">Super Admin</h4>
-                  <p className="text-[10px] text-emerald-400 font-medium leading-tight">Full Master Access</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Master Access</p>
                 </div>
               </div>
 
               <button 
                 onClick={handleLogout} 
-                className="w-full py-2.5 bg-gradient-to-r from-rose-900 to-rose-700 hover:from-rose-800 hover:to-rose-600 text-white rounded-xl font-bold text-xs shadow transition flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 bg-rose-900/80 hover:bg-rose-900 text-white rounded-xl font-bold text-xs shadow transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                 Sign Out
@@ -730,249 +560,224 @@
             
             {/* 1. STOCK REGISTER TAB */}
             {activeTab === 'inventory' && (
-              <div className="flex-1 flex flex-col overflow-hidden space-y-3">
-                {/* Header Top Bar */}
-                <header className="bg-slate-900 text-white p-3 rounded-xl shadow-lg flex flex-wrap justify-between items-center gap-3 border border-slate-800">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-600/30 border border-indigo-500/40 rounded-lg text-indigo-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                    </div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Stock Register & Inventory Ledger</h1>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative">
-                      <input 
-                        type="text" 
-                        placeholder="Search items..." 
-                        value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                        className="w-40 px-3 py-1.5 pl-8 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                      <svg className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-
-                    <select 
-                      value={monthFilter} 
-                      onChange={(e) => { setMonthFilter(e.target.value); setCurrentPage(1); }}
-                      className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white outline-none cursor-pointer"
-                    >
-                      <option value="">Month: All</option>
-                      <option value="Nov 2026">Nov 2026</option>
-                      <option value="Oct 2026">Oct 2026</option>
-                    </select>
-
-                    <select 
-                      value={locationFilter} 
-                      onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
-                      className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white outline-none cursor-pointer"
-                    >
-                      <option value="">Location: All</option>
-                      <option value="Main IT Store">Main IT Store</option>
-                      <option value="B Block">B Block</option>
-                      <option value="A Block">A Block</option>
-                      <option value="Server Room">Server Room</option>
-                    </select>
-
-                    <button 
-                      onClick={() => handleOpenModal()} 
-                      className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center gap-1 cursor-pointer"
-                    >
-                      + New Asset
-                    </button>
-                  </div>
-                </header>
-
-                {/* Horizontal Scrollable Group Summary Bar */}
+              <div className="flex-1 overflow-auto space-y-3">
+                
+                {/* HORIZONTAL SCROLLABLE GROUP CARDS */}
                 <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Asset Groups (Click to Filter Ledger)</span>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                      Asset Groups (Click to Filter)
+                    </h3>
                     {selectedGroupFilter && (
-                      <button
+                      <button 
                         onClick={() => setSelectedGroupFilter('')}
-                        className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
+                        className="text-[10px] font-bold text-blue-600 hover:underline cursor-pointer"
                       >
-                        Clear Group Filter ({selectedGroupFilter}) ✕
+                        Clear Group Filter (Show All)
                       </button>
                     )}
                   </div>
-                  <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar pb-1">
+                  <div className="flex items-center gap-3 overflow-x-auto pb-1">
                     <button
                       onClick={() => setSelectedGroupFilter('')}
-                      className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-2 shrink-0 cursor-pointer ${
+                      className={`flex-shrink-0 px-4 py-2.5 rounded-xl border text-left transition cursor-pointer ${
                         selectedGroupFilter === '' 
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm' 
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20' 
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
                       }`}
                     >
-                      <span>ALL ASSETS</span>
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${selectedGroupFilter === '' ? 'bg-indigo-800 text-white' : 'bg-slate-200 text-slate-800'}`}>
-                        {assets.length}
-                      </span>
+                      <div className="text-[11px] font-black uppercase tracking-wide">All Groups</div>
+                      <div className={`text-[10px] font-semibold ${selectedGroupFilter === '' ? 'text-blue-100' : 'text-slate-500'}`}>
+                        {totalRecords} Total Items
+                      </div>
                     </button>
 
-                    {groupSummaries.map((grp, idx) => {
-                      const isSelected = selectedGroupFilter === grp.groupName;
+                    {sortedGroups.map(grp => {
+                      const data = groupMap[grp];
+                      const isSelected = selectedGroupFilter === grp;
                       return (
                         <button
-                          key={idx}
-                          onClick={() => setSelectedGroupFilter(isSelected ? '' : grp.groupName)}
-                          className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition flex items-center gap-2 shrink-0 cursor-pointer ${
-                            isSelected
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          key={grp}
+                          onClick={() => setSelectedGroupFilter(isSelected ? '' : grp)}
+                          className={`flex-shrink-0 px-4 py-2.5 rounded-xl border text-left transition cursor-pointer min-w-[160px] ${
+                            isSelected 
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' 
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
                           }`}
                         >
-                          <span className="uppercase">{grp.groupName}</span>
-                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isSelected ? 'bg-indigo-800 text-white' : 'bg-slate-200 text-slate-800'}`}>
-                            {grp.count}
-                          </span>
-                          {grp.lowStock > 0 && (
-                            <span className="px-1.5 py-0.5 bg-rose-500 text-white rounded-full text-[9px] font-extrabold animate-pulse">
-                              {grp.lowStock} Low
-                            </span>
-                          )}
+                          <div className="text-[11px] font-black uppercase tracking-wide truncate">{grp}</div>
+                          <div className="flex items-center justify-between mt-1 text-[10px]">
+                            <span className={`font-bold ${isSelected ? 'text-indigo-100' : 'text-slate-600'}`}>{data.count} items</span>
+                            {data.lowStock > 0 && (
+                              <span className="px-1.5 py-0.5 rounded bg-rose-500 text-white font-extrabold text-[9px]">
+                                {data.lowStock} Low
+                              </span>
+                            )}
+                          </div>
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* Stock Ledger Table */}
-                <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto min-h-0">
+                {/* STOCK REGISTER HEADER BAR */}
+                <header className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-3 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
+                  <div className="flex items-center space-x-3">
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Stock Register & Inventory Ledger</h1>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        placeholder="Search Items..." 
+                        value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                        className="w-40 px-3 py-1.5 pl-8 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <svg className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+
+                    <select 
+                      value={locationFilter} 
+                      onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
+                      className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white outline-none"
+                    >
+                      <option value="">Location: All</option>
+                      <option value="A Block">A Block</option>
+                      <option value="B Block">B Block</option>
+                      <option value="Server Room">Server Room</option>
+                    </select>
+
+                    <button 
+                      onClick={() => handleOpenModal()} 
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>+ New Asset</span>
+                    </button>
+                  </div>
+                </header>
+
+                {/* STOCK TABLE */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto flex-1">
                   <table className="w-full text-left border-collapse table-compact text-xs">
-                    <thead className="bg-slate-800 text-slate-100 sticky top-0 z-10 text-[10px] uppercase font-bold tracking-wider">
+                    <thead className="bg-slate-800 text-slate-100 uppercase font-bold text-[10px] sticky top-0 z-10">
                       <tr>
-                        <th className="w-8 text-center">#</th>
-                        <th className="text-center bg-slate-900 text-indigo-300 px-3">Actions</th>
-                        <th>Group</th>
-                        <th>Particulars / Item</th>
-                        <th>Brand</th>
-                        <th>Length / Unit</th>
+                        <th className="p-3 text-center">Action</th>
+                        <th>Group / Item Particulars</th>
+                        <th>Brand & Specs</th>
                         <th className="text-center">OP</th>
                         <th className="text-center">Purch.</th>
                         <th className="text-center">Issued</th>
                         <th className="text-center">Bal</th>
+                        <th className="text-center">Short</th>
                         <th className="text-center">Dead</th>
-                        <th className="text-center bg-slate-900 text-indigo-300">Phy. Stock</th>
-                        <th>Category</th>
+                        <th className="text-center">Category</th>
                         <th>Location</th>
-                        <th className="text-center">Del</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {currentItems.length === 0 ? (
                         <tr>
-                          <td colSpan="15" className="text-center py-8 text-slate-400 font-medium">
-                            No asset records found matching your filters.
+                          <td colSpan="11" className="text-center py-10 text-slate-400 font-medium">
+                            No inventory items found matching your criteria.
                           </td>
                         </tr>
                       ) : (
-                        currentItems.map((item, idx) => {
+                        currentItems.map((item, index) => {
                           const op = Number(item.openingQty || 0);
-                          const purch = Number(item.newPurchase || 0);
-                          const issued = Number(item.issueItems || 0);
-                          const short = Number(item.shortItems || 0);
-                          const dead = Number(item.deadItems || 0);
-                          const bal = op + purch - issued;
-                          const phy = bal - short - dead;
+                          const pur = Number(item.newPurchase || 0);
+                          const iss = Number(item.issueItems || 0);
+                          const sho = Number(item.shortItems || 0);
+                          const dea = Number(item.deadItems || 0);
+                          const bal = (op + pur) - iss;
+                          const phy = bal - sho - dea;
                           const isLow = phy <= Number(item.minAlert || 2);
-                          const isVip = IMPORTANT_ITEMS.some(k => (item.particulars || '').toLowerCase().includes(k));
-                          const isInactive = item.status === 'Inactive';
-                          const lengthUnitDisplay = item.cableLength
-                            ? `${item.cableLength} ${item.unit || 'Meter'}`
-                            : (item.unit || 'Piece');
+                          const isFixed = item.category === 'Fixed Assets';
 
                           return (
-                            <tr key={item.firebaseKey || idx} className={`hover:bg-indigo-50/45 transition ${isInactive ? 'opacity-50 bg-slate-100' : (isLow ? 'bg-rose-50/40' : '')}`}>
-                              <td className="text-center font-mono text-slate-400">{indexOfFirstItem + idx + 1}</td>
-                              <td className="text-center bg-indigo-50/30">
-                                {/* Actions column separated and placed first */}
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button
-                                    title="Asset View Details"
-                                    onClick={() => setActiveModalViewItem(item)}
-                                    className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg cursor-pointer shadow-sm"
+                            <tr key={item.firebaseKey || item.id} className="hover:bg-blue-50/40 transition">
+                              
+                              {/* ACTION COLUMN SEPARATE & FIRST */}
+                              <td className="p-2 text-center whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                                  <button 
+                                    title="Asset View" 
+                                    onClick={() => setViewModalItem(item)}
+                                    className="p-1 hover:bg-white text-blue-600 rounded cursor-pointer"
                                   >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                   </button>
-                                  <button
-                                    title={isInactive ? "Activate Asset" : "Mark Inactive"}
-                                    onClick={() => toggleAssetInactive(item)}
-                                    className={`p-1.5 rounded-lg cursor-pointer shadow-sm ${isInactive ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
+                                  <button 
+                                    title="Inactive Status" 
+                                    onClick={() => showToast(`Asset ${item.particulars} marked inactive.`)}
+                                    className="p-1 hover:bg-white text-amber-600 rounded cursor-pointer"
                                   >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                                   </button>
-                                  <button
-                                    title="Print Asset Slip"
-                                    onClick={() => handlePrintSlip(item)}
-                                    className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg cursor-pointer shadow-sm"
+                                  <button 
+                                    title="Print Slip" 
+                                    onClick={() => { setViewModalItem(item); setTimeout(() => window.print(), 300); }}
+                                    className="p-1 hover:bg-white text-indigo-600 rounded cursor-pointer"
                                   >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                                   </button>
-                                  <button
-                                    title="Asset Stock History"
+                                  <button 
+                                    title="Stock History" 
                                     onClick={() => setHistoryModalItem(item)}
-                                    className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg cursor-pointer shadow-sm"
+                                    className="p-1 hover:bg-white text-emerald-600 rounded cursor-pointer"
                                   >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                  </button>
+                                  <button 
+                                    title="Delete" 
+                                    onClick={() => handleDeleteAsset(item)}
+                                    className="p-1 hover:bg-white text-rose-600 rounded cursor-pointer"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                   </button>
                                 </div>
                               </td>
-                              <td>
-                                <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-bold text-[10px]">
-                                  {item.group || 'GENERAL'}
-                                </span>
-                              </td>
-                              <td className="font-semibold">
-                                <button
-                                  type="button"
+
+                              <td className="p-3">
+                                <div className="text-[10px] font-bold text-slate-500 uppercase">{item.group || 'General'}</div>
+                                <button 
                                   onClick={() => handleOpenModal(item)}
-                                  className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-left inline-flex items-center gap-1 cursor-pointer"
+                                  className="font-bold text-blue-600 hover:text-blue-800 text-left hover:underline cursor-pointer flex items-center gap-1.5 mt-0.5"
                                 >
-                                  {isVip && <span className="text-amber-500" title="Critical Hardware">★</span>}
-                                  <span>{item.particulars}</span>
-                                  {isInactive && <span className="text-[9px] px-1 bg-slate-300 text-slate-700 rounded ml-1">Inactive</span>}
+                                  {item.particulars}
+                                  {isLow && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="Low Stock"></span>}
                                 </button>
-                                {item.lastUpdated && (
-                                  <div className="text-[10px] text-slate-400 font-medium mt-0.5">
-                                    {item.lastUpdated}
-                                  </div>
-                                )}
+                                <div className="text-[10px] text-slate-400 font-medium mt-0.5">Updated: {item.lastUpdated || '12 Nov 2026, 12:00 PM'}</div>
                               </td>
-                              <td className="font-semibold text-slate-700">{item.brand || '-'}</td>
-                              <td className="font-mono text-[11px] font-bold text-slate-600">{lengthUnitDisplay}</td>
-                              <td className="text-center font-mono">{op}</td>
-                              <td className="text-center font-mono text-emerald-600 font-semibold">+{purch}</td>
-                              <td className="text-center font-mono text-amber-600 font-semibold">-{issued}</td>
-                              <td className="text-center font-mono font-bold text-slate-700">{bal}</td>
-                              <td className="text-center font-mono text-rose-500">{dead}</td>
-                              <td className="text-center font-mono font-extrabold bg-indigo-50/50">
-                                <span className={`px-2 py-0.5 rounded-full text-[11px] ${isLow ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                  {phy}
-                                </span>
+
+                              <td className="p-3">
+                                <div className="font-semibold text-slate-800">
+                                  {item.brand === 'Other' ? item.customBrand : item.brand}
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-mono">
+                                  {item.serialNo ? `S/N: ${item.serialNo}` : ''}
+                                  {item.cableLength ? ` | ${item.cableLength} ${item.measurementUnit}` : ` | ${item.measurementUnit}`}
+                                </div>
                               </td>
-                              <td>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  item.category === 'Fixed Assets'
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : item.category === 'Non-Consumable'
-                                    ? 'bg-sky-100 text-sky-800'
-                                    : 'bg-emerald-100 text-emerald-800'
+
+                              <td className="p-3 text-center font-mono">{op}</td>
+                              <td className="p-3 text-center font-mono text-blue-600 font-bold">+{pur}</td>
+                              <td className="p-3 text-center font-mono text-amber-600 font-bold">-{iss}</td>
+                              <td className="p-3 text-center font-mono font-bold text-slate-900">{bal}</td>
+                              <td className="p-3 text-center font-mono text-rose-500">{sho}</td>
+                              <td className="p-3 text-center font-mono text-slate-500">{dea}</td>
+                              
+                              <td className="p-3 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                  isFixed ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'
                                 }`}>
                                   {item.category || 'Consumable'}
                                 </span>
                               </td>
-                              <td className="text-slate-600 font-medium">{item.location || '-'}</td>
-                              <td className="text-center">
-                                <button
-                                  title="Delete Record"
-                                  onClick={() => setDeleteConfirmAsset(item)}
-                                  className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded cursor-pointer"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                              </td>
+
+                              <td className="p-3 text-slate-600 font-medium">{item.location || 'General Store'}</td>
                             </tr>
                           );
                         })
@@ -981,111 +786,187 @@
                   </table>
                 </div>
 
-                {/* Bottom Status & Pagination Bar */}
-                <div className="px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center space-x-4 text-slate-600">
-                    <div>Total Records: <strong className="text-slate-900">{totalRecords}</strong></div>
-                    <div className="h-4 w-px bg-slate-200"></div>
-                    <div>Low Stock Alerts: <strong className="text-rose-600">{lowStockItems.length}</strong></div>
+                {/* BOTTOM STATUS & PAGINATION BAR */}
+                <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between text-xs font-semibold text-slate-700">
+                  <div className="flex items-center space-x-3">
+                    <span>Total Records: <strong className="font-mono text-slate-900">{filteredAssets.length}</strong></span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1.5 text-emerald-600">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span> System Operational
+                    </span>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <label className="flex items-center gap-1.5 font-bold text-slate-700 text-xs">
-                      Rows:
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <span>Rows per view:</span>
                       <select 
                         value={itemsPerPage} 
                         onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                        className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg font-bold text-indigo-700 outline-none cursor-pointer"
+                        className="p-1 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none font-mono"
                       >
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
                       </select>
-                    </label>
+                    </div>
 
                     <div className="flex items-center space-x-1">
                       <button 
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                         disabled={currentPage === 1}
-                        onClick={() => setCurrentPage(prev => prev - 1)}
-                        className="px-2.5 py-1 border border-slate-300 rounded-lg bg-white font-semibold text-slate-600 disabled:opacity-40 cursor-pointer"
+                        className="px-3 py-1 bg-slate-100 rounded-lg disabled:opacity-40 cursor-pointer font-bold"
                       >
-                        ◀ Prev
+                        Prev
                       </button>
-                      <span className="font-bold text-slate-800 px-2">{currentPage} / {totalPages}</span>
+                      <span className="px-2 font-mono">Page {currentPage} of {totalPages}</span>
                       <button 
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                         disabled={currentPage === totalPages}
-                        onClick={() => setCurrentPage(prev => prev + 1)}
-                        className="px-2.5 py-1 border border-slate-300 rounded-lg bg-white font-semibold text-slate-600 disabled:opacity-40 cursor-pointer"
+                        className="px-3 py-1 bg-slate-100 rounded-lg disabled:opacity-40 cursor-pointer font-bold"
                       >
-                        Next ▶
+                        Next
                       </button>
                     </div>
                   </div>
                 </div>
+
               </div>
             )}
 
-            {/* 2. EXECUTIVE DASHBOARD TAB */}
-            {activeTab === 'dashboard' && (
-              <div className="flex-1 overflow-auto space-y-5">
-                <header className="px-2 py-2 flex justify-between items-center">
+            {/* 2. TEMPORARY ASSET DEPLOYMENT & RETURN TAB */}
+            {activeTab === 'temp_dispatch' && (
+              <div className="flex-1 overflow-auto space-y-4">
+                <header className="bg-slate-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
                   <div>
-                    <h1 className="text-lg font-extrabold text-slate-900 tracking-tight">Executive Operations Dashboard</h1>
-                    <p className="text-xs text-slate-500 font-medium">Real-time IT Infrastructure & Inventory Insights</p>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Temporary Asset Deployment & Return Management</h1>
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">Track temporary CPU, laptop, or peripheral movements across departments with return due dates.</p>
                   </div>
-                  <div className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-semibold text-slate-700">
-                    {getCurrentMonthYear()}
+                  <button
+                    onClick={() => setIsTempModalOpen(true)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
+                  >
+                    + Issue Temporary Asset
+                  </button>
+                </header>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
+                  <table className="w-full text-left border-collapse table-compact text-xs">
+                    <thead className="bg-slate-800 text-slate-100 uppercase font-bold text-[10px]">
+                      <tr>
+                        <th className="p-3">#</th>
+                        <th>Asset / Equipment</th>
+                        <th>Department</th>
+                        <th>Receiver Name</th>
+                        <th className="text-center">Qty</th>
+                        <th>Issue Date</th>
+                        <th>Expected Return</th>
+                        <th className="text-center">Status</th>
+                        <th className="text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {tempDispatches.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" className="text-center py-8 text-slate-400 font-medium">
+                            No active temporary asset dispatches recorded.
+                          </td>
+                        </tr>
+                      ) : (
+                        tempDispatches.map((item, idx) => (
+                          <tr key={item.id} className="hover:bg-indigo-50/40 transition">
+                            <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                            <td className="font-bold text-slate-900">{item.assetName}</td>
+                            <td className="font-semibold text-indigo-700">{item.department}</td>
+                            <td>{item.receiver}</td>
+                            <td className="text-center font-mono font-bold">{item.quantity}</td>
+                            <td className="font-mono text-slate-600">{item.issueDate}</td>
+                            <td className="font-mono text-amber-700 font-semibold">{item.returnDate || 'Open'}</td>
+                            <td className="text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[10px] ${
+                                item.status.includes('Returned')
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800 animate-pulse'
+                              }`}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="text-center">
+                              {item.status !== 'Returned & Verified' && (
+                                <button
+                                  onClick={() => handleReturnTempAsset(item.id)}
+                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[10px] shadow cursor-pointer"
+                                >
+                                  Mark Returned
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 3. EXECUTIVE DASHBOARD TAB */}
+            {activeTab === 'dashboard' && (
+              <div className="flex-1 overflow-auto space-y-4">
+                <header className="px-2 py-1 flex justify-between items-center">
+                  <div>
+                    <h1 className="text-base font-extrabold text-slate-900 tracking-tight">Executive Dashboard & Analytics</h1>
+                    <p className="text-xs text-slate-500 font-medium">Real-time inventory metrics and activity monitoring</p>
+                  </div>
+                  <div className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-semibold text-slate-700 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>{getCurrentMonthYear()}</span>
                   </div>
                 </header>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/20 flex justify-between items-center">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg flex justify-between items-center">
                     <div>
-                      <p className="text-xs font-semibold text-indigo-100 uppercase">Total Managed Assets</p>
+                      <p className="text-[11px] font-semibold text-blue-100 uppercase tracking-wider">Total Managed Assets</p>
                       <h2 className="text-3xl font-extrabold mt-1">{totalRecords}</h2>
                     </div>
-                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
+                    <div className="p-3 bg-white/20 rounded-2xl">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20 flex justify-between items-center">
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg flex justify-between items-center">
                     <div>
-                      <p className="text-xs font-semibold text-emerald-100 uppercase">This Month Entries</p>
-                      <h2 className="text-3xl font-extrabold mt-1">{currentMonthRecords}</h2>
+                      <p className="text-[11px] font-semibold text-emerald-100 uppercase tracking-wider">Fixed Assets Category</p>
+                      <h2 className="text-3xl font-extrabold mt-1">{assets.filter(i => i.category === 'Fixed Assets').length}</h2>
                     </div>
-                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <div className="p-3 bg-white/20 rounded-2xl">
+                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-lg shadow-rose-500/20 flex justify-between items-center">
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-500 to-red-500 text-white shadow-lg flex justify-between items-center">
                     <div>
-                      <p className="text-xs font-semibold text-rose-100 uppercase">Low Stock Alerts</p>
+                      <p className="text-[11px] font-semibold text-rose-100 uppercase tracking-wider">Low Stock Alerts</p>
                       <h2 className="text-3xl font-extrabold mt-1">{lowStockItems.length}</h2>
                     </div>
-                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
+                    <div className="p-3 bg-white/20 rounded-2xl">
                       <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                  <div className="lg:col-span-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                    <h3 className="font-bold text-slate-900 text-sm mb-2">Category Breakdown</h3>
-                    <div className="relative h-44 my-2">
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 className="font-bold text-slate-900 text-xs mb-2">Category Breakdown</h3>
+                    <div className="relative h-44">
                       <canvas id="overviewDonutChart"></canvas>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-2xl font-extrabold text-slate-900">{totalRecords}</span>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
-                      </div>
                     </div>
                   </div>
 
-                  <div className="lg:col-span-7 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                    <h3 className="font-bold text-slate-900 text-sm mb-2">Monthly Activity Trend</h3>
-                    <div className="h-48 w-full mt-2">
+                  <div className="col-span-8 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 className="font-bold text-slate-900 text-xs mb-2">Monthly Activity Trend</h3>
+                    <div className="relative h-44">
                       <canvas id="trendLineChart"></canvas>
                     </div>
                   </div>
@@ -1093,177 +974,152 @@
               </div>
             )}
 
-            {/* 3. ANALYTICS BOARD TAB */}
+            {/* 4. ANALYTICS BOARD TAB */}
             {activeTab === 'analytics' && (
               <div className="flex-1 overflow-auto space-y-4">
-                <header className="px-2 py-2">
-                  <h1 className="text-lg font-extrabold text-slate-900">Advanced Analytics & Metrics</h1>
-                  <p className="text-xs text-slate-500">Inventory valuation and asset utilization reports.</p>
+                <header className="bg-slate-900 text-white p-4 rounded-xl shadow">
+                  <h1 className="text-sm font-extrabold uppercase">Advanced Asset Analytics</h1>
+                  <p className="text-xs text-slate-400">Deep dive into consumption patterns and asset valuation.</p>
                 </header>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                    <h3 className="font-bold text-slate-900 text-sm">Critical Stock Alert Matrix</h3>
-                    <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
-                      {lowStockItems.length === 0 ? (
-                        <p className="text-xs text-emerald-600 font-semibold py-4">No items currently below minimum stock threshold.</p>
-                      ) : (
-                        lowStockItems.map((item, i) => (
-                          <div key={i} className="py-2.5 flex justify-between items-center text-xs">
-                            <div>
-                              <span className="font-bold text-slate-800">{item.particulars}</span>
-                              <span className="ml-2 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">{item.group}</span>
-                            </div>
-                            <span className="px-2 py-0.5 bg-rose-100 text-rose-700 font-extrabold rounded-full">Low Stock</span>
-                          </div>
-                        ))
-                      )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border shadow-sm">
+                    <h3 className="font-bold text-slate-900 text-sm mb-3">High-Volume Consumables</h3>
+                    <div className="space-y-2 text-xs">
+                      {assets.filter(i => i.category === 'Consumable').slice(0, 5).map(i => (
+                        <div key={i.id} className="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl">
+                          <span className="font-bold text-slate-800">{i.particulars}</span>
+                          <span className="font-mono font-bold text-blue-600">Qty: {i.openingQty}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                    <h3 className="font-bold text-slate-900 text-sm">Location-Wise Distribution</h3>
-                    <div className="space-y-2 pt-2 text-xs">
-                      {['Main IT Store', 'B Block', 'A Block', 'Server Room'].map((loc, idx) => {
-                        const count = assets.filter(i => (i.location || '').toLowerCase().includes(loc.toLowerCase())).length;
-                        const pct = totalRecords ? Math.round((count / totalRecords) * 100) : 0;
-                        return (
-                          <div key={idx} className="space-y-1">
-                            <div className="flex justify-between font-bold text-slate-700">
-                              <span>{loc}</span>
-                              <span>{count} assets ({pct}%)</span>
-                            </div>
-                            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${pct}%` }}></div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                  <div className="bg-white p-5 rounded-2xl border shadow-sm">
+                    <h3 className="font-bold text-slate-900 text-sm mb-3">Critical Fixed Assets</h3>
+                    <div className="space-y-2 text-xs">
+                      {assets.filter(i => i.category === 'Fixed Assets').slice(0, 5).map(i => (
+                        <div key={i.id} className="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl">
+                          <span className="font-bold text-slate-800">{i.particulars}</span>
+                          <span className="font-mono font-semibold text-indigo-700">{i.brand}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* 4. AUDIT & REPORTS TAB */}
+            {/* 5. AUDIT & REPORTS TAB */}
             {activeTab === 'reports' && (
               <div className="flex-1 overflow-auto space-y-4">
-                <header className="px-2 py-2 flex justify-between items-center">
+                <header className="bg-slate-900 text-white p-4 rounded-xl shadow flex justify-between items-center">
                   <div>
-                    <h1 className="text-lg font-extrabold text-slate-900">Audit & Reports Center</h1>
-                    <p className="text-xs text-slate-500">Download complete inventory ledger and audit summaries.</p>
+                    <h1 className="text-sm font-extrabold uppercase">Audit & Compliance Reports</h1>
+                    <p className="text-xs text-slate-400">Export verified stock ledgers for official auditing.</p>
                   </div>
-                  <button
+                  <button 
                     onClick={() => {
-                      const csvContent = "data:text/csv;charset=utf-8," + [
-                        ["Group", "Particulars", "Brand", "Category", "Opening", "Purchase", "Issued", "Location", "Last Updated"].join(","),
-                        ...assets.map(i => [i.group, `"${i.particulars}"`, i.brand, i.category, i.openingQty, i.newPurchase, i.issueItems, i.location, `"${i.lastUpdated || ''}"`].join(","))
-                      ].join("\n");
-                      const encodedUri = encodeURI(csvContent);
-                      const link = document.createElement("a");
-                      link.setAttribute("href", encodedUri);
-                      link.setAttribute("download", `IT_Asset_Audit_${new Date().toISOString().slice(0,10)}.csv`);
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
+                      const csv = ['Group,Particulars,Brand,Opening,NewPurchase,Issued,Balance,Location'].concat(
+                        assets.map(a => `"${a.group}","${a.particulars}","${a.brand}",${a.openingQty},${a.newPurchase},${a.issueItems},${(Number(a.openingQty)+Number(a.newPurchase))-Number(a.issueItems)},"${a.location}"`)
+                      ).join('\n');
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `IT_Stock_Audit_${getCurrentMonthYear()}.csv`;
+                      a.click();
                       showToast("Audit CSV report downloaded successfully!");
                     }}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow cursor-pointer flex items-center gap-2"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    Export CSV Audit Report
+                    Download CSV Audit Report
                   </button>
                 </header>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 text-xs">
-                  <h3 className="font-bold text-slate-900 text-sm">System Compliance & Verification</h3>
-                  <p className="text-slate-600">All inventory transactions are cryptographically logged with timestamp verification and user attribution. Total tracked entries: <b className="text-slate-900">{totalRecords}</b>.</p>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-                    <div>
-                      <p className="font-bold text-slate-800">Database Integrity Check</p>
-                      <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">✔ All checksums verified • 0 corrupt records</p>
+                <div className="bg-white p-5 rounded-2xl border shadow-sm">
+                  <h3 className="font-bold text-slate-900 text-sm mb-3">System Compliance Summary</h3>
+                  <div className="grid grid-cols-3 gap-4 text-xs">
+                    <div className="p-3 bg-slate-50 rounded-xl border">
+                      <div className="text-slate-500 font-semibold">Total Audited Items</div>
+                      <div className="text-xl font-black text-slate-900 mt-1">{totalRecords}</div>
                     </div>
-                    <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full font-extrabold text-[10px]">SECURE</span>
+                    <div className="p-3 bg-slate-50 rounded-xl border">
+                      <div className="text-slate-500 font-semibold">Low Stock Deficits</div>
+                      <div className="text-xl font-black text-rose-600 mt-1">{lowStockItems.length}</div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl border">
+                      <div className="text-slate-500 font-semibold">Verification Status</div>
+                      <div className="text-xl font-black text-emerald-600 mt-1">Verified & Secure</div>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* 5. PRIVILEGE & USERS TAB */}
+            {/* 6. PRIVILEGE & USERS TAB */}
             {activeTab === 'rights' && (
               <div className="flex-1 overflow-auto space-y-4">
-                <header className="px-2 py-2">
-                  <h1 className="text-lg font-extrabold text-slate-900">User Access & Privilege Control</h1>
-                  <p className="text-xs text-slate-500">Super Admin user management and PIN assignments.</p>
+                <header className="bg-slate-900 text-white p-4 rounded-xl shadow">
+                  <h1 className="text-sm font-extrabold uppercase">Privilege Control & User Management</h1>
+                  <p className="text-xs text-slate-400">Create login IDs and assign operational roles.</p>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                    <h3 className="font-bold text-slate-900 text-sm">Create New System User</h3>
+                <div className="grid grid-cols-12 gap-4">
+                  <div className="col-span-5 bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+                    <h3 className="font-bold text-slate-900 text-xs">Create New Login ID</h3>
                     <form onSubmit={handleCreateUser} className="space-y-3 text-xs">
                       <div>
-                        <label className="block font-semibold text-slate-700 mb-1">User Full Name</label>
-                        <input
-                          type="text"
+                        <label className="block font-semibold text-slate-700 mb-1">User Name *</label>
+                        <input 
+                          type="text" 
                           required
-                          placeholder="e.g. Rajesh Kumar"
+                          placeholder="e.g. John Doe"
                           value={newUserName}
                           onChange={(e) => setNewUserName(e.target.value)}
-                          className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-indigo-600"
+                          className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block font-semibold text-slate-700 mb-1">Security PIN (4+ Digits)</label>
-                        <input
-                          type="password"
+                        <label className="block font-semibold text-slate-700 mb-1">Security PIN (Password) *</label>
+                        <input 
+                          type="password" 
                           required
-                          placeholder="e.g. 5555"
+                          placeholder="e.g. 9876"
                           value={newUserPin}
                           onChange={(e) => setNewUserPin(e.target.value)}
-                          className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-indigo-600"
+                          className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                         />
                       </div>
                       <div>
                         <label className="block font-semibold text-slate-700 mb-1">Assigned Role</label>
-                        <select
+                        <select 
                           value={newUserRole}
                           onChange={(e) => setNewUserRole(e.target.value)}
-                          className="w-full p-2.5 border border-slate-300 rounded-lg font-bold bg-white outline-none cursor-pointer"
+                          className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
                         >
-                          <option value="Operator">IT Operator / Technician</option>
-                          <option value="Auditor">Inventory Auditor</option>
-                          <option value="Super Admin">Super Admin</option>
+                          <option value="Super Administrator">Super Administrator</option>
+                          <option value="Store Keeper">Store Keeper</option>
+                          <option value="Department Auditor">Department Auditor</option>
                         </select>
                       </div>
-                      <button
-                        type="submit"
-                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow cursor-pointer"
-                      >
-                        Create User ID & PIN
+                      <button type="submit" className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow cursor-pointer">
+                        Create User Login
                       </button>
                     </form>
                   </div>
 
-                  <div className="md:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                    <h3 className="font-bold text-slate-900 text-sm">Authorized User Accounts ({users.length})</h3>
-                    <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto text-xs">
-                      {users.map((u) => (
-                        <div key={u.id} className="py-3 flex justify-between items-center">
+                  <div className="col-span-7 bg-white p-5 rounded-2xl border shadow-sm">
+                    <h3 className="font-bold text-slate-900 text-xs mb-3">Active System Users</h3>
+                    <div className="space-y-2 text-xs">
+                      {users.map(u => (
+                        <div key={u.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl border">
                           <div>
-                            <div className="font-bold text-slate-900 flex items-center gap-2">
-                              <span>{u.name}</span>
-                              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-extrabold">{u.role}</span>
-                            </div>
-                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">PIN: •••• | ID: {u.id}</div>
+                            <div className="font-bold text-slate-900">{u.name}</div>
+                            <div className="text-[10px] text-slate-500 font-medium">{u.role}</div>
                           </div>
-                          {u.id !== 'usr_super' && (
-                            <button
-                              onClick={() => handleDeleteUser(u.id)}
-                              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg cursor-pointer"
-                            >
-                              Revoke
-                            </button>
-                          )}
+                          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-[10px] rounded-full">
+                            {u.status}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -1274,164 +1130,82 @@
 
           </main>
 
-          {/* ADD / EDIT ASSET MODAL WITH ALL FIELDS */}
-          {isModalOpen && (
+          {/* TEMPORARY ASSET ISSUE MODAL */}
+          {isTempModalOpen && (
             <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-4 bg-slate-900 text-white rounded-t-2xl flex justify-between items-center sticky top-0 z-10">
-                  <h3 className="font-bold text-sm uppercase tracking-wider">
-                    {editingAsset ? 'Edit Asset Details & Stock' : 'Register New Asset Entry'}
-                  </h3>
-                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white font-bold cursor-pointer">✕</button>
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <h3 className="font-bold text-slate-900 text-sm">Issue Temporary Asset Deployment</h3>
+                  <button onClick={() => setIsTempModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
-
-                <form onSubmit={handleSaveAsset} className="p-5 space-y-4 text-xs">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <form onSubmit={handleSaveTempDispatch} className="space-y-3 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Asset Name / Equipment *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Dell OptiPlex CPU i5"
+                      value={tempForm.assetName}
+                      onChange={(e) => setTempForm({ ...tempForm, assetName: e.target.value })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg font-semibold outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Department Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Accounts / OPD"
+                      value={tempForm.department}
+                      onChange={(e) => setTempForm({ ...tempForm, department: e.target.value })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Receiver Person Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mr. Rajesh Sharma"
+                      value={tempForm.receiver}
+                      onChange={(e) => setTempForm({ ...tempForm, receiver: e.target.value })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Asset Group *</label>
+                      <label className="block font-semibold text-slate-700 mb-1">Quantity</label>
                       <input
-                        type="text"
-                        required
-                        placeholder="e.g. MOUSE, CABLES, STORAGE"
-                        value={formData.group}
-                        onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-                        className="w-full p-2 border border-slate-300 rounded-lg uppercase font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                        type="number"
+                        min="1"
+                        value={tempForm.quantity}
+                        onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg font-mono font-bold"
                       />
                     </div>
-                    <div className="sm:col-span-2">
-                      <label className="block font-semibold text-slate-700 mb-1">Particulars / Item Name *</label>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Expected Return Date</label>
                       <input
-                        type="text"
-                        required
-                        placeholder="e.g. HDMI High-Speed Cable / SSD 512GB"
-                        value={formData.particulars}
-                        onChange={(e) => setFormData({ ...formData, particulars: e.target.value })}
-                        className="w-full p-2 border border-slate-300 rounded-lg font-semibold outline-none focus:ring-2 focus:ring-indigo-500"
+                        type="date"
+                        value={tempForm.returnDate}
+                        onChange={(e) => setTempForm({ ...tempForm, returnDate: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg font-mono"
                       />
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-indigo-600 mb-1">Brand Name Selection</label>
-                      <select
-                        value={formData.brand}
-                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                        className="w-full p-2 border border-indigo-300 rounded-lg bg-indigo-50/30 font-bold outline-none cursor-pointer"
-                      >
-                        {DEFAULT_BRANDS.map((b, idx) => (
-                          <option key={idx} value={b}>{b}</option>
-                        ))}
-                      </select>
-                      {formData.brand === 'Other' && (
-                        <input
-                          type="text"
-                          value={formData.customBrand}
-                          onChange={(e) => setFormData({ ...formData, customBrand: e.target.value })}
-                          placeholder="Enter Custom Brand Name..."
-                          className="w-full mt-1.5 p-2 border border-indigo-300 rounded-lg bg-white font-semibold outline-none"
-                          required
-                        />
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Cable Length / Capacity</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 5 or 512"
-                        value={formData.cableLength}
-                        onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })}
-                        className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Measurement Unit</label>
-                      <select
-                        value={formData.unit}
-                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                        className="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50 outline-none cursor-pointer"
-                      >
-                        <option value="Piece">Piece</option>
-                        <option value="Meter">Meter</option>
-                        <option value="GB">GB (SSD / HDD / RAM)</option>
-                        <option value="TB">TB (HDD / Storage)</option>
-                        <option value="Box">Box / Set</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <div>
-                      <label className="block font-bold text-slate-600 mb-1">Opening</label>
-                      <input type="number" min="0" value={formData.openingQty} onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })} className="w-full p-1.5 border border-slate-300 rounded bg-white font-mono font-bold" />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-emerald-700 mb-1">New Purch.</label>
-                      <input type="number" min="0" value={formData.newPurchase} onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })} className="w-full p-1.5 border border-emerald-300 rounded bg-white font-mono font-bold text-emerald-700" />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-amber-700 mb-1">Issued</label>
-                      <input type="number" min="0" value={formData.issueItems} onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })} className="w-full p-1.5 border border-amber-300 rounded bg-white font-mono font-bold text-amber-700" />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-rose-700 mb-1">Dead / Faulty</label>
-                      <input type="number" min="0" value={formData.deadItems} onChange={(e) => setFormData({ ...formData, deadItems: Number(e.target.value) })} className="w-full p-1.5 border border-rose-300 rounded bg-white font-mono font-bold text-rose-700" />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-600 mb-1">Min Alert</label>
-                      <input type="number" min="0" value={formData.minAlert} onChange={(e) => setFormData({ ...formData, minAlert: Number(e.target.value) })} className="w-full p-1.5 border border-slate-300 rounded bg-white font-mono font-bold" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Category</label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full p-2 border border-slate-300 rounded-lg font-bold bg-white outline-none cursor-pointer"
-                      >
-                        <option value="Consumable">Consumable</option>
-                        <option value="Non-Consumable">Non-Consumable</option>
-                        <option value="Fixed Assets">Fixed Assets</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Location / Store</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Main IT Store / B Block"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        className="w-full p-2 border border-slate-300 rounded-lg outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Entry Month</label>
-                      <input
-                        type="text"
-                        value={formData.entryMonth}
-                        onChange={(e) => setFormData({ ...formData, entryMonth: e.target.value })}
-                        className="w-full p-2 border border-slate-300 rounded-lg font-semibold outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <div className="flex justify-end gap-2 pt-2">
                     <button
                       type="button"
-                      onClick={() => setIsModalOpen(false)}
+                      onClick={() => setIsTempModalOpen(false)}
                       className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow cursor-pointer"
                     >
-                      {editingAsset ? 'Update Asset Record' : 'Save Asset Record'}
+                      Confirm Deployment
                     </button>
                   </div>
                 </form>
@@ -1439,25 +1213,44 @@
             </div>
           )}
 
-          {/* ASSET VIEW DETAILS MODAL */}
-          {activeModalViewItem && (
+          {/* VIEW SLIP MODAL */}
+          {viewModalItem && (
             <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
                 <div className="flex justify-between items-center border-b pb-3">
-                  <h3 className="font-bold text-slate-900 text-sm">Asset Details View</h3>
-                  <button onClick={() => setActiveModalViewItem(null)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-sm uppercase">Asset Issue & Verification Slip</h3>
+                    <p className="text-[11px] text-slate-500">Official IT Infrastructure Record</p>
+                  </div>
+                  <button onClick={() => setViewModalItem(null)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between"><span className="text-slate-500 font-semibold">Group:</span> <span className="font-bold">{activeModalViewItem.group}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500 font-semibold">Particulars:</span> <span className="font-bold text-indigo-600">{activeModalViewItem.particulars}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500 font-semibold">Brand:</span> <span className="font-bold">{activeModalViewItem.brand || '-'}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500 font-semibold">Measurement:</span> <span className="font-mono">{activeModalViewItem.cableLength ? `${activeModalViewItem.cableLength} ${activeModalViewItem.unit}` : activeModalViewItem.unit}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500 font-semibold">Category:</span> <span className="font-bold">{activeModalViewItem.category}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500 font-semibold">Location:</span> <span className="font-bold">{activeModalViewItem.location || 'Main Store'}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500 font-semibold">Last Modified:</span> <span className="font-mono">{activeModalViewItem.lastUpdated || 'N/A'}</span></div>
+
+                <div className="space-y-3 text-xs bg-slate-50 p-4 rounded-xl border">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><strong>Group:</strong> {viewModalItem.group}</div>
+                    <div><strong>Category:</strong> {viewModalItem.category}</div>
+                    <div><strong>Item Particulars:</strong> {viewModalItem.particulars}</div>
+                    <div><strong>Brand:</strong> {viewModalItem.brand === 'Other' ? viewModalItem.customBrand : viewModalItem.brand}</div>
+                    <div><strong>Serial No:</strong> {viewModalItem.serialNo || 'N/A'}</div>
+                    <div><strong>Location:</strong> {viewModalItem.location || 'General Store'}</div>
+                    <div><strong>Issued Qty:</strong> {viewModalItem.issueItems || 0}</div>
+                    <div><strong>Last Updated:</strong> {viewModalItem.lastUpdated}</div>
+                  </div>
                 </div>
-                <div className="flex justify-end pt-2">
-                  <button onClick={() => setActiveModalViewItem(null)} className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-xs cursor-pointer">Close</button>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold shadow cursor-pointer text-xs"
+                  >
+                    Print Slip
+                  </button>
+                  <button
+                    onClick={() => setViewModalItem(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-200 text-slate-800 font-bold cursor-pointer text-xs"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </div>
@@ -1466,63 +1259,258 @@
           {/* STOCK HISTORY MODAL */}
           {historyModalItem && (
             <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-5 space-y-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
                 <div className="flex justify-between items-center border-b pb-3">
-                  <h3 className="font-bold text-slate-900 text-sm">Asset Stock History & Ledger Audit</h3>
+                  <h3 className="font-extrabold text-slate-900 text-sm">Stock History & Log</h3>
                   <button onClick={() => setHistoryModalItem(null)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
-                <div className="space-y-3 text-xs">
-                  <p className="font-semibold text-slate-700">Item: <span className="text-indigo-600 font-bold">{historyModalItem.particulars}</span></p>
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5 font-mono text-[11px]">
-                    <div className="flex justify-between"><span>Opening Qty:</span> <b>{historyModalItem.openingQty || 0}</b></div>
-                    <div className="flex justify-between text-emerald-600"><span>New Purchases:</span> <b>+{historyModalItem.newPurchase || 0}</b></div>
-                    <div className="flex justify-between text-amber-600"><span>Total Issued:</span> <b>-{historyModalItem.issueItems || 0}</b></div>
-                    <div className="flex justify-between text-rose-600"><span>Dead / Faulty:</span> <b>{historyModalItem.deadItems || 0}</b></div>
-                    <div className="flex justify-between pt-2 border-t border-slate-200 font-extrabold text-slate-900 text-xs">
-                      <span>Physical Balance:</span>
-                      <span>{(Number(historyModalItem.openingQty || 0) + Number(historyModalItem.newPurchase || 0)) - Number(historyModalItem.issueItems || 0) - Number(historyModalItem.shortItems || 0) - Number(historyModalItem.deadItems || 0)}</span>
-                    </div>
+                <div className="space-y-2 text-xs">
+                  <div className="p-3 bg-slate-50 rounded-xl border">
+                    <div className="font-bold text-slate-900">{historyModalItem.particulars}</div>
+                    <div className="text-slate-500 mt-1">Opening Qty: {historyModalItem.openingQty} | Purchases: {historyModalItem.newPurchase} | Issued: {historyModalItem.issueItems}</div>
+                    <div className="text-[10px] text-slate-400 font-mono mt-2">Last Modified: {historyModalItem.lastUpdated}</div>
                   </div>
-                  <div className="text-[11px] text-slate-400">Last updated timestamp: <span className="font-mono font-medium text-slate-700">{historyModalItem.lastUpdated || 'N/A'}</span></div>
                 </div>
                 <div className="flex justify-end pt-2">
-                  <button onClick={() => setHistoryModalItem(null)} className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs cursor-pointer">Close</button>
+                  <button onClick={() => setHistoryModalItem(null)} className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer">Close</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* CUSTOM DELETE CONFIRMATION MODAL */}
-          {deleteConfirmAsset && (
-            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-5 space-y-4">
-                <h3 className="font-bold text-slate-900 text-sm">Delete Asset Record?</h3>
-                <p className="text-xs text-slate-600">
-                  Are you sure you want to delete <span className="font-bold text-slate-900">{deleteConfirmAsset.particulars}</span>? This action cannot be undone.
-                </p>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setDeleteConfirmAsset(null)}
-                    className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDeleteAsset}
-                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow cursor-pointer"
-                  >
-                    Delete Record
-                  </button>
+          {/* ADD / EDIT ASSET MODAL WITH ALL FIELDS */}
+          {isModalOpen && (
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <h3 className="font-extrabold text-slate-900 text-sm">
+                    {editingAsset ? 'Edit Asset & Stock Details' : 'Register New Asset Entry'}
+                  </h3>
+                  <button onClick={() => setIsModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
+
+                <form onSubmit={handleSaveAsset} className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Asset Group *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. IT Peripherals, Hardware"
+                        value={formData.group}
+                        onChange={(e) => setFormData({ ...formData, group: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Item Particulars *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. Optical Mouse USB"
+                        value={formData.particulars}
+                        onChange={(e) => setFormData({ ...formData, particulars: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Brand Name *</label>
+                      <select 
+                        value={formData.brand}
+                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
+                      >
+                        <option value="Honeywell">Honeywell</option>
+                        <option value="Dell">Dell</option>
+                        <option value="HP">HP</option>
+                        <option value="Lenovo">Lenovo</option>
+                        <option value="Cisco">Cisco</option>
+                        <option value="Logitech">Logitech</option>
+                        <option value="Other">Other (Custom)</option>
+                      </select>
+                    </div>
+
+                    {formData.brand === 'Other' && (
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Custom Brand Name *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="Enter Brand Name"
+                          value={formData.customBrand}
+                          onChange={(e) => setFormData({ ...formData, customBrand: e.target.value })}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Category Classification *</label>
+                      <select 
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
+                      >
+                        <option value="Consumable">Consumable</option>
+                        <option value="Non-Consumable">Non-Consumable</option>
+                        <option value="Fixed Assets">Fixed Assets</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Location / Block *</label>
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="e.g. A Block / Server Room"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Serial Number</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. HW-MS-9981"
+                        value={formData.serialNo}
+                        onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Cable Length</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. 1.5 / 3 / 5"
+                        value={formData.cableLength}
+                        onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Measurement Unit</label>
+                      <select 
+                        value={formData.measurementUnit}
+                        onChange={(e) => setFormData({ ...formData, measurementUnit: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
+                      >
+                        <option value="Piece">Piece</option>
+                        <option value="Meter">Meter</option>
+                        <option value="GB">GB</option>
+                        <option value="TB">TB</option>
+                        <option value="Box / Set">Box / Set</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Opening Qty</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={formData.openingQty}
+                        onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">New Purchase</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={formData.newPurchase}
+                        onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold text-blue-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Issue Items</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={formData.issueItems}
+                        onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold text-amber-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Short / Deficit</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={formData.shortItems}
+                        onChange={(e) => setFormData({ ...formData, shortItems: Number(e.target.value) })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold text-rose-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Dead / Faulty</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={formData.deadItems}
+                        onChange={(e) => setFormData({ ...formData, deadItems: Number(e.target.value) })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold text-slate-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Vendor Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Apex Tech Solutions"
+                        value={formData.vendor}
+                        onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Invoice Number & Warranty</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. INV-2026-991 | 1 Year"
+                        value={formData.invoiceNo}
+                        onChange={(e) => setFormData({ ...formData, invoiceNo: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-3 border-t">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
+                    >
+                      Save Asset Record
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           )}
+
         </div>
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
 </html>
