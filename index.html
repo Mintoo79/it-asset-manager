@@ -29,11 +29,26 @@
       line-height: 1.2 !important;
     }
     .neon-sidebar {
-      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+      background: linear-gradient(180deg, #0b1120 0%, #111827 100%);
     }
     .active-neon-btn {
-      background: linear-gradient(90deg, #4f46e5 0%, #6366f1 100%);
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+      background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+    /* Custom subtle horizontal scrollbar for Group Strip */
+    .group-scroll::-webkit-scrollbar {
+      height: 5px;
+    }
+    .group-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 9999px;
+    }
+    .group-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .group-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
   </style>
 </head>
@@ -72,12 +87,12 @@
     const IMPORTANT_ITEMS = ['mouse', 'keyboard', 'ram', 'ssd', 'hdd', 'web camera', 'camera'];
 
     const GROUP_COLORS = [
-      { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-900', badge: 'bg-indigo-600 text-white' },
-      { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900', badge: 'bg-emerald-600 text-white' },
-      { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-900', badge: 'bg-sky-600 text-white' },
-      { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900', badge: 'bg-amber-600 text-white' },
-      { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900', badge: 'bg-purple-600 text-white' },
-      { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-900', badge: 'bg-rose-600 text-white' }
+      { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-blue-600 text-white' },
+      { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-teal-600 text-white' },
+      { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-indigo-600 text-white' },
+      { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-emerald-600 text-white' },
+      { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-cyan-700 text-white' },
+      { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-800', badge: 'bg-slate-700 text-white' }
     ];
 
     function App() {
@@ -775,12 +790,12 @@
             {/* TAB 1: STOCK REGISTER */}
             {activeTab === 'inventory' && (
               <>
-                <header className="bg-slate-900 text-white p-3 rounded-xl shadow-md flex flex-wrap gap-2 justify-between items-center border border-slate-800">
+                <header className="bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-sm flex flex-wrap gap-2 justify-between items-center border border-slate-800 shrink-0">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-600/30 border border-indigo-500/40 rounded-lg text-indigo-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <div className="p-1.5 bg-blue-600/20 border border-blue-500/30 rounded-lg text-blue-400">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     </div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Stock Register & Inventory Ledger</h1>
+                    <h1 className="text-xs font-extrabold tracking-wider uppercase">Stock Register & Inventory Ledger</h1>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -790,7 +805,7 @@
                         placeholder="Search Items / Brand..."
                         value={searchQuery}
                         onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                        className="w-44 px-3 py-1.5 pl-8 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-44 px-3 py-1.5 pl-8 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <svg className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
@@ -820,29 +835,52 @@
 
                     <button
                       onClick={() => handleOpenModal()}
-                      className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs shadow transition flex items-center gap-1.5 cursor-pointer"
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs shadow transition flex items-center gap-1.5 cursor-pointer"
                     >
                       <span>+ New Asset</span>
                     </button>
                   </div>
                 </header>
 
-                {/* Alphabetical Group Summary Cards */}
-                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                {/* Compact Horizontal Scrollable Group Strip */}
+                <div className="bg-white px-3 py-2.5 rounded-xl border border-slate-200 shadow-sm shrink-0">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
-                      Asset Groups (Alphabetical A–Z) • Click to Filter
+                      Asset Groups (Scroll & Select Group)
                     </span>
                     {selectedGroupFilter && (
                       <button
                         onClick={() => { setSelectedGroupFilter(''); setCurrentPage(1); }}
-                        className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                        className="text-[11px] font-bold text-blue-600 hover:underline cursor-pointer"
                       >
-                        ✕ Clear Group Filter ({selectedGroupFilter})
+                        Show All Assets ({assets.length})
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
+                  <div className="flex items-center gap-2.5 overflow-x-auto pb-1.5 group-scroll">
+                    {/* All Assets Pill Card */}
+                    <button
+                      onClick={() => { setSelectedGroupFilter(''); setCurrentPage(1); }}
+                      className={`min-w-[130px] shrink-0 p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                        selectedGroupFilter === ''
+                          ? 'bg-slate-900 border-slate-900 text-white shadow-sm'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-0.5">
+                        <span className="font-extrabold text-xs">ALL ASSETS</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                          selectedGroupFilter === '' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'
+                        }`}>
+                          {assets.length}
+                        </span>
+                      </div>
+                      <div className={`text-[10px] font-semibold ${selectedGroupFilter === '' ? 'text-slate-300' : 'text-slate-500'}`}>
+                        Complete Register
+                      </div>
+                    </button>
+
+                    {/* Alphabetical Group Cards */}
                     {sortedGroups.map((grp, idx) => {
                       const theme = GROUP_COLORS[idx % GROUP_COLORS.length];
                       const isSelected = selectedGroupFilter === grp.name;
@@ -853,13 +891,17 @@
                             setSelectedGroupFilter(isSelected ? '' : grp.name);
                             setCurrentPage(1);
                           }}
-                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${theme.bg} ${theme.border} ${
-                            isSelected ? 'ring-2 ring-indigo-600 scale-[1.02] shadow-md' : 'hover:shadow-sm'
+                          className={`min-w-[145px] shrink-0 p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-blue-50 border-blue-600 ring-1 ring-blue-600 shadow-sm'
+                              : `${theme.bg} ${theme.border} hover:border-slate-300 hover:bg-white`
                           }`}
                         >
-                          <div className="flex justify-between items-center mb-1">
-                            <span className={`font-extrabold text-xs truncate ${theme.text}`}>{grp.name}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${theme.badge}`}>
+                          <div className="flex justify-between items-center gap-2 mb-0.5">
+                            <span className={`font-extrabold text-xs truncate ${isSelected ? 'text-blue-900' : theme.text}`}>
+                              {grp.name}
+                            </span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${theme.badge}`}>
                               {grp.totalStock}
                             </span>
                           </div>
@@ -876,9 +918,9 @@
                 </div>
 
                 {/* Stock Ledger Table */}
-                <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
+                <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto min-h-0">
                   <table className="w-full text-left border-collapse table-compact text-xs">
-                    <thead className="bg-slate-900 text-slate-200 sticky top-0 z-10 text-[10px] uppercase font-bold tracking-wider">
+                    <thead className="bg-slate-800 text-slate-100 sticky top-0 z-10 text-[10px] uppercase font-bold tracking-wider">
                       <tr>
                         <th className="w-8 text-center">#</th>
                         <th>Group</th>
@@ -890,7 +932,7 @@
                         <th className="text-center">Issued</th>
                         <th className="text-center">Bal</th>
                         <th className="text-center">Dead</th>
-                        <th className="text-center bg-indigo-950 text-indigo-200">Phy. Stock</th>
+                        <th className="text-center bg-slate-900 text-blue-300">Phy. Stock</th>
                         <th>Category</th>
                         <th>Location</th>
                         <th className="text-center">Actions</th>
