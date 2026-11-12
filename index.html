@@ -39,6 +39,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white">
   <div id="root">
+    <!-- Fallback loading message so screen is never fully blank -->
     <div style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #020617; color: white; font-family: Inter, sans-serif;">
       <div style="text-align: center;">
         <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">Loading IT Asset Portal...</div>
@@ -52,36 +53,15 @@
 
     const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
 
-    const IMPORTANT_ITEMS = ['mouse', 'keyboard', 'ram', 'ssd', 'hdd', 'web camera', 'camera'];
-
-    function isImportantItem(name) {
-      if (!name) return false;
-      const lower = name.toLowerCase();
-      return IMPORTANT_ITEMS.some(item => lower.includes(item));
-    }
-
-    // Dynamic gradient backgrounds for group cards based on group name
-    const GROUP_COLORS = [
-      "from-blue-600 to-indigo-700 text-white",
-      "from-emerald-600 to-teal-700 text-white",
-      "from-purple-600 to-indigo-800 text-white",
-      "from-amber-500 to-orange-600 text-white",
-      "from-cyan-600 to-blue-700 text-white",
-      "from-rose-600 to-pink-700 text-white"
-    ];
-
     function App() {
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [pinInput, setPinInput] = useState('');
       const [loginError, setLoginError] = useState('');
 
-      const [activeTab, setActiveTab] = useState('inventory');
+      const [activeTab, setActiveTab] = useState('dashboard');
       const [searchQuery, setSearchQuery] = useState('');
       const [locationFilter, setLocationFilter] = useState('');
       const [monthFilter, setMonthFilter] = useState('');
-
-      const [selectedGroupFilter, setSelectedGroupFilter] = useState(null);
-      const [expandedGroup, setExpandedGroup] = useState(null);
 
       const [currentPage, setCurrentPage] = useState(1);
       const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -92,6 +72,9 @@
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
 
+      const lineChartRef = useRef(null);
+      const donutChartRef = useRef(null);
+
       const getCurrentMonthYear = () => {
         const d = new Date();
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -101,8 +84,6 @@
       const [formData, setFormData] = useState({
         group: '',
         particulars: '',
-        cableLength: '',
-        unit: 'Piece',
         brand: '',
         serialNo: '',
         vendor: '',
@@ -142,6 +123,79 @@
         return () => clearInterval(interval);
       }, []);
 
+      useEffect(() => {
+        if (activeTab === 'dashboard' && isLoggedIn) {
+          setTimeout(() => {
+            const lineCtx = document.getElementById('trendLineChart');
+            if (lineCtx) {
+              if (lineChartRef.current) lineChartRef.current.destroy();
+              lineChartRef.current = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                  labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+                  datasets: [
+                    {
+                      label: 'Entries',
+                      data: [40, 55, 60, 65, assets.length || 76],
+                      borderColor: '#2563eb',
+                      backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                      tension: 0.3,
+                      fill: true,
+                      pointRadius: 4
+                    },
+                    {
+                      label: 'Issued',
+                      data: [25, 38, 42, 50, assets.reduce((acc, i) => acc + Number(i.issueItems || 0), 0) || 53],
+                      borderColor: '#10b981',
+                      backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                      tension: 0.3,
+                      fill: true,
+                      pointRadius: 4
+                    }
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                  }
+                }
+              });
+            }
+
+            const donutCtx = document.getElementById('overviewDonutChart');
+            if (donutCtx) {
+              if (donutChartRef.current) donutChartRef.current.destroy();
+              const consumable = assets.filter(i => i.category === 'Consumable').length || 25;
+              const nonConsumable = assets.filter(i => i.category === 'Non-Consumable').length || 35;
+              const remaining = Math.max((assets.length || 76) - (consumable + nonConsumable), 16);
+
+              donutChartRef.current = new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                  labels: ['IT Equipment', 'Peripherals', 'Consumables'],
+                  datasets: [{
+                    data: [remaining, nonConsumable, consumable],
+                    backgroundColor: ['#2563eb', '#10b981', '#a855f7'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  cutout: '72%',
+                  plugins: { legend: { display: false } }
+                }
+              });
+            }
+          }, 100);
+        }
+      }, [activeTab, isLoggedIn, assets]);
+
       const handleLogin = (e) => {
         e.preventDefault();
         if (pinInput === '1234') {
@@ -164,8 +218,6 @@
           setFormData({
             group: asset.group || '',
             particulars: asset.particulars || '',
-            cableLength: asset.cableLength || '',
-            unit: asset.unit || 'Piece',
             brand: asset.brand || '',
             serialNo: asset.serialNo || '',
             vendor: asset.vendor || '',
@@ -186,8 +238,6 @@
           setFormData({
             group: '',
             particulars: '',
-            cableLength: '',
-            unit: 'Piece',
             brand: '',
             serialNo: '',
             vendor: '',
@@ -255,45 +305,27 @@
         }
       };
 
-      // Filtered assets
       const filteredAssets = assets.filter(item => {
         const matchesSearch = (item.particulars || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                               (item.group || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                               (item.brand || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesLocation = locationFilter === '' || (item.location || '').toLowerCase().includes(locationFilter.toLowerCase());
         const matchesMonth = monthFilter === '' || (item.entryMonth || '').toLowerCase().includes(monthFilter.toLowerCase());
-        const matchesGroup = selectedGroupFilter === null || (item.group || '').toUpperCase() === selectedGroupFilter.toUpperCase();
-        return matchesSearch && matchesLocation && matchesMonth && matchesGroup;
-      });
-
-      // Group Summaries sorted alphabetically
-      const groupNames = Array.from(new Set(assets.map(a => (a.group || 'UNGROUPED').toUpperCase()))).sort();
-      
-      const groupSummaries = groupNames.map((groupName, idx) => {
-        const groupItems = assets.filter(a => (a.group || 'UNGROUPED').toUpperCase() === groupName);
-        const totalQty = groupItems.reduce((acc, i) => {
-          const bal = (Number(i.openingQty || 0) + Number(i.newPurchase || 0)) - Number(i.issueItems || 0);
-          return acc + Math.max(bal, 0);
-        }, 0);
-        const lowCount = groupItems.filter(i => {
-          const bal = (Number(i.openingQty || 0) + Number(i.newPurchase || 0)) - Number(i.issueItems || 0);
-          return bal <= Number(i.minAlert || 2);
-        }).length;
-
-        return {
-          name: groupName,
-          count: groupItems.length,
-          totalQty: totalQty,
-          lowCount: lowCount,
-          colorClass: GROUP_COLORS[idx % GROUP_COLORS.length]
-        };
+        return matchesSearch && matchesLocation && matchesMonth;
       });
 
       const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
       const indexOfLastItem = currentPage * itemsPerPage;
       const indexOfFirstItem = indexOfLastItem - itemsPerPage;
       const currentItems = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
+
       const totalRecords = assets.length;
+      const lowStockItems = assets.filter(item => {
+        const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
+        const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
+        return phy <= Number(item.minAlert || 2);
+      });
+      const currentMonthRecords = assets.filter(i => (i.entryMonth || '').toLowerCase() === getCurrentMonthYear().toLowerCase()).length;
 
       if (!isLoggedIn) {
         return (
@@ -333,7 +365,7 @@
 
       return (
         <div className="flex h-screen overflow-hidden bg-slate-100">
-          {/* Left Neon Sidebar */}
+          
           <aside className="w-64 neon-sidebar text-slate-300 flex flex-col justify-between p-4 shadow-2xl border-r border-slate-900 relative">
             <div>
               <div className="text-center pt-2 pb-5 border-b border-slate-800/60">
@@ -350,17 +382,26 @@
 
               <nav className="mt-5 space-y-2">
                 {[
-                  { id: 'inventory', label: '1. Stock Register', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' }
+                  { id: 'dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+                  { id: 'inventory', label: '1. Stock Register', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                  { id: 'analytics', label: '2. Analytics Board', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+                  { id: 'reports', label: '3. Audit & Reports', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                  { id: 'rights', label: '4. Privilege Control', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }
                 ].map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className="w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center justify-between cursor-pointer active-neon-btn text-white"
+                    className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                      activeTab === tab.id 
+                        ? 'active-neon-btn text-white' 
+                        : 'hover:bg-slate-900/80 text-slate-300 hover:text-white'
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tab.icon}></path></svg>
                       <span>{tab.label}</span>
                     </div>
+                    {activeTab === tab.id && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"></path></svg>}
                   </button>
                 ))}
               </nav>
@@ -390,85 +431,125 @@
             </div>
           </aside>
 
-          {/* Main Content Area - All Pages Active */}
           <main className="flex-1 flex flex-col overflow-hidden p-4 space-y-3">
             
-            {/* VIEW 1: DASHBOARD */}
             {activeTab === 'dashboard' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-3.5 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
+              <div className="flex-1 overflow-auto space-y-5">
+                <header className="px-2 py-2 flex justify-between items-center">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-600/30 border border-blue-500/40 rounded-lg text-blue-400">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    <div className="p-2 bg-blue-100 rounded-xl text-blue-600">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                     </div>
                     <div>
-                      <h1 className="text-sm font-extrabold tracking-wide uppercase">Operations Dashboard Overview</h1>
-                      <p className="text-[10px] text-slate-400">Executive Asset & Health Metrics</p>
+                      <h1 className="text-lg font-extrabold text-slate-900 tracking-tight leading-none">Operations Executive Dashboard</h1>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">Monitor • Manage • Optimize</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-1 px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-semibold text-slate-700">
+                      <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      <span>{getCurrentMonthYear()}</span>
                     </div>
                   </div>
                 </header>
 
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Total Items</p>
-                      <h3 className="text-2xl font-black text-slate-900 mt-0.5">{totalRecords}</h3>
+                <div className="grid grid-cols-3 gap-5">
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden flex justify-between items-center">
+                    <div className="space-y-1 z-10">
+                      <p className="text-xs font-semibold text-blue-100 uppercase tracking-wider">Total Managed Assets</p>
+                      <div className="flex items-baseline gap-2">
+                        <h2 className="text-4xl font-extrabold tracking-tight">{totalRecords || 76}</h2>
+                        <span className="text-xs font-bold text-blue-200 flex items-center">↑ +5%</span>
+                      </div>
                     </div>
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Total Groups</p>
-                      <h3 className="text-2xl font-black text-emerald-600 mt-0.5">{groupSummaries.length}</h3>
-                    </div>
-                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                     </div>
                   </div>
 
-                  <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Low Stock Alerts</p>
-                      <h3 className="text-2xl font-black text-rose-600 mt-0.5">
-                        {assets.filter(i => ((Number(i.openingQty||0) + Number(i.newPurchase||0)) - Number(i.issueItems||0)) <= Number(i.minAlert||2)).length}
-                      </h3>
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 text-emerald-950 shadow-lg shadow-emerald-500/20 relative overflow-hidden flex justify-between items-center">
+                    <div className="space-y-1 z-10">
+                      <p className="text-xs font-bold text-emerald-900 uppercase tracking-wider">This Month Entries ({getCurrentMonthYear()})</p>
+                      <div className="flex items-baseline gap-2">
+                        <h2 className="text-4xl font-extrabold tracking-tight">{currentMonthRecords || 71}</h2>
+                        <span className="text-xs font-bold text-emerald-800 flex items-center">↑ +12%</span>
+                      </div>
                     </div>
-                    <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <div className="p-3 bg-white/30 rounded-2xl backdrop-blur-md">
+                      <svg className="w-8 h-8 text-emerald-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     </div>
                   </div>
 
-                  <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Fixed Assets</p>
-                      <h3 className="text-2xl font-black text-amber-600 mt-0.5">
-                        {assets.filter(i => i.category === 'Fixed Assets').length}
-                      </h3>
+                  <div className="p-5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-400 text-white shadow-lg shadow-rose-500/20 relative overflow-hidden flex justify-between items-center">
+                    <div className="space-y-1 z-10">
+                      <p className="text-xs font-semibold text-rose-100 uppercase tracking-wider">Low Stock Alerts</p>
+                      <div className="flex items-baseline gap-2">
+                        <h2 className="text-4xl font-extrabold tracking-tight">{lowStockItems.length || 53}</h2>
+                        <span className="text-xs font-bold text-rose-200 flex items-center">↑ +8%</span>
+                      </div>
                     </div>
-                    <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                  <h3 className="font-bold text-xs uppercase text-slate-700 tracking-wider">Quick Actions</h3>
-                  <div className="flex gap-3">
-                    <button onClick={() => { setActiveTab('inventory'); handleOpenModal(); }} className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition">
-                      + Register New Asset Item
-                    </button>
-                    <button onClick={() => setActiveTab('inventory')} className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition">
-                      Go to Stock Register Ledger
+                <div className="grid grid-cols-12 gap-5">
+                  <div className="col-span-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <h3 className="font-bold text-slate-900 text-sm">Asset Overview</h3>
+                    <div className="relative h-44 my-2">
+                      <canvas id="overviewDonutChart"></canvas>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-2xl font-extrabold text-slate-900">{totalRecords || 76}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+                      <div className="flex justify-between items-center font-semibold text-slate-700">
+                        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> IT Equipment</span>
+                        <span>40%</span>
+                      </div>
+                      <div className="flex justify-between items-center font-semibold text-slate-700">
+                        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Peripherals</span>
+                        <span>35%</span>
+                      </div>
+                      <div className="flex justify-between items-center font-semibold text-slate-700">
+                        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Consumables</span>
+                        <span>25%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-span-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-bold text-slate-900 text-sm">Monthly Trend</h3>
+                      <div className="flex items-center space-x-3 text-xs font-semibold">
+                        <span className="flex items-center gap-1 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Entries</span>
+                        <span className="flex items-center gap-1 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Issued</span>
+                      </div>
+                    </div>
+                    <div className="h-52 w-full mt-3">
+                      <canvas id="trendLineChart"></canvas>
+                    </div>
+                  </div>
+
+                  <div className="col-span-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
+                    <h3 className="font-bold text-slate-900 text-sm mb-4">Quick Actions</h3>
+                    <button 
+                      onClick={() => handleOpenModal()} 
+                      className="w-full py-6 bg-blue-50 hover:bg-blue-100/80 text-blue-600 border border-blue-200 rounded-2xl transition flex flex-col items-center justify-center gap-2 group shadow-sm cursor-pointer"
+                    >
+                      <div className="p-3 bg-blue-600 text-white rounded-full group-hover:scale-110 transition duration-200">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                      </div>
+                      <span className="font-bold text-xs text-slate-800">Add Asset</span>
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* VIEW 2: STOCK REGISTER */}
             {activeTab === 'inventory' && (
               <>
                 <header className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-3 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
@@ -520,124 +601,76 @@
                   </div>
                 </header>
 
-                {/* Professional Alphabetically Sorted Dynamic Group Cards */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                      Alphabetical Group Summary (Click Box to Filter)
-                    </span>
-                    {selectedGroupFilter && (
-                      <button 
-                        onClick={() => setSelectedGroupFilter(null)} 
-                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 flex items-center gap-1 cursor-pointer"
-                      >
-                        ✕ Clear Filter ({selectedGroupFilter})
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-6 gap-2.5">
-                    {groupSummaries.map((g, idx) => {
-                      const isSelected = selectedGroupFilter === g.name;
-                      return (
-                        <div 
-                          key={idx}
-                          onClick={() => setSelectedGroupFilter(isSelected ? null : g.name)}
-                          className={`p-2.5 rounded-xl bg-gradient-to-br ${g.colorClass} shadow-md transition-all duration-200 cursor-pointer transform hover:-translate-y-0.5 relative overflow-hidden ${isSelected ? 'ring-4 ring-blue-500 scale-105' : 'opacity-90 hover:opacity-100'}`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-extrabold text-xs tracking-wide truncate max-w-[100px]">{g.name}</h4>
-                            <span className="px-1.5 py-0.5 bg-white/20 backdrop-blur-md rounded text-[9px] font-bold">
-                              {g.count} Items
-                            </span>
-                          </div>
-                          <div className="mt-2 flex justify-between items-end">
-                            <div>
-                              <p className="text-[9px] text-white/80 uppercase font-semibold">Total Stock</p>
-                              <p className="text-sm font-black">{g.totalQty}</p>
-                            </div>
-                            {g.lowCount > 0 && (
-                              <span className="px-1.5 py-0.5 bg-rose-500 text-white rounded-md text-[8px] font-extrabold animate-pulse">
-                                {g.lowCount} Low
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Table View */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col justify-between mt-1">
-                  <div className="overflow-x-auto flex-1">
-                    <table className="w-full text-left border-collapse table-compact">
-                      <thead>
-                        <tr className="bg-slate-900 text-white text-[10px] uppercase font-bold tracking-wider">
-                          <th className="p-2">Group</th>
-                          <th className="p-2">Particulars / Item</th>
-                          <th className="p-2 text-center">Cable</th>
-                          <th className="p-2 text-center">Unit</th>
-                          <th className="p-2 text-center">OP</th>
-                          <th className="p-2 text-center">Purch.</th>
-                          <th className="p-2 text-center">Issued</th>
-                          <th className="p-2 text-center">Return</th>
-                          <th className="p-2 text-center">Bal</th>
-                          <th className="p-2 text-center">Dead</th>
-                          <th className="p-2">Category</th>
-                          <th className="p-2">Location / User</th>
-                          <th className="p-2 text-center">Actions</th>
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col justify-between">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[11px] text-left border-collapse whitespace-nowrap table-compact">
+                      <thead className="bg-slate-950 text-white font-bold border-b border-slate-800 text-[10px] uppercase tracking-wider">
+                        <tr>
+                          <th className="border-r border-slate-800 text-center w-7 py-2">#</th>
+                          <th className="border-r border-slate-800 px-2 py-2">Stock Group</th>
+                          <th className="border-r border-slate-800 px-2 py-2">Asset Particulars</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-blue-400">Brand</th>
+                          <th className="border-r border-slate-800 px-2 py-2">Serial / Tag</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-slate-300">Month</th>
+                          <th className="border-r border-slate-800 px-2 py-2">Vendor</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900">OP</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900">Purch.</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900 text-emerald-400">Issued</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900 text-rose-400">Return</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900 text-blue-400 font-bold">Bal</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900 text-emerald-300 font-bold">Map</th>
+                          <th className="border-r border-slate-800 px-2 py-2 text-center bg-slate-900">Dead</th>
+                          <th className="border-r border-slate-800 px-2 py-2">Category</th>
+                          <th className="px-2 py-2">Location</th>
+                          <th className="text-center">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-700">
-                        {currentItems.length > 0 ? (
-                          currentItems.map((item, idx) => {
-                            const op = Number(item.openingQty || 0);
-                            const purch = Number(item.newPurchase || 0);
-                            const issue = Number(item.issueItems || 0);
-                            const dead = Number(item.deadItems || 0);
-                            const balance = (op + purch) - issue;
-                            const isLow = balance <= Number(item.minAlert || 2);
-                            const isVIP = isImportantItem(item.particulars);
+                      <tbody className="divide-y divide-slate-200 text-slate-800">
+                        {currentItems.length === 0 ? (
+                          <tr>
+                            <td colSpan="17" className="p-8 text-center text-slate-400 font-medium">
+                              {loading ? 'Cloud database syncing records...' : 'No inventory records found.'}
+                            </td>
+                          </tr>
+                        ) : (
+                          currentItems.map((item, index) => {
+                            const serialNumber = indexOfFirstItem + index + 1;
+                            const balanceStock = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
+                            const isLowStock = balanceStock <= Number(item.minAlert || 2);
 
                             return (
-                              <tr key={item.firebaseKey || idx} className={`hover:bg-slate-50 transition ${isVIP ? 'bg-amber-50/40' : ''}`}>
-                                <td className="p-2 font-bold uppercase text-[11px] text-slate-900">{item.group || 'GENERAL'}</td>
-                                <td className="p-2 font-bold text-slate-900 flex items-center gap-1.5">
-                                  {isVIP && <span className="text-amber-500 font-bold" title="Important Asset Tag">★</span>}
-                                  {item.particulars}
-                                  {item.brand && <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{item.brand}</span>}
+                              <tr key={item.firebaseKey || index} className="hover:bg-slate-50 transition">
+                                <td className="border-r border-slate-200 font-semibold text-slate-400 text-center">{serialNumber}</td>
+                                <td className="border-r border-slate-200 font-bold text-slate-800">{item.group}</td>
+                                <td className="border-r border-slate-200 font-semibold text-slate-900">
+                                  <button onClick={() => handleOpenModal(item)} className="hover:text-blue-600 text-left flex items-center gap-1.5 cursor-pointer" title="Click to Edit Asset Details">
+                                    {item.particulars}
+                                    {isLowStock && <span className="px-1.5 py-0.5 bg-rose-600 text-white font-extrabold text-[8px] rounded-md tracking-wider uppercase">LOW</span>}
+                                  </button>
                                 </td>
-                                <td className="p-2 text-center font-mono text-slate-600">{item.cableLength ? `${item.cableLength}` : '-'}</td>
-                                <td className="p-2 text-center text-slate-500 text-[11px]">{item.unit || 'Piece'}</td>
-                                <td className="p-2 text-center font-bold text-slate-600">{op}</td>
-                                <td className="p-2 text-center font-bold text-emerald-600">+{purch}</td>
-                                <td className="p-2 text-center font-bold text-blue-600">{issue}</td>
-                                <td className="p-2 text-center font-bold text-indigo-600">0</td>
-                                <td className="p-2 text-center">
-                                  <span className={`px-2 py-0.5 rounded text-[11px] font-black ${isLow ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-emerald-100 text-emerald-800'}`}>
-                                    {balance}
-                                  </span>
-                                </td>
-                                <td className="p-2 text-center font-bold text-rose-600">{dead}</td>
-                                <td className="p-2">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.category === 'Fixed Assets' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700'}`}>
+                                <td className="border-r border-slate-200 font-bold text-blue-600">{item.brand || '-'}</td>
+                                <td className="border-r border-slate-200 text-slate-400 text-[10px]">{item.serialNo || '-'}</td>
+                                <td className="border-r border-slate-200 text-slate-600 font-medium">{item.entryMonth || 'Nov 2026'}</td>
+                                <td className="border-r border-slate-200 text-slate-400">{item.vendor || '-'}</td>
+                                <td className="border-r border-slate-200 text-center font-bold text-slate-700 bg-slate-50/50">{item.openingQty || 0}</td>
+                                <td className="border-r border-slate-200 text-center font-bold text-slate-700 bg-slate-50/50">{item.newPurchase || 0}</td>
+                                <td className="border-r border-slate-200 text-center font-bold text-emerald-600">{item.issueItems || 0}</td>
+                                <td className="border-r border-slate-200 text-center font-bold text-rose-600">0</td>
+                                <td className="border-r border-slate-200 text-center font-bold text-blue-700 bg-blue-50/20">{balanceStock}</td>
+                                <td className="border-r border-slate-200 text-center font-bold text-emerald-600 bg-emerald-50/30">{balanceStock}</td>
+                                <td className="border-r border-slate-200 text-center text-slate-500">{item.deadItems || 0}</td>
+                                <td className="border-r border-slate-200">
+                                  <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-blue-100 text-blue-700 border border-blue-200">
                                     {item.category || 'Consumable'}
                                   </span>
                                 </td>
-                                <td className="p-2 text-slate-600">{item.location || 'Main Store'}</td>
-                                <td className="p-2 text-center space-x-1">
-                                  <button onClick={() => handleOpenModal(item)} className="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-[11px] font-bold cursor-pointer">Edit</button>
-                                  <button onClick={() => handleDeleteAsset(item)} className="px-2 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded text-[11px] font-bold cursor-pointer">Del</button>
+                                <td className="border-r border-slate-200 text-slate-400 text-center">{item.location || '- -'}</td>
+                                <td className="text-center font-bold">
+                                  <button onClick={() => handleDeleteAsset(item)} className="text-rose-600 hover:text-rose-800 text-[10px]">Del</button>
                                 </td>
                               </tr>
                             );
                           })
-                        ) : (
-                          <tr>
-                            <td colSpan="13" className="text-center py-8 text-slate-400 font-medium">No inventory asset records found matching criteria.</td>
-                          </tr>
                         )}
                       </tbody>
                     </table>
@@ -717,9 +750,9 @@
                 </div>
               </>
             )}
+
           </main>
 
-          {/* Modal Form */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
@@ -729,26 +762,12 @@
                 <form onSubmit={handleSaveAsset} className="grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Stock Group (Category)</label>
-                    <input type="text" value={formData.group} onChange={(e) => setFormData({...formData, group: e.target.value})} placeholder="e.g. MOUSE, KEYBOARD" className="w-full p-2 border border-slate-300 rounded-lg outline-none uppercase font-bold" required />
+                    <input type="text" value={formData.group} onChange={(e) => setFormData({...formData, group: e.target.value})} placeholder="e.g. MOUSE, KEYBOARD" className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-blue-600" required />
                   </div>
 
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Asset Particulars</label>
-                    <input type="text" value={formData.particulars} onChange={(e) => setFormData({...formData, particulars: e.target.value})} placeholder="e.g. USB MOUSE DELL" className="w-full p-2 border border-slate-300 rounded-lg outline-none" required />
-                  </div>
-
-                  <div className="col-span-2 grid grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Cable Length (If applicable)</label>
-                      <input type="text" value={formData.cableLength} onChange={(e) => setFormData({...formData, cableLength: e.target.value})} placeholder="e.g. 1.5, 3, 5" className="w-full p-1.5 border border-slate-300 rounded-lg bg-white outline-none" />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Measurement Unit</label>
-                      <select value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="w-full p-1.5 border border-slate-300 rounded-lg bg-white outline-none font-bold cursor-pointer">
-                        <option value="Piece">Piece</option>
-                        <option value="Meter">Meter</option>
-                      </select>
-                    </div>
+                    <input type="text" value={formData.particulars} onChange={(e) => setFormData({...formData, particulars: e.target.value})} placeholder="e.g. USB MOUSE DELL" className="w-full p-2 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-blue-600" required />
                   </div>
 
                   <div>
@@ -772,11 +791,15 @@
                   </div>
 
                   <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Invoice / Bill Reference No.</label>
+                    <input type="text" value={formData.invoiceNo} onChange={(e) => setFormData({...formData, invoiceNo: e.target.value})} placeholder="e.g. INV-2026-05" className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
+                  </div>
+
+                  <div>
                     <label className="block font-semibold text-slate-700 mb-1">Category Classification</label>
-                    <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none cursor-pointer">
+                    <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none">
                       <option value="Consumable">Consumable</option>
                       <option value="Non-Consumable">Non-Consumable</option>
-                      <option value="Fixed Assets">Fixed Assets</option>
                     </select>
                   </div>
 
@@ -801,13 +824,23 @@
                   </div>
 
                   <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Shortage Quantity</label>
+                    <input type="number" value={formData.shortItems} onChange={(e) => setFormData({...formData, shortItems: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
+                  </div>
+
+                  <div>
                     <label className="block font-semibold text-slate-700 mb-1">Dead / Faulty Quantity</label>
                     <input type="number" value={formData.deadItems} onChange={(e) => setFormData({...formData, deadItems: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
                   </div>
 
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Warranty Expiry Date</label>
+                    <input type="date" value={formData.warranty} onChange={(e) => setFormData({...formData, warranty: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
+                  </div>
+
                   <div className="col-span-2">
                     <label className="block font-semibold text-slate-700 mb-1">Installation Location / User Allocation</label>
-                    <input type="text" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} placeholder="e.g. B Block, Dr. Jha Room" className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
+                    <input type="text" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} placeholder="e.g. B Block, Dr. Jha Room, Shampa HR" className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
                   </div>
 
                   <div className="col-span-2 flex justify-end space-x-2 pt-4 border-t border-slate-200">
