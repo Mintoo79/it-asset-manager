@@ -55,72 +55,76 @@
     const USERS_STORAGE_KEY = "it_asset_system_users_v1";
 
     const DEFAULT_SAMPLE_ASSETS = [
-      { firebaseKey: 'sample_1', group: 'MOUSE', particulars: 'USB Optical Mouse - Dell', brand: 'Dell', category: 'Consumable', openingQty: 15, newPurchase: 10, issueItems: 8, deadItems: 1, minAlert: 5, location: 'Main IT Store', entryMonth: 'Nov 2026', unit: 'Piece' },
-      { firebaseKey: 'sample_2', group: 'KEYBOARD', particulars: 'Wired USB Keyboard - HP', brand: 'HP', category: 'Consumable', openingQty: 12, newPurchase: 5, issueItems: 15, deadItems: 0, minAlert: 4, location: 'B Block', entryMonth: 'Nov 2026', unit: 'Piece' },
-      { firebaseKey: 'sample_3', group: 'STORAGE', particulars: 'SSD 512GB SATA III', brand: 'WD', unit: 'GB', category: 'Fixed Assets', openingQty: 8, newPurchase: 4, issueItems: 3, deadItems: 0, minAlert: 3, location: 'Server Room', entryMonth: 'Nov 2026' },
-      { firebaseKey: 'sample_4', group: 'CABLES', particulars: 'HDMI High-Speed Cable', brand: 'UGREEN', cableLength: '5', unit: 'Meter', category: 'Consumable', openingQty: 20, newPurchase: 0, issueItems: 6, deadItems: 0, minAlert: 5, location: 'A Block', entryMonth: 'Oct 2026' },
-      { firebaseKey: 'sample_5', group: 'PERIPHERALS', particulars: 'HD Web Camera 1080p', brand: 'Logitech', unit: 'Piece', category: 'Fixed Assets', openingQty: 5, newPurchase: 2, issueItems: 6, deadItems: 0, minAlert: 2, location: 'Conference Room', entryMonth: 'Nov 2026' }
+      { firebaseKey: 'sample_1', group: 'MOUSE', particulars: 'USB Optical Mouse - Dell', brand: 'Dell', category: 'Consumable', openingQty: 15, newPurchase: 10, issueItems: 8, shortItems: 0, deadItems: 1, minAlert: 5, location: 'Main IT Store', entryMonth: 'Nov 2026', unit: 'Piece', cableLength: '' },
+      { firebaseKey: 'sample_2', group: 'KEYBOARD', particulars: 'Wired USB Keyboard - HP', brand: 'HP', category: 'Consumable', openingQty: 12, newPurchase: 5, issueItems: 15, shortItems: 0, deadItems: 0, minAlert: 4, location: 'B Block', entryMonth: 'Nov 2026', unit: 'Piece', cableLength: '' },
+      { firebaseKey: 'sample_3', group: 'STORAGE', particulars: 'SSD 512GB SATA III', brand: 'WD', unit: 'GB', category: 'Fixed Assets', openingQty: 8, newPurchase: 4, issueItems: 3, shortItems: 0, deadItems: 0, minAlert: 3, location: 'Server Room', entryMonth: 'Nov 2026', cableLength: '' },
+      { firebaseKey: 'sample_4', group: 'CABLES', particulars: 'HDMI High-Speed Cable', brand: 'UGREEN', cableLength: '5', unit: 'Meter', category: 'Consumable', openingQty: 20, newPurchase: 0, issueItems: 6, shortItems: 0, deadItems: 0, minAlert: 5, location: 'A Block', entryMonth: 'Oct 2026' },
+      { firebaseKey: 'sample_5', group: 'PERIPHERALS', particulars: 'HD Web Camera 1080p', brand: 'Logitech', unit: 'Piece', category: 'Fixed Assets', openingQty: 5, newPurchase: 2, issueItems: 6, shortItems: 0, deadItems: 0, minAlert: 2, location: 'Conference Room', entryMonth: 'Nov 2026', cableLength: '' }
     ];
 
-    const DEFAULT_BRANDS = ['Dell', 'HP', 'Lenovo', 'Logitech', 'WD', 'Seagate', 'Kingston', 'UGREEN', 'Cisco', 'Samsung', 'Mantra', 'Wacom'];
+    const DEFAULT_USERS = [
+      { id: 'usr_super', name: 'Super Admin', pin: '1234', role: 'Super Admin', permissions: 'Full Access (Master + Create Users + Delete)' },
+      { id: 'usr_tech', name: 'IT Technician', pin: '2222', role: 'Operator', permissions: 'Stock Entry & Issue' }
+    ];
+
+    const DEFAULT_BRANDS = ['Dell', 'HP', 'Lenovo', 'Logitech', 'WD', 'Seagate', 'Kingston', 'UGREEN', 'Cisco', 'Samsung', 'Mantra', 'Wacom', 'Honeywell', 'Other'];
 
     const IMPORTANT_ITEMS = ['mouse', 'keyboard', 'ram', 'ssd', 'hdd', 'web camera', 'camera'];
 
-    function isImportantItem(name) {
-      if (!name) return false;
-      const lower = name.toLowerCase();
-      return IMPORTANT_ITEMS.some(item => lower.includes(item));
-    }
-
     const GROUP_COLORS = [
-      "bg-white border-l-4 border-l-indigo-600 text-slate-800 hover:bg-indigo-50/40",
-      "bg-white border-l-4 border-l-emerald-600 text-slate-800 hover:bg-emerald-50/40",
-      "bg-white border-l-4 border-l-sky-600 text-slate-800 hover:bg-sky-50/40",
-      "bg-white border-l-4 border-l-amber-500 text-slate-800 hover:bg-amber-50/40",
-      "bg-white border-l-4 border-l-violet-600 text-slate-800 hover:bg-violet-50/40",
-      "bg-white border-l-4 border-l-rose-500 text-slate-800 hover:bg-rose-50/40"
+      { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-900', badge: 'bg-indigo-600 text-white' },
+      { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900', badge: 'bg-emerald-600 text-white' },
+      { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-900', badge: 'bg-sky-600 text-white' },
+      { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900', badge: 'bg-amber-600 text-white' },
+      { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900', badge: 'bg-purple-600 text-white' },
+      { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-900', badge: 'bg-rose-600 text-white' }
     ];
 
     function App() {
-      const [isLoggedIn, setIsLoggedIn] = useState(false);
-      const [pinInput, setPinInput] = useState('');
-      const [loginError, setLoginError] = useState('');
-      const [currentUserSession, setCurrentUserSession] = useState(null);
-
-      const [systemUsers, setSystemUsers] = useState(() => {
+      const [users, setUsers] = useState(() => {
         try {
-          const cached = localStorage.getItem(USERS_STORAGE_KEY);
-          if (cached) return JSON.parse(cached);
-        } catch (e) {}
-        return [
-          { id: 'u1', username: 'Super Admin', pin: '1234', role: 'Super Admin', active: true }
-        ];
+          const saved = localStorage.getItem(USERS_STORAGE_KEY);
+          return saved ? JSON.parse(saved) : DEFAULT_USERS;
+        } catch (e) {
+          return DEFAULT_USERS;
+        }
       });
 
-      // New user form state inside Privilege Control
-      const [newUserForm, setNewUserForm] = useState({ username: '', pin: '', role: 'Administrator' });
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+      const [currentUser, setCurrentUser] = useState(null);
+      const [pinInput, setPinInput] = useState('');
+      const [loginError, setLoginError] = useState('');
 
-      const [activeTab, setActiveTab] = useState('inventory');
+      const [activeTab, setActiveTab] = useState('dashboard');
       const [searchQuery, setSearchQuery] = useState('');
       const [locationFilter, setLocationFilter] = useState('');
       const [monthFilter, setMonthFilter] = useState('');
-      const [brandFilter, setBrandFilter] = useState('');
-      const [selectedGroupFilter, setSelectedGroupFilter] = useState(null);
+      const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
 
       const [currentPage, setCurrentPage] = useState(1);
       const [itemsPerPage, setItemsPerPage] = useState(10);
 
       const [assets, setAssets] = useState([]);
       const [loading, setLoading] = useState(true);
-      const [isOfflineMode, setIsOfflineMode] = useState(false);
+      const [cloudConnected, setCloudConnected] = useState(false);
 
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
       const [deleteConfirmAsset, setDeleteConfirmAsset] = useState(null);
       const [toastMsg, setToastMsg] = useState('');
 
+      // New User Form State (Super Admin Privilege Control)
+      const [newUserName, setNewUserName] = useState('');
+      const [newUserPin, setNewUserPin] = useState('');
+      const [newUserRole, setNewUserRole] = useState('Super Admin');
+
       const lineChartRef = useRef(null);
       const donutChartRef = useRef(null);
+
+      const showToast = (msg) => {
+        setToastMsg(msg);
+        setTimeout(() => setToastMsg(''), 3000);
+      };
 
       const getCurrentMonthYear = () => {
         const d = new Date();
@@ -134,6 +138,7 @@
         cableLength: '',
         unit: 'Piece',
         brand: 'Dell',
+        customBrand: '',
         serialNo: '',
         vendor: '',
         invoiceNo: '',
@@ -148,11 +153,6 @@
         minAlert: 2,
         entryMonth: getCurrentMonthYear()
       });
-
-      const showToast = (msg) => {
-        setToastMsg(msg);
-        setTimeout(() => setToastMsg(''), 3000);
-      };
 
       const loadLocalFallback = () => {
         try {
@@ -171,27 +171,29 @@
       const saveLocalFallback = (updatedList) => {
         try {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedList));
-        } catch (e) {}
+        } catch (e) {
+          console.warn("Local storage save skipped:", e);
+        }
       };
 
       const fetchCloudData = async () => {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
           const res = await fetch(FIREBASE_DB_URL, { signal: controller.signal });
           clearTimeout(timeoutId);
           if (!res.ok) throw new Error("Network response not ok");
           const data = await res.json();
-          setIsOfflineMode(false);
+          setCloudConnected(true);
           if (data) {
             const list = Object.keys(data).map(key => ({ ...data[key], firebaseKey: key }));
             setAssets(list);
             saveLocalFallback(list);
           } else {
-            setAssets([]);
+            loadLocalFallback();
           }
         } catch (err) {
-          setIsOfflineMode(true);
+          setCloudConnected(false);
           loadLocalFallback();
         } finally {
           setLoading(false);
@@ -200,18 +202,91 @@
 
       useEffect(() => {
         fetchCloudData();
-        const interval = setInterval(fetchCloudData, 4000);
+        const interval = setInterval(fetchCloudData, 5000);
         return () => clearInterval(interval);
       }, []);
 
+      useEffect(() => {
+        if (activeTab === 'dashboard' && isLoggedIn) {
+          const timer = setTimeout(() => {
+            const lineCtx = document.getElementById('trendLineChart');
+            if (lineCtx && window.Chart) {
+              if (lineChartRef.current) lineChartRef.current.destroy();
+              lineChartRef.current = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                  labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+                  datasets: [
+                    {
+                      label: 'Entries',
+                      data: [40, 55, 60, 65, assets.length || 5],
+                      borderColor: '#4f46e5',
+                      backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                      tension: 0.3,
+                      fill: true,
+                      pointRadius: 4
+                    },
+                    {
+                      label: 'Issued',
+                      data: [25, 38, 42, 50, assets.reduce((acc, i) => acc + Number(i.issueItems || 0), 0)],
+                      borderColor: '#10b981',
+                      backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                      tension: 0.3,
+                      fill: true,
+                      pointRadius: 4
+                    }
+                  ]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                  }
+                }
+              });
+            }
+
+            const donutCtx = document.getElementById('overviewDonutChart');
+            if (donutCtx && window.Chart) {
+              if (donutChartRef.current) donutChartRef.current.destroy();
+              const consumable = assets.filter(i => i.category === 'Consumable').length;
+              const nonConsumable = assets.filter(i => i.category === 'Non-Consumable').length;
+              const fixedAssets = assets.filter(i => i.category === 'Fixed Assets').length;
+
+              donutChartRef.current = new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                  labels: ['Fixed Assets', 'Non-Consumable', 'Consumables'],
+                  datasets: [{
+                    data: [fixedAssets || 1, nonConsumable || 1, consumable || 1],
+                    backgroundColor: ['#4f46e5', '#10b981', '#a855f7'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  cutout: '72%',
+                  plugins: { legend: { display: false } }
+                }
+              });
+            }
+          }, 100);
+          return () => clearTimeout(timer);
+        }
+      }, [activeTab, isLoggedIn, assets]);
+
       const handleLogin = (e) => {
         e.preventDefault();
-        const foundUser = systemUsers.find(u => u.pin === pinInput && u.active);
+        const foundUser = users.find(u => u.pin === pinInput.trim());
         if (foundUser) {
+          setCurrentUser(foundUser);
           setIsLoggedIn(true);
-          setCurrentUserSession(foundUser);
           setLoginError('');
-          showToast(`Welcome back, ${foundUser.username} (${foundUser.role})`);
         } else {
           setLoginError('Invalid Security PIN (Default Super Admin PIN: 1234)');
         }
@@ -219,57 +294,60 @@
 
       const handleLogout = () => {
         setIsLoggedIn(false);
-        setCurrentUserSession(null);
+        setCurrentUser(null);
         setPinInput('');
       };
 
       const handleCreateUser = (e) => {
         e.preventDefault();
-        if (!newUserForm.username || !newUserForm.pin) {
-          showToast("Please enter username and PIN");
+        if (!newUserName.trim() || !newUserPin.trim()) return;
+        if (users.some(u => u.pin === newUserPin.trim())) {
+          showToast("PIN already exists! Choose a unique PIN.");
           return;
         }
-        const newUser = {
-          id: `usr_${Date.now()}`,
-          username: newUserForm.username,
-          pin: newUserForm.pin,
-          role: newUserForm.role,
-          active: true
+        const perms = newUserRole === 'Super Admin'
+          ? 'Full Access (Master + Create Users + Delete)'
+          : newUserRole === 'Admin'
+          ? 'Stock Entry + Reports + Edit'
+          : 'Stock Entry & View Only';
+        const newUserObj = {
+          id: 'usr_' + Date.now(),
+          name: newUserName.trim(),
+          pin: newUserPin.trim(),
+          role: newUserRole,
+          permissions: perms
         };
-        const updatedUsers = [...systemUsers, newUser];
-        setSystemUsers(updatedUsers);
-        try {
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-        } catch (err) {}
-        setNewUserForm({ username: '', pin: '', role: 'Administrator' });
-        showToast(`New user account "${newUser.username}" created successfully.`);
+        const updatedUsers = [...users, newUserObj];
+        setUsers(updatedUsers);
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+        setNewUserName('');
+        setNewUserPin('');
+        showToast(`User "${newUserObj.name}" (${newUserObj.role}) created!`);
       };
 
       const handleDeleteUser = (userId) => {
-        if (systemUsers.length <= 1) {
-          showToast("Cannot delete the last remaining system user.");
+        if (userId === 'usr_super') {
+          showToast("Primary Super Admin cannot be removed.");
           return;
         }
-        if (window.confirm("Are you sure you want to revoke access for this user?")) {
-          const updatedUsers = systemUsers.filter(u => u.id !== userId);
-          setSystemUsers(updatedUsers);
-          try {
-            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-          } catch (err) {}
-          showToast("User account removed.");
-        }
+        const updatedUsers = users.filter(u => u.id !== userId);
+        setUsers(updatedUsers);
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+        showToast("User account removed.");
       };
 
       const handleOpenModal = (asset = null) => {
         const autoMonth = getCurrentMonthYear();
         if (asset) {
+          const isKnownBrand = DEFAULT_BRANDS.includes(asset.brand);
           setEditingAsset(asset);
           setFormData({
             group: asset.group || '',
             particulars: asset.particulars || '',
             cableLength: asset.cableLength || '',
             unit: asset.unit || 'Piece',
-            brand: asset.brand || 'Dell',
+            brand: isKnownBrand ? (asset.brand || 'Dell') : 'Other',
+            customBrand: isKnownBrand ? '' : (asset.brand || ''),
             serialNo: asset.serialNo || '',
             vendor: asset.vendor || '',
             invoiceNo: asset.invoiceNo || '',
@@ -292,6 +370,7 @@
             cableLength: '',
             unit: 'Piece',
             brand: 'Dell',
+            customBrand: '',
             serialNo: '',
             vendor: '',
             invoiceNo: '',
@@ -314,45 +393,50 @@
         e.preventDefault();
         setLoading(true);
         const currentTimestamp = Date.now();
+        const resolvedBrand = formData.brand === 'Other' && formData.customBrand.trim()
+          ? formData.customBrand.trim()
+          : formData.brand;
+        const { customBrand, ...cleanFormData } = formData;
         const finalData = {
-          ...formData,
+          ...cleanFormData,
+          brand: resolvedBrand,
           group: (formData.group || 'GENERAL').toUpperCase().trim(),
           entryMonth: formData.entryMonth ? formData.entryMonth : getCurrentMonthYear()
         };
 
+        let updatedList;
+        if (editingAsset && editingAsset.firebaseKey) {
+          updatedList = assets.map(item =>
+            item.firebaseKey === editingAsset.firebaseKey ? { ...finalData, firebaseKey: editingAsset.firebaseKey } : item
+          );
+        } else {
+          const newRecord = { ...finalData, id: currentTimestamp, firebaseKey: `local_${currentTimestamp}` };
+          updatedList = [newRecord, ...assets];
+        }
+
+        setAssets(updatedList);
+        saveLocalFallback(updatedList);
+        setIsModalOpen(false);
+        showToast(editingAsset ? "Asset record updated!" : "New asset added to ledger!");
+
         try {
-          if (isOfflineMode) throw new Error("Offline mode active");
-          if (editingAsset && editingAsset.firebaseKey) {
+          if (editingAsset && editingAsset.firebaseKey && !editingAsset.firebaseKey.startsWith('sample_') && !editingAsset.firebaseKey.startsWith('local_')) {
             const updateUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${editingAsset.firebaseKey}.json`;
             await fetch(updateUrl, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(finalData)
             });
-            showToast("Asset record updated successfully.");
           } else {
             await fetch(FIREBASE_DB_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ ...finalData, id: currentTimestamp })
             });
-            showToast("New asset record registered.");
           }
-          setIsModalOpen(false);
           await fetchCloudData();
         } catch (err) {
-          let updatedAssets;
-          if (editingAsset && editingAsset.firebaseKey) {
-            updatedAssets = assets.map(a => a.firebaseKey === editingAsset.firebaseKey ? { ...finalData, firebaseKey: editingAsset.firebaseKey } : a);
-            showToast("Asset updated (Local Storage Mode).");
-          } else {
-            const newRecord = { ...finalData, id: currentTimestamp, firebaseKey: `local_${currentTimestamp}` };
-            updatedAssets = [newRecord, ...assets];
-            showToast("New asset saved (Local Storage Mode).");
-          }
-          setAssets(updatedAssets);
-          saveLocalFallback(updatedAssets);
-          setIsModalOpen(false);
+          console.warn("Saved locally (Cloud offline)");
         } finally {
           setLoading(false);
         }
@@ -360,47 +444,76 @@
 
       const confirmDeleteAsset = async () => {
         if (!deleteConfirmAsset) return;
+        const asset = deleteConfirmAsset;
+        setDeleteConfirmAsset(null);
         setLoading(true);
+
+        const updatedList = assets.filter(item => item.firebaseKey !== asset.firebaseKey);
+        setAssets(updatedList);
+        saveLocalFallback(updatedList);
+        showToast("Asset record deleted.");
+
         try {
-          if (isOfflineMode) throw new Error("Offline mode active");
-          const deleteUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${deleteConfirmAsset.firebaseKey}.json`;
-          await fetch(deleteUrl, { method: 'DELETE' });
-          showToast("Asset record deleted.");
-          setDeleteConfirmAsset(null);
-          await fetchCloudData();
+          if (asset.firebaseKey && !asset.firebaseKey.startsWith('sample_') && !asset.firebaseKey.startsWith('local_')) {
+            const deleteUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${asset.firebaseKey}.json`;
+            await fetch(deleteUrl, { method: 'DELETE' });
+            await fetchCloudData();
+          }
         } catch (err) {
-          const updatedAssets = assets.filter(a => a.firebaseKey !== deleteConfirmAsset.firebaseKey);
-          setAssets(updatedAssets);
-          saveLocalFallback(updatedAssets);
-          showToast("Asset deleted (Local Storage Mode).");
-          setDeleteConfirmAsset(null);
+          console.warn("Deleted locally");
         } finally {
           setLoading(false);
         }
       };
 
-      const groupSummaries = React.useMemo(() => {
-        const groupsMap = {};
-        assets.forEach(item => {
-          const grp = (item.group || 'GENERAL').toUpperCase().trim();
-          if (!groupsMap[grp]) {
-            groupsMap[grp] = { name: grp, count: 0, totalQty: 0, lowCount: 0 };
-          }
-          groupsMap[grp].count += 1;
+      const handleExportCSV = () => {
+        const headers = ['Group', 'Particulars', 'Brand', 'CableLength', 'Unit', 'Category', 'Opening', 'Purchase', 'Issued', 'Short', 'Dead', 'PhysicalBal', 'Location', 'Month'];
+        const rows = assets.map(item => {
           const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
-          groupsMap[grp].totalQty += Math.max(0, bal);
-          if (bal <= Number(item.minAlert || 2)) {
-            groupsMap[grp].lowCount += 1;
-          }
+          const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
+          return [
+            `"${item.group || ''}"`,
+            `"${item.particulars || ''}"`,
+            `"${item.brand || ''}"`,
+            `"${item.cableLength || ''}"`,
+            `"${item.unit || 'Piece'}"`,
+            `"${item.category || ''}"`,
+            item.openingQty || 0,
+            item.newPurchase || 0,
+            item.issueItems || 0,
+            item.shortItems || 0,
+            item.deadItems || 0,
+            phy,
+            `"${item.location || ''}"`,
+            `"${item.entryMonth || ''}"`
+          ].join(',');
         });
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `IT_Stock_Register_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("Stock Register exported to CSV!");
+      };
 
-        return Object.values(groupsMap)
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((grp, idx) => ({
-            ...grp,
-            colorClass: GROUP_COLORS[idx % GROUP_COLORS.length]
-          }));
-      }, [assets]);
+      // Alphabetical Group Summary Calculation
+      const groupMap = {};
+      assets.forEach(item => {
+        const grp = (item.group || 'GENERAL').toUpperCase().trim();
+        const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
+        const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
+        const isLow = phy <= Number(item.minAlert || 2);
+        if (!groupMap[grp]) {
+          groupMap[grp] = { name: grp, count: 0, totalStock: 0, lowCount: 0 };
+        }
+        groupMap[grp].count += 1;
+        groupMap[grp].totalStock += Math.max(phy, 0);
+        if (isLow) groupMap[grp].lowCount += 1;
+      });
+      const sortedGroups = Object.values(groupMap).sort((a, b) => a.name.localeCompare(b.name));
 
       const filteredAssets = assets.filter(item => {
         const matchesSearch = (item.particulars || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -408,17 +521,16 @@
                               (item.brand || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesLocation = locationFilter === '' || (item.location || '').toLowerCase().includes(locationFilter.toLowerCase());
         const matchesMonth = monthFilter === '' || (item.entryMonth || '').toLowerCase().includes(monthFilter.toLowerCase());
-        const matchesBrand = brandFilter === '' || (item.brand || '').toLowerCase() === brandFilter.toLowerCase();
-        const matchesGroup = !selectedGroupFilter || (item.group || 'GENERAL').toUpperCase().trim() === selectedGroupFilter;
-        return matchesSearch && matchesLocation && matchesMonth && matchesBrand && matchesGroup;
+        const matchesGroup = selectedGroupFilter === '' || (item.group || 'GENERAL').toUpperCase().trim() === selectedGroupFilter;
+        return matchesSearch && matchesLocation && matchesMonth && matchesGroup;
       });
 
       const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
       const indexOfLastItem = currentPage * itemsPerPage;
       const indexOfFirstItem = indexOfLastItem - itemsPerPage;
       const currentItems = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
-      const totalRecords = assets.length;
 
+      const totalRecords = assets.length;
       const lowStockItems = assets.filter(item => {
         const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
         const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
@@ -428,7 +540,7 @@
 
       if (!isLoggedIn) {
         return (
-          <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
+          <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
             <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
               <div className="text-center mb-6">
                 <div className="inline-flex p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl mb-3 shadow-inner border border-indigo-100">
@@ -441,9 +553,9 @@
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Security PIN Code</label>
-                  <input 
-                    type="password" 
-                    placeholder="Enter PIN (Default Super Admin: 1234)" 
+                  <input
+                    type="password"
+                    placeholder="Enter PIN (Super Admin Default: 1234)"
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-600 outline-none transition"
@@ -464,34 +576,28 @@
 
       return (
         <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
-          
           {/* Toast Notification */}
           {toastMsg && (
-            <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 animate-bounce">
+            <div className="fixed bottom-12 right-5 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 text-xs font-bold flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              {toastMsg}
+              <span>{toastMsg}</span>
             </div>
           )}
 
-          {/* Left Sidebar */}
+          {/* Left Sidebar Navigation */}
           <aside className="w-64 neon-sidebar text-slate-300 flex flex-col justify-between p-4 shadow-xl border-r border-slate-800 relative shrink-0">
             <div>
               <div className="text-center pt-2 pb-5 border-b border-slate-800">
-                <div className="inline-flex p-3 bg-indigo-500/15 border border-indigo-500/30 rounded-2xl mb-2 shadow-inner">
+                <div className="inline-flex p-3 bg-indigo-600/20 border border-indigo-500/40 rounded-full mb-2 shadow-lg shadow-indigo-500/20">
                   <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 </div>
                 <h2 className="font-black text-white text-base tracking-wider leading-tight">IT ASSET</h2>
                 <h2 className="font-black text-white text-base tracking-wider leading-tight">MANAGEMENT</h2>
                 <h2 className="font-black text-white text-base tracking-wider leading-tight">SYSTEM</h2>
-                {isOfflineMode ? (
-                  <span className="text-[11px] text-amber-400 font-bold flex items-center justify-center gap-1.5 mt-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400"></span> Local Storage Sync
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-emerald-400 font-bold flex items-center justify-center gap-1.5 mt-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Synchronized
-                  </span>
-                )}
+                <span className="text-[11px] text-emerald-400 font-bold flex items-center justify-center gap-1.5 mt-2">
+                  <span className={`w-2 h-2 rounded-full ${cloudConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                  {cloudConnected ? 'Cloud Synchronized' : 'Local Sync Active'}
+                </span>
               </div>
 
               <nav className="mt-5 space-y-2">
@@ -505,9 +611,9 @@
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
-                      activeTab === tab.id 
-                        ? 'active-neon-btn text-white' 
+                    className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                      activeTab === tab.id
+                        ? 'active-neon-btn text-white'
                         : 'hover:bg-slate-800/80 text-slate-300 hover:text-white'
                     }`}
                   >
@@ -522,22 +628,22 @@
             </div>
 
             <div className="space-y-3 pt-3 border-t border-slate-800">
-              <div className="p-3 bg-slate-800/70 rounded-xl border border-slate-700/80 flex items-center space-x-3">
+              <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center space-x-3">
                 <div className="relative">
                   <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-sm">
-                    {currentUserSession?.username ? currentUserSession.username.charAt(0).toUpperCase() : 'A'}
+                    {(currentUser?.name || 'S')[0]}
                   </div>
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 absolute bottom-0 right-0 border-2 border-slate-900"></span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-white text-xs leading-tight">{currentUserSession?.username || 'Admin'}</h4>
-                  <p className="text-[10px] text-slate-400 font-medium leading-tight">{currentUserSession?.role || 'Super Admin'}</p>
+                  <h4 className="font-bold text-white text-xs leading-tight">{currentUser?.name || 'Super Admin'}</h4>
+                  <p className="text-[10px] text-indigo-400 font-bold leading-tight">{currentUser?.role || 'Super Admin'}</p>
                 </div>
               </div>
 
-              <button 
-                onClick={handleLogout} 
-                className="w-full py-2.5 bg-slate-800 hover:bg-rose-600 text-slate-200 hover:text-white border border-slate-700 hover:border-rose-600 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 cursor-pointer"
+              <button
+                onClick={handleLogout}
+                className="w-full py-3 bg-gradient-to-r from-rose-800 to-rose-700 hover:from-rose-700 hover:to-rose-600 text-white rounded-2xl font-bold text-xs shadow-lg shadow-rose-900/30 transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                 Sign Out
@@ -545,15 +651,15 @@
             </div>
           </aside>
 
-          {/* Main Content Area */}
+          {/* Main Content Workspace */}
           <main className="flex-1 flex flex-col overflow-hidden p-4 space-y-3">
-            
-            {/* VIEW 1: DASHBOARD */}
+
+            {/* TAB 0: DASHBOARD */}
             {activeTab === 'dashboard' && (
               <div className="flex-1 overflow-auto space-y-5">
                 <header className="px-2 py-2 flex justify-between items-center">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600">
+                    <div className="p-2 bg-indigo-100 rounded-xl text-indigo-600">
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                     </div>
                     <div>
@@ -563,67 +669,67 @@
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-1 px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-semibold text-slate-700">
-                      <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <div className="flex items-center space-x-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-xs font-semibold text-slate-700">
+                      <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                       <span>{getCurrentMonthYear()}</span>
                     </div>
                   </div>
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div className="p-5 rounded-2xl bg-white border border-slate-200 border-l-4 border-l-indigo-600 shadow-sm relative overflow-hidden flex justify-between items-center">
-                    <div className="space-y-1 z-10">
+                  <div className="p-5 rounded-2xl bg-white border-l-4 border-l-indigo-600 border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div className="space-y-1">
                       <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Managed Assets</p>
                       <div className="flex items-baseline gap-2">
-                        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">{totalRecords || 76}</h2>
-                        <span className="text-xs font-bold text-indigo-600 flex items-center">↑ +5%</span>
+                        <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">{totalRecords}</h2>
+                        <span className="text-xs font-bold text-indigo-600">Active SKUs</span>
                       </div>
                     </div>
                     <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-white border border-slate-200 border-l-4 border-l-emerald-500 shadow-sm relative overflow-hidden flex justify-between items-center">
-                    <div className="space-y-1 z-10">
+                  <div className="p-5 rounded-2xl bg-white border-l-4 border-l-emerald-500 border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div className="space-y-1">
                       <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">This Month Entries ({getCurrentMonthYear()})</p>
                       <div className="flex items-baseline gap-2">
-                        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">{currentMonthRecords || 71}</h2>
-                        <span className="text-xs font-bold text-emerald-600 flex items-center">↑ +12%</span>
+                        <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">{currentMonthRecords}</h2>
+                        <span className="text-xs font-bold text-emerald-600">Current Period</span>
                       </div>
                     </div>
                     <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     </div>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-white border border-slate-200 border-l-4 border-l-rose-500 shadow-sm relative overflow-hidden flex justify-between items-center">
-                    <div className="space-y-1 z-10">
+                  <div className="p-5 rounded-2xl bg-white border-l-4 border-l-rose-500 border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div className="space-y-1">
                       <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Low Stock Alerts</p>
                       <div className="flex items-baseline gap-2">
-                        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">{lowStockItems.length || 53}</h2>
-                        <span className="text-xs font-bold text-rose-600 flex items-center">Attention</span>
+                        <h2 className="text-4xl font-extrabold text-rose-600 tracking-tight">{lowStockItems.length}</h2>
+                        <span className="text-xs font-bold text-rose-500">Needs Restock</span>
                       </div>
                     </div>
                     <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl">
-                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   <div className="lg:col-span-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                    <h3 className="font-bold text-slate-900 text-sm">Asset Overview</h3>
+                    <h3 className="font-bold text-slate-900 text-sm">Asset Category Overview</h3>
                     <div className="relative h-44 my-2">
                       <canvas id="overviewDonutChart"></canvas>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-2xl font-extrabold text-slate-900">{totalRecords || 76}</span>
+                        <span className="text-2xl font-extrabold text-slate-900">{totalRecords}</span>
                         <span className="text-[10px] text-slate-400 font-bold uppercase">Total</span>
                       </div>
                     </div>
                     <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
                       <div className="flex justify-between items-center font-semibold text-slate-700">
-                        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Fixed Assets</span>
+                        <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> Fixed Assets</span>
                         <span>{assets.filter(i => i.category === 'Fixed Assets').length}</span>
                       </div>
                       <div className="flex justify-between items-center font-semibold text-slate-700">
@@ -641,7 +747,7 @@
                     <div className="flex justify-between items-center">
                       <h3 className="font-bold text-slate-900 text-sm">Monthly Trend</h3>
                       <div className="flex items-center space-x-3 text-xs font-semibold">
-                        <span className="flex items-center gap-1 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Entries</span>
+                        <span className="flex items-center gap-1 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> Entries</span>
                         <span className="flex items-center gap-1 text-slate-600"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Issued</span>
                       </div>
                     </div>
@@ -652,59 +758,47 @@
 
                   <div className="lg:col-span-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
                     <h3 className="font-bold text-slate-900 text-sm mb-4">Quick Actions</h3>
-                    <button 
-                      onClick={() => handleOpenModal()} 
-                      className="w-full py-6 bg-indigo-50/70 hover:bg-indigo-100/80 text-indigo-600 border border-indigo-200 rounded-2xl transition flex flex-col items-center justify-center gap-2 group shadow-sm cursor-pointer"
+                    <button
+                      onClick={() => handleOpenModal()}
+                      className="w-full py-6 bg-indigo-50 hover:bg-indigo-100/80 text-indigo-600 border border-indigo-200 rounded-2xl transition flex flex-col items-center justify-center gap-2 group shadow-sm cursor-pointer"
                     >
                       <div className="p-3 bg-indigo-600 text-white rounded-full group-hover:scale-110 transition duration-200">
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                       </div>
-                      <span className="font-bold text-xs text-slate-800">Add Asset</span>
+                      <span className="font-bold text-xs text-slate-800">Add New Asset</span>
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* VIEW 2: STOCK REGISTER */}
+            {/* TAB 1: STOCK REGISTER */}
             {activeTab === 'inventory' && (
               <>
-                <header className="bg-white text-slate-900 p-3.5 rounded-xl shadow-sm flex flex-wrap gap-2 justify-between items-center border border-slate-200">
+                <header className="bg-slate-900 text-white p-3 rounded-xl shadow-md flex flex-wrap gap-2 justify-between items-center border border-slate-800">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-600">
+                    <div className="p-2 bg-indigo-600/30 border border-indigo-500/40 rounded-lg text-indigo-400">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     </div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-800">Stock Register & Inventory Ledger</h1>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Stock Register & Inventory Ledger</h1>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="relative">
-                      <input 
-                        type="text" 
-                        placeholder="Search Items..." 
+                      <input
+                        type="text"
+                        placeholder="Search Items / Brand..."
                         value={searchQuery}
                         onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                        className="w-40 px-3 py-1.5 pl-8 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        className="w-44 px-3 py-1.5 pl-8 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       />
                       <svg className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
 
-                    {/* Brand Filter Dropdown */}
-                    <select 
-                      value={brandFilter} 
-                      onChange={(e) => { setBrandFilter(e.target.value); setCurrentPage(1); }}
-                      className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-700 font-bold outline-none cursor-pointer"
-                    >
-                      <option value="">Brand: All</option>
-                      {DEFAULT_BRANDS.map((b, idx) => (
-                        <option key={idx} value={b}>{b}</option>
-                      ))}
-                    </select>
-
-                    <select 
-                      value={monthFilter} 
+                    <select
+                      value={monthFilter}
                       onChange={(e) => { setMonthFilter(e.target.value); setCurrentPage(1); }}
-                      className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-700 font-medium outline-none"
+                      className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white outline-none"
                     >
                       <option value="">Month: All</option>
                       <option value="Nov 2026">Month: Nov 2026</option>
@@ -712,517 +806,575 @@
                       <option value="Sep 2026">Month: Sep 2026</option>
                     </select>
 
-                    <select 
-                      value={locationFilter} 
+                    <select
+                      value={locationFilter}
                       onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
-                      className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg text-slate-700 font-medium outline-none"
+                      className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white outline-none"
                     >
                       <option value="">Location: All</option>
-                      <option value="B Block">Location: B Block</option>
-                      <option value="A Block">Location: A Block</option>
+                      <option value="Main IT Store">Main IT Store</option>
+                      <option value="Server Room">Server Room</option>
+                      <option value="B Block">B Block</option>
+                      <option value="A Block">A Block</option>
                     </select>
 
-                    <button 
-                      onClick={() => handleOpenModal()} 
-                      className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer"
+                    <button
+                      onClick={() => handleOpenModal()}
+                      className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-xs shadow transition flex items-center gap-1.5 cursor-pointer"
                     >
-                      + New Asset
+                      <span>+ New Asset</span>
                     </button>
                   </div>
                 </header>
 
-                {/* Alphabetically Sorted Dynamic Group Cards */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                      <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                      Alphabetical Group Summary (Click Box to Filter)
+                {/* Alphabetical Group Summary Cards */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+                      Asset Groups (Alphabetical A–Z) • Click to Filter
                     </span>
                     {selectedGroupFilter && (
-                      <button 
-                        onClick={() => { setSelectedGroupFilter(null); setCurrentPage(1); }} 
-                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 flex items-center gap-1 cursor-pointer"
+                      <button
+                        onClick={() => { setSelectedGroupFilter(''); setCurrentPage(1); }}
+                        className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
                       >
-                        ✕ Clear Filter ({selectedGroupFilter})
+                        ✕ Clear Group Filter ({selectedGroupFilter})
                       </button>
                     )}
                   </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 max-h-36 overflow-y-auto pr-1">
-                    {groupSummaries.map((g, idx) => {
-                      const isSelected = selectedGroupFilter === g.name;
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
+                    {sortedGroups.map((grp, idx) => {
+                      const theme = GROUP_COLORS[idx % GROUP_COLORS.length];
+                      const isSelected = selectedGroupFilter === grp.name;
                       return (
-                        <div 
-                          key={idx}
-                          onClick={() => { setSelectedGroupFilter(isSelected ? null : g.name); setCurrentPage(1); }}
-                          className={`p-2.5 rounded-xl border border-slate-200 ${g.colorClass} shadow-sm transition-all duration-200 cursor-pointer relative overflow-hidden ${isSelected ? 'ring-2 ring-indigo-600 bg-indigo-50/50 scale-[1.01]' : ''}`}
+                        <button
+                          key={grp.name}
+                          onClick={() => {
+                            setSelectedGroupFilter(isSelected ? '' : grp.name);
+                            setCurrentPage(1);
+                          }}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${theme.bg} ${theme.border} ${
+                            isSelected ? 'ring-2 ring-indigo-600 scale-[1.02] shadow-md' : 'hover:shadow-sm'
+                          }`}
                         >
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-extrabold text-xs tracking-wide truncate max-w-[100px] text-slate-900">{g.name}</h4>
-                            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-bold">
-                              {g.count} Items
+                          <div className="flex justify-between items-center mb-1">
+                            <span className={`font-extrabold text-xs truncate ${theme.text}`}>{grp.name}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${theme.badge}`}>
+                              {grp.totalStock}
                             </span>
                           </div>
-                          <div className="mt-2 flex justify-between items-end">
-                            <div>
-                              <p className="text-[9px] text-slate-400 uppercase font-semibold">Total Stock</p>
-                              <p className="text-sm font-black text-slate-800">{g.totalQty}</p>
-                            </div>
-                            {g.lowCount > 0 && (
-                              <span className="px-1.5 py-0.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-md text-[8px] font-extrabold">
-                                {g.lowCount} Low
-                              </span>
+                          <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold">
+                            <span>{grp.count} SKUs</span>
+                            {grp.lowCount > 0 && (
+                              <span className="text-rose-600 font-bold">{grp.lowCount} Low</span>
                             )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Stock Ledger Table */}
+                <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
+                  <table className="w-full text-left border-collapse table-compact text-xs">
+                    <thead className="bg-slate-900 text-slate-200 sticky top-0 z-10 text-[10px] uppercase font-bold tracking-wider">
+                      <tr>
+                        <th className="w-8 text-center">#</th>
+                        <th>Group</th>
+                        <th>Particulars / Item (Click to Edit)</th>
+                        <th>Brand</th>
+                        <th>Length / Unit</th>
+                        <th className="text-center">OP</th>
+                        <th className="text-center">Purch.</th>
+                        <th className="text-center">Issued</th>
+                        <th className="text-center">Bal</th>
+                        <th className="text-center">Dead</th>
+                        <th className="text-center bg-indigo-950 text-indigo-200">Phy. Stock</th>
+                        <th>Category</th>
+                        <th>Location</th>
+                        <th className="text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {currentItems.length === 0 ? (
+                        <tr>
+                          <td colSpan="14" className="text-center py-8 text-slate-400 font-medium">
+                            No asset records found matching your filters.
+                          </td>
+                        </tr>
+                      ) : (
+                        currentItems.map((item, idx) => {
+                          const op = Number(item.openingQty || 0);
+                          const purch = Number(item.newPurchase || 0);
+                          const issued = Number(item.issueItems || 0);
+                          const short = Number(item.shortItems || 0);
+                          const dead = Number(item.deadItems || 0);
+                          const bal = op + purch - issued;
+                          const phy = bal - short - dead;
+                          const isLow = phy <= Number(item.minAlert || 2);
+                          const isVip = IMPORTANT_ITEMS.some(k => (item.particulars || '').toLowerCase().includes(k));
+                          const lengthUnitDisplay = item.cableLength
+                            ? `${item.cableLength} ${item.unit || 'Meter'}`
+                            : (item.unit || 'Piece');
+
+                          return (
+                            <tr key={item.firebaseKey || idx} className={`hover:bg-indigo-50/40 transition ${isLow ? 'bg-rose-50/40' : ''}`}>
+                              <td className="text-center font-mono text-slate-400">{indexOfFirstItem + idx + 1}</td>
+                              <td>
+                                <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-bold text-[10px]">
+                                  {item.group || 'GENERAL'}
+                                </span>
+                              </td>
+                              <td className="font-semibold">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenModal(item)}
+                                  className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-left inline-flex items-center gap-1 cursor-pointer"
+                                  title="Click to Edit Asset Details"
+                                >
+                                  {isVip && <span className="text-amber-500" title="Critical Hardware">★</span>}
+                                  <span>{item.particulars}</span>
+                                </button>
+                              </td>
+                              <td className="font-semibold text-slate-700">{item.brand || '-'}</td>
+                              <td className="font-mono text-[11px] font-bold text-slate-600">{lengthUnitDisplay}</td>
+                              <td className="text-center font-mono">{op}</td>
+                              <td className="text-center font-mono text-emerald-600 font-semibold">+{purch}</td>
+                              <td className="text-center font-mono text-amber-600 font-semibold">-{issued}</td>
+                              <td className="text-center font-mono font-bold text-slate-700">{bal}</td>
+                              <td className="text-center font-mono text-rose-500">{dead}</td>
+                              <td className="text-center font-mono font-extrabold bg-indigo-50/50">
+                                <span className={`px-2 py-0.5 rounded-full text-[11px] ${isLow ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                  {phy}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  item.category === 'Fixed Assets'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : item.category === 'Non-Consumable'
+                                    ? 'bg-sky-100 text-sky-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}>
+                                  {item.category || 'Consumable'}
+                                </span>
+                              </td>
+                              <td className="text-slate-600 font-medium">{item.location || '-'}</td>
+                              <td className="text-center">
+                                <button
+                                  onClick={() => setDeleteConfirmAsset(item)}
+                                  className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded text-[10px] font-bold transition cursor-pointer"
+                                >
+                                  Del
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Bottom Status & Pagination Bar */}
+                <footer className="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center text-xs">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-slate-500 font-medium">Rows per view:</span>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                        className="border border-slate-300 rounded-lg px-2 py-1 font-bold text-slate-700 bg-slate-50 outline-none"
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                    <span className="text-slate-500 font-semibold">
+                      Showing {filteredAssets.length === 0 ? 0 : indexOfFirstItem + 1}–{Math.min(indexOfLastItem, filteredAssets.length)} of {filteredAssets.length} records
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      className="px-3 py-1 rounded-lg border border-slate-300 font-bold disabled:opacity-40 hover:bg-slate-100 cursor-pointer"
+                    >
+                      Prev
+                    </button>
+                    <span className="font-bold text-indigo-600 px-2">Page {currentPage} of {totalPages}</span>
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      className="px-3 py-1 rounded-lg border border-slate-300 font-bold disabled:opacity-40 hover:bg-slate-100 cursor-pointer"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </footer>
+              </>
+            )}
+
+            {/* TAB 2: ANALYTICS BOARD */}
+            {activeTab === 'analytics' && (
+              <div className="flex-1 overflow-auto space-y-5">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                  <h2 className="text-base font-extrabold text-slate-900">Group-Wise Stock Distribution & Analytics</h2>
+                  <p className="text-xs text-slate-500 mb-4">Real-time breakdown of physical stock quantities across asset groups.</p>
+
+                  <div className="space-y-3">
+                    {sortedGroups.map((grp, idx) => {
+                      const maxStock = Math.max(...sortedGroups.map(g => g.totalStock), 1);
+                      const pct = Math.round((grp.totalStock / maxStock) * 100);
+                      return (
+                        <div key={grp.name} className="space-y-1">
+                          <div className="flex justify-between text-xs font-bold">
+                            <span className="text-slate-800">{grp.name} ({grp.count} Items)</span>
+                            <span className="text-indigo-600">{grp.totalStock} Units</span>
+                          </div>
+                          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            ></div>
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 </div>
-
-                {/* Table View */}
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col justify-between mt-1">
-                  <div className="overflow-x-auto flex-1">
-                    <table className="w-full text-left border-collapse table-compact">
-                      <thead>
-                        <tr className="bg-slate-800 text-white text-[10px] uppercase font-bold tracking-wider">
-                          <th className="p-2">Group</th>
-                          <th className="p-2">Particulars / Item</th>
-                          <th className="p-2 text-indigo-300">Brand</th>
-                          <th className="p-2 text-center">Unit</th>
-                          <th className="p-2 text-center">OP</th>
-                          <th className="p-2 text-center">Purch.</th>
-                          <th className="p-2 text-center">Issued</th>
-                          <th className="p-2 text-center">Return</th>
-                          <th className="p-2 text-center">Bal</th>
-                          <th className="p-2 text-center">Dead</th>
-                          <th className="p-2">Category</th>
-                          <th className="p-2">Location</th>
-                          <th className="p-2 text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-700">
-                        {currentItems.length > 0 ? (
-                          currentItems.map((item, idx) => {
-                            const op = Number(item.openingQty || 0);
-                            const purch = Number(item.newPurchase || 0);
-                            const issue = Number(item.issueItems || 0);
-                            const dead = Number(item.deadItems || 0);
-                            const balance = (op + purch) - issue;
-                            const isLow = balance <= Number(item.minAlert || 2);
-                            const isVIP = isImportantItem(item.particulars);
-
-                            return (
-                              <tr key={item.firebaseKey || idx} className={`hover:bg-slate-50 transition ${isVIP ? 'bg-amber-50/40' : ''}`}>
-                                <td className="p-2 font-bold uppercase text-[11px] text-slate-900">{item.group || 'GENERAL'}</td>
-                                <td className="p-2 font-bold">
-                                  <button 
-                                    type="button"
-                                    onClick={() => handleOpenModal(item)}
-                                    className="text-left text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1.5 cursor-pointer font-bold transition"
-                                    title="Click to Edit Asset Details"
-                                  >
-                                    {isVIP && <span className="text-amber-500 font-bold" title="Important Asset Tag">★</span>}
-                                    <span>{item.particulars}</span>
-                                  </button>
-                                </td>
-                                <td className="p-2 font-bold text-slate-700">{item.brand || '-'}</td>
-                                <td className="p-2 text-center text-slate-600 text-[11px] font-bold">
-                                  {item.cableLength ? `${item.cableLength} ` : ''}{item.unit || 'Piece'}
-                                </td>
-                                <td className="p-2 text-center font-bold text-slate-600">{op}</td>
-                                <td className="p-2 text-center font-bold text-emerald-600">+{purch}</td>
-                                <td className="p-2 text-center font-bold text-blue-600">{issue}</td>
-                                <td className="p-2 text-center font-bold text-indigo-600">0</td>
-                                <td className="p-2 text-center">
-                                  <span className={`px-2 py-0.5 rounded text-[11px] font-black ${isLow ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-emerald-100 text-emerald-800'}`}>
-                                    {balance}
-                                  </span>
-                                </td>
-                                <td className="p-2 text-center font-bold text-rose-600">{dead}</td>
-                                <td className="p-2">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.category === 'Fixed Assets' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-slate-100 text-slate-700'}`}>
-                                    {item.category || 'Consumable'}
-                                  </span>
-                                </td>
-                                <td className="p-2 text-slate-600">{item.location || 'Main Store'}</td>
-                                <td className="p-2 text-center">
-                                  <button onClick={() => setDeleteConfirmAsset(item)} className="px-2.5 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded text-[11px] font-bold cursor-pointer">Del</button>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        ) : (
-                          <tr>
-                            <td colSpan="13" className="text-center py-8 text-slate-400 font-medium">No inventory asset records found matching criteria.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Bottom Status & Rows Control Bar */}
-                  <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-2 items-center justify-between text-xs">
-                    <div className="flex items-center space-x-5">
-                      <div className="flex items-center space-x-2">
-                        <div className="p-1 bg-emerald-500 rounded-full text-white">
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 leading-tight">System Status</p>
-                          <p className="text-emerald-600 font-bold leading-tight">All Systems Operational</p>
-                        </div>
-                      </div>
-
-                      <div className="h-6 w-px bg-slate-300 hidden sm:block"></div>
-
-                      <div className="hidden sm:flex items-center space-x-2">
-                        <div className="p-1 text-blue-600">
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path></svg>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 leading-tight">Total Records</p>
-                          <p className="font-bold text-slate-800 leading-tight">{totalRecords} Assets</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                      <label className="flex items-center gap-1.5 font-bold text-slate-700 text-xs">
-                        View Records:
-                        <select 
-                          value={itemsPerPage} 
-                          onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                          className="px-2 py-0.5 bg-white border border-slate-300 rounded-lg font-bold text-blue-700 outline-none cursor-pointer shadow-sm"
-                        >
-                          <option value="10">10 per page</option>
-                          <option value="25">25 per page</option>
-                          <option value="50">50 per page</option>
-                          <option value="100">100 per page</option>
-                        </select>
-                      </label>
-
-                      <div className="flex items-center space-x-1.5">
-                        <button 
-                          disabled={currentPage === 1}
-                          onClick={() => setCurrentPage(prev => prev - 1)}
-                          className="px-2.5 py-1 border border-slate-300 rounded bg-white font-semibold text-slate-600 disabled:opacity-40 shadow-sm cursor-pointer"
-                        >
-                          ◀ Prev
-                        </button>
-                        <span className="font-bold text-slate-800 px-2">{currentPage} / {totalPages}</span>
-                        <button 
-                          disabled={currentPage === totalPages}
-                          onClick={() => setCurrentPage(prev => prev + 1)}
-                          className="px-2.5 py-1 border border-slate-300 rounded bg-white font-semibold text-slate-600 disabled:opacity-40 shadow-sm cursor-pointer"
-                        >
-                          Next ▶
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* VIEW 3: ANALYTICS BOARD */}
-            {activeTab === 'analytics' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-white text-slate-900 p-3.5 rounded-xl shadow-sm flex justify-between items-center border border-slate-200">
-                  <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Group-Wise Stock Analytics Board</h1>
-                    <p className="text-[10px] text-slate-500">Alphabetical Inventory Distribution & Health Insights</p>
-                  </div>
-                </header>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {groupSummaries.map((g, idx) => (
-                    <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-black text-xs text-slate-900 uppercase">{g.name}</span>
-                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-bold">{g.count} Types</span>
-                      </div>
-                      <div className="flex justify-between items-end pt-2 border-t border-slate-100">
-                        <div>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase">Available Units</p>
-                          <p className="text-xl font-black text-slate-800">{g.totalQty}</p>
-                        </div>
-                        {g.lowCount > 0 ? (
-                          <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold">{g.lowCount} Low Alert</span>
-                        ) : (
-                          <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold">Healthy</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             )}
 
-            {/* VIEW 4: AUDIT & REPORTS */}
+            {/* TAB 3: AUDIT & REPORTS */}
             {activeTab === 'reports' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-white text-slate-900 p-3.5 rounded-xl shadow-sm flex justify-between items-center border border-slate-200">
+              <div className="flex-1 overflow-auto space-y-5">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-4">
                   <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Audit & Compliance Reports</h1>
-                    <p className="text-[10px] text-slate-500">Critical Assets, Low Stock & Dead Stock Verification</p>
+                    <h2 className="text-base font-extrabold text-slate-900">Audit Ledger & CSV Export</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Download the complete stock register with physical balances, brands, and cable measurements.</p>
                   </div>
-                </header>
+                  <button
+                    onClick={handleExportCSV}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow transition cursor-pointer"
+                  >
+                    ⬇ Download CSV Report
+                  </button>
+                </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                    <h3 className="font-bold text-xs uppercase text-slate-800">Low Stock & Critical Audit Summary ({lowStockItems.length} Items)</h3>
-                    <button 
-                      onClick={() => {
-                        const csvContent = "data:text/csv;charset=utf-8," 
-                          + ["Group,Particulars,Brand,Category,Opening,Purchased,Issued,Balance,Location"].join(",") + "\n"
-                          + assets.map(i => `${i.group},"${i.particulars}",${i.brand},${i.category},${i.openingQty},${i.newPurchase},${i.issueItems},${(Number(i.openingQty||0)+Number(i.newPurchase||0))-Number(i.issueItems||0)},${i.location}`).join("\n");
-                        const encodedUri = encodeURI(csvContent);
-                        const link = document.createElement("a");
-                        link.setAttribute("href", encodedUri);
-                        link.setAttribute("download", "IT_Stock_Audit_Report.csv");
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        showToast("Audit CSV report downloaded.");
-                      }}
-                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm cursor-pointer"
-                    >
-                      ⬇ Export Full CSV Ledger
-                    </button>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse table-compact">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-600 text-[10px] uppercase font-bold">
-                          <th className="p-2">Group</th>
-                          <th className="p-2">Particulars</th>
-                          <th className="p-2 text-center">Balance</th>
-                          <th className="p-2 text-center">Alert Limit</th>
-                          <th className="p-2">Location</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-xs">
-                        {lowStockItems.map((item, idx) => (
-                          <tr key={idx}>
-                            <td className="p-2 font-bold">{item.group}</td>
-                            <td className="p-2">{item.particulars}</td>
-                            <td className="p-2 text-center font-bold text-rose-600">{(Number(item.openingQty||0)+Number(item.newPurchase||0))-Number(item.issueItems||0)}</td>
-                            <td className="p-2 text-center">{item.minAlert || 2}</td>
-                            <td className="p-2">{item.location || 'Main Store'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                  <h3 className="text-sm font-bold text-rose-600 mb-3">Low Stock Action Items ({lowStockItems.length})</h3>
+                  {lowStockItems.length === 0 ? (
+                    <p className="text-xs text-slate-500">All items are currently above minimum threshold limits.</p>
+                  ) : (
+                    <div className="divide-y divide-slate-100 text-xs">
+                      {lowStockItems.map((item, i) => {
+                        const phy = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0) - Number(item.shortItems || 0) - Number(item.deadItems || 0);
+                        return (
+                          <div key={i} className="py-2.5 flex justify-between items-center">
+                            <div>
+                              <span className="font-bold text-slate-800">{item.particulars}</span>
+                              <span className="ml-2 text-slate-400">({item.brand || 'Generic'} • {item.location || 'Main Store'})</span>
+                            </div>
+                            <span className="px-2.5 py-1 bg-rose-100 text-rose-700 rounded-lg font-bold">
+                              Stock: {phy} (Min: {item.minAlert || 2})
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* VIEW 5: PRIVILEGE CONTROL & USER CREATOR */}
+            {/* TAB 4: PRIVILEGE CONTROL (SUPER ADMIN USER MANAGEMENT) */}
             {activeTab === 'rights' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-white text-slate-900 p-3.5 rounded-xl shadow-sm flex justify-between items-center border border-slate-200">
-                  <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Super Admin Privilege Control & User Management</h1>
-                    <p className="text-[10px] text-slate-500">Create User IDs, Assign Roles, and Manage Authorized System Access</p>
-                  </div>
-                </header>
+              <div className="flex-1 overflow-auto space-y-5">
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                  <h2 className="text-base font-extrabold text-slate-900">Super Admin Privilege & User Master</h2>
+                  <p className="text-xs text-slate-500 mb-4">Create authorized user accounts and assign Security PINs and operational roles.</p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Create New User Card */}
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                    <h3 className="font-bold text-xs uppercase text-slate-900 border-b border-slate-100 pb-2">Create New User ID & Password</h3>
-                    <form onSubmit={handleCreateUser} className="space-y-3 text-xs">
-                      <div>
-                        <label className="block font-bold text-slate-700 mb-1">Full Name / User ID</label>
-                        <input 
-                          type="text" 
-                          value={newUserForm.username} 
-                          onChange={(e) => setNewUserForm({...newUserForm, username: e.target.value})} 
-                          placeholder="e.g. Rahul Sharma (IT Desk)" 
-                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold"
-                          required 
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block font-bold text-slate-700 mb-1">Security PIN Password</label>
-                        <input 
-                          type="password" 
-                          value={newUserForm.pin} 
-                          onChange={(e) => setNewUserForm({...newUserForm, pin: e.target.value})} 
-                          placeholder="e.g. 5678" 
-                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold"
-                          required 
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block font-bold text-slate-700 mb-1">Role Permission</label>
-                        <select 
-                          value={newUserForm.role} 
-                          onChange={(e) => setNewUserForm({...newUserForm, role: e.target.value})}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold cursor-pointer"
-                        >
-                          <option value="Super Admin">Super Admin (Full Access)</option>
-                          <option value="Administrator">Administrator</option>
-                          <option value="Inventory Operator">Inventory Operator</option>
-                          <option value="Auditor Viewer">Auditor Viewer</option>
-                        </select>
-                      </div>
-
-                      <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-sm transition cursor-pointer">
-                        + Create Authorized User Account
-                      </button>
-                    </form>
-                  </div>
-
-                  {/* Active Users List */}
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                    <h3 className="font-bold text-xs uppercase text-slate-900 border-b border-slate-100 pb-2">Active System Users ({systemUsers.length})</h3>
-                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                      {systemUsers.map((u) => (
-                        <div key={u.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center text-xs">
-                          <div>
-                            <p className="font-extrabold text-slate-900">{u.username}</p>
-                            <p className="text-[10px] text-indigo-600 font-bold">{u.role} • PIN: ****</p>
-                          </div>
-                          {systemUsers.length > 1 && (
-                            <button onClick={() => handleDeleteUser(u.id)} className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg text-[11px] cursor-pointer">
-                              Revoke
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                  <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-3 border-t border-slate-100">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Rajesh Kumar"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                        className="w-full p-2 border border-slate-300 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
                     </div>
-                  </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Login PIN Code *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 4567"
+                        value={newUserPin}
+                        onChange={(e) => setNewUserPin(e.target.value)}
+                        className="w-full p-2 border border-slate-300 rounded-xl text-xs bg-slate-50 font-mono outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Assigned Role</label>
+                      <select
+                        value={newUserRole}
+                        onChange={(e) => setNewUserRole(e.target.value)}
+                        className="w-full p-2 border border-slate-300 rounded-xl text-xs bg-slate-50 font-bold outline-none"
+                      >
+                        <option value="Super Admin">Super Admin (Full Master)</option>
+                        <option value="Admin">IT Admin (Entry & Reports)</option>
+                        <option value="Operator">Store Operator</option>
+                      </select>
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        type="submit"
+                        className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow cursor-pointer"
+                      >
+                        + Create User ID
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-slate-900 text-slate-200 text-[10px] uppercase font-bold">
+                      <tr>
+                        <th className="p-3">User Name</th>
+                        <th className="p-3">Role</th>
+                        <th className="p-3">Security PIN</th>
+                        <th className="p-3">Permissions</th>
+                        <th className="p-3 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {users.map(u => (
+                        <tr key={u.id}>
+                          <td className="p-3 font-bold text-slate-800">{u.name}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.role === 'Super Admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'}`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="p-3 font-mono font-bold text-slate-600">•••• ({u.pin})</td>
+                          <td className="p-3 text-slate-500">{u.permissions}</td>
+                          <td className="p-3 text-center">
+                            {u.id !== 'usr_super' ? (
+                              <button
+                                onClick={() => handleDeleteUser(u.id)}
+                                className="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-lg font-bold text-[10px] hover:bg-rose-100 cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 font-semibold">Primary</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
           </main>
 
-          {/* Delete Confirmation Modal */}
-          {deleteConfirmAsset && (
-            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 text-center space-y-4">
-                <div className="mx-auto w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-lg">!</div>
-                <div>
-                  <h3 className="text-sm font-extrabold text-slate-900">Confirm Deletion</h3>
-                  <p className="text-xs text-slate-500 mt-1">Are you sure you want to permanently remove <span className="font-bold text-slate-800">{deleteConfirmAsset.particulars}</span>?</p>
-                </div>
-                <div className="flex justify-center gap-3 pt-2">
-                  <button onClick={() => setDeleteConfirmAsset(null)} className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-600 cursor-pointer">Cancel</button>
-                  <button onClick={confirmDeleteAsset} className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer">Yes, Delete</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Add / Edit Asset Modal Form */}
+          {/* ADD / EDIT ASSET MODAL */}
           {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 max-h-[90vh] overflow-y-auto">
-                <h3 className="text-sm font-bold text-slate-900 mb-4 border-b border-slate-200 pb-2">
-                  {editingAsset ? 'Edit Stock Register Record' : 'Register New Asset Entry'}
-                </h3>
-                <form onSubmit={handleSaveAsset} className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Stock Group (Category)</label>
-                    <input type="text" value={formData.group} onChange={(e) => setFormData({...formData, group: e.target.value})} placeholder="e.g. MOUSE, KEYBOARD, STORAGE" className="w-full p-2 border border-slate-300 rounded-lg outline-none uppercase font-bold" required />
-                  </div>
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-4 bg-slate-900 text-white rounded-t-2xl flex justify-between items-center sticky top-0 z-10">
+                  <h3 className="font-bold text-sm uppercase tracking-wider">
+                    {editingAsset ? 'Edit Asset Details' : 'Register New Asset Entry'}
+                  </h3>
+                  <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white font-bold cursor-pointer">✕</button>
+                </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Asset Particulars</label>
-                    <input type="text" value={formData.particulars} onChange={(e) => setFormData({...formData, particulars: e.target.value})} placeholder="e.g. SSD 512GB SATA III" className="w-full p-2 border border-slate-300 rounded-lg outline-none" required />
-                  </div>
-
-                  <div className="col-span-2 grid grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <form onSubmit={handleSaveAsset} className="p-5 space-y-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Cable Length (If applicable)</label>
-                      <input type="text" value={formData.cableLength} onChange={(e) => setFormData({...formData, cableLength: e.target.value})} placeholder="e.g. 1.5, 3, 5" className="w-full p-1.5 border border-slate-300 rounded-lg bg-white outline-none" />
+                      <label className="block font-semibold text-slate-700 mb-1">Asset Group *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. MOUSE, CABLES, STORAGE"
+                        value={formData.group}
+                        onChange={(e) => setFormData({ ...formData, group: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg uppercase font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
                     </div>
+                    <div className="sm:col-span-2">
+                      <label className="block font-semibold text-slate-700 mb-1">Particulars / Item Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. HDMI High-Speed Cable / SSD 512GB"
+                        value={formData.particulars}
+                        onChange={(e) => setFormData({ ...formData, particulars: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-semibold outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Measurement Unit (Supports GB / TB)</label>
-                      <select value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="w-full p-1.5 border border-slate-300 rounded-lg bg-white outline-none font-bold cursor-pointer text-indigo-700">
+                      <label className="block font-semibold text-indigo-600 mb-1">Brand Name Selection</label>
+                      <select
+                        value={formData.brand}
+                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                        className="w-full p-2 border border-indigo-300 rounded-lg bg-indigo-50/30 font-bold outline-none cursor-pointer"
+                      >
+                        {DEFAULT_BRANDS.map((b, idx) => (
+                          <option key={idx} value={b}>{b}</option>
+                        ))}
+                      </select>
+                      {formData.brand === 'Other' && (
+                        <input
+                          type="text"
+                          value={formData.customBrand}
+                          onChange={(e) => setFormData({ ...formData, customBrand: e.target.value })}
+                          placeholder="Enter Custom Brand Name..."
+                          className="w-full mt-1.5 p-2 border border-indigo-300 rounded-lg bg-white font-semibold outline-none"
+                          required
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Cable Length / Capacity</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 5 or 512"
+                        value={formData.cableLength}
+                        onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-mono font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Measurement Unit</label>
+                      <select
+                        value={formData.unit}
+                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50 outline-none"
+                      >
                         <option value="Piece">Piece</option>
                         <option value="Meter">Meter</option>
-                        <option value="GB">GB</option>
-                        <option value="TB">TB</option>
-                        <option value="Set">Set</option>
+                        <option value="GB">GB (SSD / HDD / RAM)</option>
+                        <option value="TB">TB (HDD / Storage)</option>
+                        <option value="Box">Box / Set</option>
                       </select>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-blue-600 mb-1">Brand Name Selection</label>
-                    <select value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="w-full p-2 border border-blue-300 rounded-lg bg-blue-50/20 font-bold outline-none cursor-pointer">
-                      {DEFAULT_BRANDS.map((b, idx) => (
-                        <option key={idx} value={b}>{b}</option>
-                      ))}
-                    </select>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div>
+                      <label className="block font-bold text-slate-600 mb-1">Opening</label>
+                      <input type="number" min="0" value={formData.openingQty} onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })} className="w-full p-1.5 border border-slate-300 rounded bg-white font-mono font-bold" />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-emerald-700 mb-1">New Purch.</label>
+                      <input type="number" min="0" value={formData.newPurchase} onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })} className="w-full p-1.5 border border-emerald-300 rounded bg-white font-mono font-bold text-emerald-700" />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-amber-700 mb-1">Issued</label>
+                      <input type="number" min="0" value={formData.issueItems} onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })} className="w-full p-1.5 border border-amber-300 rounded bg-white font-mono font-bold text-amber-700" />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-rose-700 mb-1">Dead / Faulty</label>
+                      <input type="number" min="0" value={formData.deadItems} onChange={(e) => setFormData({ ...formData, deadItems: Number(e.target.value) })} className="w-full p-1.5 border border-rose-300 rounded bg-white font-mono font-bold text-rose-700" />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-600 mb-1">Min Alert</label>
+                      <input type="number" min="0" value={formData.minAlert} onChange={(e) => setFormData({ ...formData, minAlert: Number(e.target.value) })} className="w-full p-1.5 border border-slate-300 rounded bg-white font-mono font-bold" />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-emerald-700 mb-1">Entry Period (Month)</label>
-                    <input type="text" value={formData.entryMonth} onChange={(e) => setFormData({...formData, entryMonth: e.target.value})} className="w-full p-2 border border-emerald-200 rounded-lg bg-emerald-50/30 font-semibold text-emerald-800 outline-none" required />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Category</label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-bold bg-white outline-none"
+                      >
+                        <option value="Consumable">Consumable</option>
+                        <option value="Non-Consumable">Non-Consumable</option>
+                        <option value="Fixed Assets">Fixed Assets</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Location / Store</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Main IT Store / B Block"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Entry Month</label>
+                      <input
+                        type="text"
+                        value={formData.entryMonth}
+                        onChange={(e) => setFormData({ ...formData, entryMonth: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-lg font-semibold outline-none"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Serial Number / Asset Tag</label>
-                    <input type="text" value={formData.serialNo} onChange={(e) => setFormData({...formData, serialNo: e.target.value})} placeholder="e.g. SN-99281-XYZ" className="w-full p-2 border border-slate-300 rounded-lg outline-none font-mono" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Procurement Vendor Name</label>
-                    <input type="text" value={formData.vendor} onChange={(e) => setFormData({...formData, vendor: e.target.value})} placeholder="e.g. Tech Solutions Ltd" className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Category Classification</label>
-                    <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full p-2 border border-slate-300 rounded-lg outline-none cursor-pointer">
-                      <option value="Consumable">Consumable</option>
-                      <option value="Non-Consumable">Non-Consumable</option>
-                      <option value="Fixed Assets">Fixed Assets</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Low Stock Alert Limit</label>
-                    <input type="number" value={formData.minAlert} onChange={(e) => setFormData({...formData, minAlert: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Opening Quantity Stock (OP)</label>
-                    <input type="number" value={formData.openingQty} onChange={(e) => setFormData({...formData, openingQty: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">New Purchase Quantity (Purch.)</label>
-                    <input type="number" value={formData.newPurchase} onChange={(e) => setFormData({...formData, newPurchase: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Issued Quantity Total</label>
-                    <input type="number" value={formData.issueItems} onChange={(e) => setFormData({...formData, issueItems: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Dead / Faulty Quantity</label>
-                    <input type="number" value={formData.deadItems} onChange={(e) => setFormData({...formData, deadItems: Number(e.target.value)})} className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block font-semibold text-slate-700 mb-1">Installation Location / User Allocation</label>
-                    <input type="text" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} placeholder="e.g. B Block, Dr. Jha Room" className="w-full p-2 border border-slate-300 rounded-lg outline-none" />
-                  </div>
-
-                  <div className="col-span-2 flex justify-end space-x-2 pt-4 border-t border-slate-200">
-                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-slate-300 rounded-lg text-slate-600 font-semibold cursor-pointer">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold shadow-md cursor-pointer">Save Asset Record</button>
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow cursor-pointer"
+                    >
+                      {editingAsset ? 'Update Asset Record' : 'Save Asset Record'}
+                    </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* CUSTOM DELETE CONFIRMATION MODAL */}
+          {deleteConfirmAsset && (
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-5 space-y-4">
+                <h3 className="font-bold text-slate-900 text-sm">Delete Asset Record?</h3>
+                <p className="text-xs text-slate-600">
+                  Are you sure you want to delete <span className="font-bold text-slate-900">{deleteConfirmAsset.particulars}</span>? This action cannot be undone.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setDeleteConfirmAsset(null)}
+                    className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteAsset}
+                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow cursor-pointer"
+                  >
+                    Delete Record
+                  </button>
+                </div>
               </div>
             </div>
           )}
