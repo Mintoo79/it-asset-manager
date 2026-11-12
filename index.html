@@ -77,7 +77,7 @@
 
       // Temporary Asset Deployment state
       const [tempDispatches, setTempDispatches] = useState(() => {
-        const saved = localStorage.getItem('it_temp_dispatches_v2');
+        const saved = localStorage.getItem('it_temp_dispatches_v3');
         return saved ? JSON.parse(saved) : [
           { id: 'td_1', assetName: 'Dell OptiPlex CPU i5', department: 'Accounts Department', receiver: 'Mr. Ramesh Gupta', quantity: 2, issueDate: '10 Nov 2026', returnDate: '25 Nov 2026', status: 'Active Dispatched' }
         ];
@@ -85,8 +85,19 @@
       const [isTempModalOpen, setIsTempModalOpen] = useState(false);
       const [tempForm, setTempForm] = useState({ assetName: '', department: '', receiver: '', quantity: 1, returnDate: '' });
 
+      // Preventive Maintenance (PM) state
+      const [pmSchedules, setPmSchedules] = useState(() => {
+        const saved = localStorage.getItem('it_pm_schedules_v1');
+        return saved ? JSON.parse(saved) : [
+          { id: 'pm_1', equipmentName: 'Server Room Rack A', maintenanceType: 'Quarterly Dusting & Thermal Check', scheduledDate: '20 Nov 2026', technician: 'Mr. Amit Verma', status: 'Scheduled', remarks: 'Pending due date' },
+          { id: 'pm_2', equipmentName: 'UPS Battery Bank 10KVA', maintenanceType: 'Battery Load Test & Calibration', scheduledDate: '15 Nov 2026', technician: 'Apex Power Services', status: 'Completed', remarks: 'All cells optimal' }
+        ];
+      });
+      const [isPmModalOpen, setIsPmModalOpen] = useState(false);
+      const [pmForm, setPmForm] = useState({ equipmentName: '', maintenanceType: '', scheduledDate: '', technician: '', remarks: '' });
+
       const [users, setUsers] = useState(() => {
-        const saved = localStorage.getItem('it_system_users_v1');
+        const saved = localStorage.getItem('it_system_users_v2');
         return saved ? JSON.parse(saved) : [
           { id: 1, name: 'Super Admin', pin: '1234', role: 'Super Administrator', status: 'Active' },
           { id: 2, name: 'IT Inventory Desk', pin: '5678', role: 'Store Keeper', status: 'Active' }
@@ -140,7 +151,7 @@
         shortItems: 0,
         deadItems: 0,
         category: 'Consumable',
-        location: '',
+        location: '', // Optional/blank by default until assigned
         minAlert: 2,
         entryMonth: getCurrentMonthYear(),
         lastUpdated: getFormattedDateTime()
@@ -150,7 +161,7 @@
         { id: 101, group: 'IT Peripherals', particulars: 'Optical Mouse USB', brand: 'Honeywell', serialNo: 'HW-MS-9981', cableLength: '1.5', measurementUnit: 'Meter', openingQty: 25, newPurchase: 10, issueItems: 8, shortItems: 0, deadItems: 1, category: 'Consumable', location: 'A Block', minAlert: 5, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 10:15 AM' },
         { id: 102, group: 'IT Peripherals', particulars: 'Multimedia Keyboard', brand: 'Honeywell', serialNo: 'HW-KB-4421', cableLength: '1.8', measurementUnit: 'Meter', openingQty: 20, newPurchase: 5, issueItems: 6, shortItems: 0, deadItems: 0, category: 'Consumable', location: 'B Block', minAlert: 4, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 11:20 AM' },
         { id: 103, group: 'Hardware Parts', particulars: 'DDR4 8GB RAM Module', brand: 'Other', customBrand: 'Corsair', serialNo: 'CR-8G-2666', cableLength: '', measurementUnit: 'Piece', openingQty: 15, newPurchase: 10, issueItems: 12, shortItems: 0, deadItems: 0, category: 'Fixed Assets', location: 'A Block', minAlert: 3, entryMonth: 'Nov 2026', lastUpdated: '11 Nov 2026, 02:40 PM' },
-        { id: 104, group: 'Storage Devices', particulars: 'Solid State Drive 512GB SSD', brand: 'Other', customBrand: 'Samsung', serialNo: 'SS-512-V9', cableLength: '', measurementUnit: 'GB', openingQty: 10, newPurchase: 8, issueItems: 14, shortItems: 0, deadItems: 0, category: 'Fixed Assets', location: 'Server Room', minAlert: 2, entryMonth: 'Oct 2026', lastUpdated: '10 Nov 2026, 04:00 PM' }
+        { id: 104, group: 'Storage Devices', particulars: 'Solid State Drive 512GB SSD', brand: 'Other', customBrand: 'Samsung', serialNo: 'SS-512-V9', cableLength: '', measurementUnit: 'GB', openingQty: 10, newPurchase: 8, issueItems: 14, shortItems: 0, deadItems: 0, category: 'Fixed Assets', location: '', minAlert: 2, entryMonth: 'Oct 2026', lastUpdated: '10 Nov 2026, 04:00 PM' }
       ];
 
       const fetchCloudData = async () => {
@@ -303,7 +314,7 @@
             shortItems: 0,
             deadItems: 0,
             category: 'Consumable',
-            location: '',
+            location: '', // Blank by default
             minAlert: 2,
             entryMonth: getCurrentMonthYear(),
             lastUpdated: currentTs
@@ -339,7 +350,6 @@
           await fetchCloudData();
           showToast("Asset record saved successfully!");
         } catch (err) {
-          // Fallback local persistence if offline
           if (editingAsset) {
             setAssets(assets.map(i => i.id === editingAsset.id ? { ...timestampedData, id: editingAsset.id } : i));
           } else {
@@ -382,7 +392,7 @@
         };
         const updated = [...users, newUser];
         setUsers(updated);
-        localStorage.setItem('it_system_users_v1', JSON.stringify(updated));
+        localStorage.setItem('it_system_users_v2', JSON.stringify(updated));
         setNewUserName('');
         setNewUserPin('');
         showToast(`User account created for ${newUser.name}!`);
@@ -398,7 +408,7 @@
         };
         const updated = [newRecord, ...tempDispatches];
         setTempDispatches(updated);
-        localStorage.setItem('it_temp_dispatches_v2', JSON.stringify(updated));
+        localStorage.setItem('it_temp_dispatches_v3', JSON.stringify(updated));
         setIsTempModalOpen(false);
         setTempForm({ assetName: '', department: '', receiver: '', quantity: 1, returnDate: '' });
         showToast("Temporary asset deployment registered successfully!");
@@ -407,8 +417,30 @@
       const handleReturnTempAsset = (id) => {
         const updated = tempDispatches.map(item => item.id === id ? { ...item, status: 'Returned & Verified' } : item);
         setTempDispatches(updated);
-        localStorage.setItem('it_temp_dispatches_v2', JSON.stringify(updated));
+        localStorage.setItem('it_temp_dispatches_v3', JSON.stringify(updated));
         showToast("Asset marked as returned and verified.");
+      };
+
+      const handleSavePmSchedule = (e) => {
+        e.preventDefault();
+        const newPm = {
+          id: `pm_${Date.now()}`,
+          ...pmForm,
+          status: 'Scheduled'
+        };
+        const updated = [newPm, ...pmSchedules];
+        setPmSchedules(updated);
+        localStorage.setItem('it_pm_schedules_v1', JSON.stringify(updated));
+        setIsPmModalOpen(false);
+        setPmForm({ equipmentName: '', maintenanceType: '', scheduledDate: '', technician: '', remarks: '' });
+        showToast("Preventive maintenance task scheduled!");
+      };
+
+      const handleCompletePm = (id) => {
+        const updated = pmSchedules.map(item => item.id === id ? { ...item, status: 'Completed' } : item);
+        setPmSchedules(updated);
+        localStorage.setItem('it_pm_schedules_v1', JSON.stringify(updated));
+        showToast("PM task marked as completed.");
       };
 
       // Group summaries computation
@@ -507,14 +539,15 @@
                 </span>
               </div>
 
-              <nav className="mt-4 space-y-1.5">
+              <nav className="mt-3 space-y-1">
                 {[
                   { id: 'inventory', label: '1. Stock Register', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
                   { id: 'temp_dispatch', label: '2. Temporary Deployment', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
-                  { id: 'dashboard', label: '3. Executive Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-                  { id: 'analytics', label: '4. Analytics Board', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-                  { id: 'reports', label: '5. Audit & Reports', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-                  { id: 'rights', label: '6. Privilege & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }
+                  { id: 'preventive_maint', label: '3. Preventive Maintenance', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+                  { id: 'dashboard', label: '4. Executive Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+                  { id: 'analytics', label: '5. Analytics Board', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+                  { id: 'reports', label: '6. Audit & Reports', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+                  { id: 'rights', label: '7. Privilege & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -777,7 +810,7 @@
                                 </span>
                               </td>
 
-                              <td className="p-3 text-slate-600 font-medium">{item.location || 'General Store'}</td>
+                              <td className="p-3 text-slate-600 font-medium">{item.location || <span className="text-slate-400 italic">Unassigned</span>}</td>
                             </tr>
                           );
                         })
@@ -834,7 +867,7 @@
               </div>
             )}
 
-            {/* 2. TEMPORARY ASSET DEPLOYMENT & RETURN TAB */}
+            {/* 2. TEMPORARY ASSET DEPLOYMENT TAB */}
             {activeTab === 'temp_dispatch' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-slate-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
@@ -910,7 +943,81 @@
               </div>
             )}
 
-            {/* 3. EXECUTIVE DASHBOARD TAB */}
+            {/* 3. PREVENTIVE MAINTENANCE TAB */}
+            {activeTab === 'preventive_maint' && (
+              <div className="flex-1 overflow-auto space-y-4">
+                <header className="bg-slate-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
+                  <div>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Preventive Maintenance (PM) Scheduling & Logging</h1>
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">Schedule routine IT hardware servicing, dusting, UPS calibration, and compliance checks.</p>
+                  </div>
+                  <button
+                    onClick={() => setIsPmModalOpen(true)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
+                  >
+                    + Schedule PM Task
+                  </button>
+                </header>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
+                  <table className="w-full text-left border-collapse table-compact text-xs">
+                    <thead className="bg-slate-800 text-slate-100 uppercase font-bold text-[10px]">
+                      <tr>
+                        <th className="p-3">#</th>
+                        <th>Equipment / System</th>
+                        <th>Maintenance Type</th>
+                        <th>Scheduled Date</th>
+                        <th>Technician / Vendor</th>
+                        <th>Remarks</th>
+                        <th className="text-center">Status</th>
+                        <th className="text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {pmSchedules.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="text-center py-8 text-slate-400 font-medium">
+                            No preventive maintenance tasks scheduled.
+                          </td>
+                        </tr>
+                      ) : (
+                        pmSchedules.map((item, idx) => (
+                          <tr key={item.id} className="hover:bg-blue-50/40 transition">
+                            <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                            <td className="font-bold text-slate-900">{item.equipmentName}</td>
+                            <td className="font-semibold text-blue-700">{item.maintenanceType}</td>
+                            <td className="font-mono text-slate-600">{item.scheduledDate}</td>
+                            <td>{item.technician}</td>
+                            <td className="text-slate-500">{item.remarks || 'None'}</td>
+                            <td className="text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[10px] ${
+                                item.status === 'Completed'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800 animate-pulse'
+                              }`}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="text-center">
+                              {item.status !== 'Completed' && (
+                                <button
+                                  onClick={() => handleCompletePm(item.id)}
+                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[10px] shadow cursor-pointer"
+                                >
+                                  Complete PM
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 4. EXECUTIVE DASHBOARD TAB */}
             {activeTab === 'dashboard' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="px-2 py-1 flex justify-between items-center">
@@ -974,7 +1081,7 @@
               </div>
             )}
 
-            {/* 4. ANALYTICS BOARD TAB */}
+            {/* 5. ANALYTICS BOARD TAB */}
             {activeTab === 'analytics' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-slate-900 text-white p-4 rounded-xl shadow">
@@ -1009,7 +1116,7 @@
               </div>
             )}
 
-            {/* 5. AUDIT & REPORTS TAB */}
+            {/* 6. AUDIT & REPORTS TAB */}
             {activeTab === 'reports' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-slate-900 text-white p-4 rounded-xl shadow flex justify-between items-center">
@@ -1020,7 +1127,7 @@
                   <button 
                     onClick={() => {
                       const csv = ['Group,Particulars,Brand,Opening,NewPurchase,Issued,Balance,Location'].concat(
-                        assets.map(a => `"${a.group}","${a.particulars}","${a.brand}",${a.openingQty},${a.newPurchase},${a.issueItems},${(Number(a.openingQty)+Number(a.newPurchase))-Number(a.issueItems)},"${a.location}"`)
+                        assets.map(a => `"${a.group}","${a.particulars}","${a.brand}",${a.openingQty},${a.newPurchase},${a.issueItems},${(Number(a.openingQty)+Number(a.newPurchase))-Number(a.issueItems)},"${a.location || 'Unassigned'}"`)
                       ).join('\n');
                       const blob = new Blob([csv], { type: 'text/csv' });
                       const url = window.URL.createObjectURL(blob);
@@ -1056,7 +1163,7 @@
               </div>
             )}
 
-            {/* 6. PRIVILEGE & USERS TAB */}
+            {/* 7. PRIVILEGE & USERS TAB */}
             {activeTab === 'rights' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-slate-900 text-white p-4 rounded-xl shadow">
@@ -1213,6 +1320,89 @@
             </div>
           )}
 
+          {/* PREVENTIVE MAINTENANCE SCHEDULE MODAL */}
+          {isPmModalOpen && (
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <h3 className="font-bold text-slate-900 text-sm">Schedule Preventive Maintenance (PM)</h3>
+                  <button onClick={() => setIsPmModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+                <form onSubmit={handleSavePmSchedule} className="space-y-3 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Equipment Name / System *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Server Rack B / Core Switch"
+                      value={pmForm.equipmentName}
+                      onChange={(e) => setPmForm({ ...pmForm, equipmentName: e.target.value })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Maintenance Type *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Quarterly Dusting & Firmware Update"
+                      value={pmForm.maintenanceType}
+                      onChange={(e) => setPmForm({ ...pmForm, maintenanceType: e.target.value })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Scheduled Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={pmForm.scheduledDate}
+                        onChange={(e) => setPmForm({ ...pmForm, scheduledDate: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Technician / Vendor</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Mr. Amit Verma"
+                        value={pmForm.technician}
+                        onChange={(e) => setPmForm({ ...pmForm, technician: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Remarks / Checklist</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Check power supply fans and backup"
+                      value={pmForm.remarks}
+                      onChange={(e) => setPmForm({ ...pmForm, remarks: e.target.value })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsPmModalOpen(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
+                    >
+                      Schedule Task
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* VIEW SLIP MODAL */}
           {viewModalItem && (
             <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1232,7 +1422,7 @@
                     <div><strong>Item Particulars:</strong> {viewModalItem.particulars}</div>
                     <div><strong>Brand:</strong> {viewModalItem.brand === 'Other' ? viewModalItem.customBrand : viewModalItem.brand}</div>
                     <div><strong>Serial No:</strong> {viewModalItem.serialNo || 'N/A'}</div>
-                    <div><strong>Location:</strong> {viewModalItem.location || 'General Store'}</div>
+                    <div><strong>Location:</strong> {viewModalItem.location || 'Unassigned'}</div>
                     <div><strong>Issued Qty:</strong> {viewModalItem.issueItems || 0}</div>
                     <div><strong>Last Updated:</strong> {viewModalItem.lastUpdated}</div>
                   </div>
@@ -1278,7 +1468,7 @@
             </div>
           )}
 
-          {/* ADD / EDIT ASSET MODAL WITH ALL FIELDS */}
+          {/* ADD / EDIT ASSET MODAL WITH ALL FIELDS & OPTIONAL LOCATION */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8">
@@ -1361,11 +1551,10 @@
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Location / Block *</label>
+                      <label className="block font-semibold text-slate-700 mb-1">Location / Department (Optional)</label>
                       <input 
                         type="text" 
-                        required
-                        placeholder="e.g. A Block / Server Room"
+                        placeholder="Leave blank until assigned"
                         value={formData.location}
                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                         className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
