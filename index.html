@@ -147,6 +147,13 @@
         return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
       };
 
+      const getFormattedDate = () => {
+        const d = new Date();
+        const day = String(d.getDate()).padStart(2, '0');
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      };
+
       const [formData, setFormData] = useState({
         group: '',
         particulars: '',
@@ -408,6 +415,7 @@
         e.preventDefault();
         setLoading(true);
         const currentTimestamp = Date.now();
+        const todayDate = getFormattedDate();
         const resolvedBrand = formData.brand === 'Other' && formData.customBrand.trim()
           ? formData.customBrand.trim()
           : formData.brand;
@@ -416,7 +424,8 @@
           ...cleanFormData,
           brand: resolvedBrand,
           group: (formData.group || 'GENERAL').toUpperCase().trim(),
-          entryMonth: formData.entryMonth ? formData.entryMonth : getCurrentMonthYear()
+          entryMonth: formData.entryMonth ? formData.entryMonth : getCurrentMonthYear(),
+          lastUpdated: todayDate
         };
 
         let updatedList;
@@ -978,6 +987,11 @@
                                   {isVip && <span className="text-amber-500" title="Critical Hardware">★</span>}
                                   <span>{item.particulars}</span>
                                 </button>
+                                {item.lastUpdated && (
+                                  <div className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                    Updated: {item.lastUpdated}
+                                  </div>
+                                )}
                               </td>
                               <td className="font-semibold text-slate-700">{item.brand || '-'}</td>
                               <td className="font-mono text-[11px] font-bold text-slate-600">{lengthUnitDisplay}</td>
