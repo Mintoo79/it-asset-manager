@@ -79,11 +79,11 @@
       const [tempDispatches, setTempDispatches] = useState(() => {
         const saved = localStorage.getItem('it_temp_dispatches_v3');
         return saved ? JSON.parse(saved) : [
-          { id: 'td_1', assetName: 'Dell OptiPlex CPU i5', department: 'Accounts Department', receiver: 'Mr. Ramesh Gupta', quantity: 2, issueDate: '10 Nov 2026', returnDate: '25 Nov 2026', status: 'Active Dispatched' }
+          { id: 'td_1', assetName: 'Dell OptiPlex CPU i5', assetTagNo: 'TAG-IT-9012', department: 'Accounts Department', receiver: 'Mr. Ramesh Gupta', quantity: 2, issueDate: '10 Nov 2026', status: 'Active Dispatched' }
         ];
       });
       const [isTempModalOpen, setIsTempModalOpen] = useState(false);
-      const [tempForm, setTempForm] = useState({ assetName: '', department: '', receiver: '', quantity: 1, returnDate: '' });
+      const [tempForm, setTempForm] = useState({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
 
       // Preventive Maintenance (PM) state
       const [pmSchedules, setPmSchedules] = useState(() => {
@@ -410,7 +410,7 @@
         setTempDispatches(updated);
         localStorage.setItem('it_temp_dispatches_v3', JSON.stringify(updated));
         setIsTempModalOpen(false);
-        setTempForm({ assetName: '', department: '', receiver: '', quantity: 1, returnDate: '' });
+        setTempForm({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
         showToast("Temporary asset deployment registered successfully!");
       };
 
@@ -873,7 +873,7 @@
                 <header className="bg-slate-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
                   <div>
                     <h1 className="text-sm font-extrabold tracking-wide uppercase">Temporary Asset Deployment & Return Management</h1>
-                    <p className="text-xs text-slate-400 font-medium mt-0.5">Track temporary CPU, laptop, or peripheral movements across departments with return due dates.</p>
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">Track temporary CPU, laptop, or peripheral movements across departments with asset tag numbers.</p>
                   </div>
                   <button
                     onClick={() => setIsTempModalOpen(true)}
@@ -889,11 +889,11 @@
                       <tr>
                         <th className="p-3">#</th>
                         <th>Asset / Equipment</th>
+                        <th>Asset Tag No.</th>
                         <th>Department</th>
                         <th>Receiver Name</th>
                         <th className="text-center">Qty</th>
                         <th>Issue Date</th>
-                        <th>Expected Return</th>
                         <th className="text-center">Status</th>
                         <th className="text-center">Action</th>
                       </tr>
@@ -910,11 +910,11 @@
                           <tr key={item.id} className="hover:bg-indigo-50/40 transition">
                             <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
                             <td className="font-bold text-slate-900">{item.assetName}</td>
+                            <td className="font-mono text-blue-600 font-bold">{item.assetTagNo || 'N/A'}</td>
                             <td className="font-semibold text-indigo-700">{item.department}</td>
                             <td>{item.receiver}</td>
                             <td className="text-center font-mono font-bold">{item.quantity}</td>
                             <td className="font-mono text-slate-600">{item.issueDate}</td>
-                            <td className="font-mono text-amber-700 font-semibold">{item.returnDate || 'Open'}</td>
                             <td className="text-center">
                               <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[10px] ${
                                 item.status.includes('Returned')
@@ -1258,6 +1258,17 @@
                     />
                   </div>
                   <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Asset Tag No. *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. TAG-IT-9012"
+                      value={tempForm.assetTagNo}
+                      onChange={(e) => setTempForm({ ...tempForm, assetTagNo: e.target.value })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg font-mono font-semibold outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
                     <label className="block font-semibold text-slate-700 mb-1">Department Name *</label>
                     <input
                       type="text"
@@ -1279,26 +1290,15 @@
                       className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Quantity</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={tempForm.quantity}
-                        onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })}
-                        className="w-full p-2.5 border border-slate-300 rounded-lg font-mono font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Expected Return Date</label>
-                      <input
-                        type="date"
-                        value={tempForm.returnDate}
-                        onChange={(e) => setTempForm({ ...tempForm, returnDate: e.target.value })}
-                        className="w-full p-2.5 border border-slate-300 rounded-lg font-mono"
-                      />
-                    </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Quantity</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={tempForm.quantity}
+                      onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg font-mono font-bold"
+                    />
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
                     <button
@@ -1699,7 +1699,8 @@
       );
     }
 
-    ReactDOM.render(<App />, document.getElementById('root'));
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
   </script>
 </body>
 </html>
