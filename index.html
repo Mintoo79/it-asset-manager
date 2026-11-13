@@ -875,12 +875,33 @@
                     <h1 className="text-sm font-extrabold tracking-wide uppercase">Temporary Asset Deployment & Return Management</h1>
                     <p className="text-xs text-slate-400 font-medium mt-0.5">Track temporary CPU, laptop, or peripheral movements across departments with asset tag numbers.</p>
                   </div>
-                  <button
-                    onClick={() => setIsTempModalOpen(true)}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
-                  >
-                    + Issue Temporary Asset
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const jsonStr = JSON.stringify(tempDispatches, null, 2);
+                        const blob = new Blob([jsonStr], { type: 'application/json' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'Temporary_Dispatches_Export.json';
+                        a.click();
+                        showToast("Temporary Dispatches exported successfully!");
+                      }}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer"
+                    >
+                      Export JSON
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingTempItem(null);
+                        setTempForm({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
+                        setIsTempModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
+                    >
+                      + Issue Temporary Asset
+                    </button>
+                  </div>
                 </header>
 
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
@@ -895,7 +916,7 @@
                         <th className="text-center">Qty</th>
                         <th>Issue Date</th>
                         <th className="text-center">Status</th>
-                        <th className="text-center">Action</th>
+                        <th className="text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -924,15 +945,49 @@
                                 {item.status}
                               </span>
                             </td>
-                            <td className="text-center">
-                              {item.status !== 'Returned & Verified' && (
+                            <td className="text-center whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                {item.status !== 'Returned & Verified' && (
+                                  <button
+                                    onClick={() => handleReturnTempAsset(item.id)}
+                                    title="Mark Returned"
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[10px] shadow cursor-pointer"
+                                  >
+                                    Return
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => handleReturnTempAsset(item.id)}
-                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[10px] shadow cursor-pointer"
+                                  onClick={() => {
+                                    setEditingTempItem(item);
+                                    setTempForm({
+                                      assetName: item.assetName,
+                                      assetTagNo: item.assetTagNo,
+                                      department: item.department,
+                                      receiver: item.receiver,
+                                      quantity: item.quantity
+                                    });
+                                    setIsTempModalOpen(true);
+                                  }}
+                                  title="Edit Deployment"
+                                  className="p-1.5 bg-slate-100 hover:bg-blue-50 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
                                 >
-                                  Mark Returned
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                 </button>
-                              )}
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm("Delete this temporary dispatch record?")) {
+                                      const updated = tempDispatches.filter(d => d.id !== item.id);
+                                      setTempDispatches(updated);
+                                      localStorage.setItem('it_temp_dispatches_v3', JSON.stringify(updated));
+                                      showToast("Temporary deployment record deleted.");
+                                    }
+                                  }}
+                                  title="Delete Deployment"
+                                  className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -951,12 +1006,29 @@
                     <h1 className="text-sm font-extrabold tracking-wide uppercase">Preventive Maintenance (PM) Scheduling & Logging</h1>
                     <p className="text-xs text-slate-400 font-medium mt-0.5">Schedule routine IT hardware servicing, dusting, UPS calibration, and compliance checks.</p>
                   </div>
-                  <button
-                    onClick={() => setIsPmModalOpen(true)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
-                  >
-                    + Schedule PM Task
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const jsonStr = JSON.stringify(pmSchedules, null, 2);
+                        const blob = new Blob([jsonStr], { type: 'application/json' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'Preventive_Maintenance_Export.json';
+                        a.click();
+                        showToast("Preventive Maintenance schedules exported!");
+                      }}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer"
+                    >
+                      Export JSON
+                    </button>
+                    <button
+                      onClick={() => setIsPmModalOpen(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
+                    >
+                      + Schedule PM Task
+                    </button>
+                  </div>
                 </header>
 
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
@@ -1121,26 +1193,55 @@
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-slate-900 text-white p-4 rounded-xl shadow flex justify-between items-center">
                   <div>
-                    <h1 className="text-sm font-extrabold uppercase">Audit & Compliance Reports</h1>
-                    <p className="text-xs text-slate-400">Export verified stock ledgers for official auditing.</p>
+                    <h1 className="text-sm font-extrabold uppercase">Audit & Compliance Reports (Import / Export)</h1>
+                    <p className="text-xs text-slate-400">Export verified stock ledgers or import bulk assets.</p>
                   </div>
-                  <button 
-                    onClick={() => {
-                      const csv = ['Group,Particulars,Brand,Opening,NewPurchase,Issued,Balance,Location'].concat(
-                        assets.map(a => `"${a.group}","${a.particulars}","${a.brand}",${a.openingQty},${a.newPurchase},${a.issueItems},${(Number(a.openingQty)+Number(a.newPurchase))-Number(a.issueItems)},"${a.location || 'Unassigned'}"`)
-                      ).join('\n');
-                      const blob = new Blob([csv], { type: 'text/csv' });
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `IT_Stock_Audit_${getCurrentMonthYear()}.csv`;
-                      a.click();
-                      showToast("Audit CSV report downloaded successfully!");
-                    }}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer"
-                  >
-                    Download CSV Audit Report
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <label className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer">
+                      Import JSON
+                      <input 
+                        type="file" 
+                        accept=".json" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            try {
+                              const imported = JSON.parse(event.target.result);
+                              if (Array.isArray(imported)) {
+                                setAssets(imported);
+                                showToast(`Successfully imported ${imported.length} asset records!`);
+                              } else {
+                                showToast("Invalid JSON format for assets.");
+                              }
+                            } catch(err) {
+                              showToast("Error parsing JSON file.");
+                            }
+                          };
+                          reader.readAsText(file);
+                        }} 
+                      />
+                    </label>
+                    <button 
+                      onClick={() => {
+                        const csv = ['Group,Particulars,Brand,Opening,NewPurchase,Issued,Balance,Location'].concat(
+                          assets.map(a => `"${a.group}","${a.particulars}","${a.brand}",${a.openingQty},${a.newPurchase},${a.issueItems},${(Number(a.openingQty)+Number(a.newPurchase))-Number(a.issueItems)},"${a.location || 'Unassigned'}"`)
+                        ).join('\n');
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `IT_Stock_Audit_${getCurrentMonthYear()}.csv`;
+                        a.click();
+                        showToast("Audit CSV report downloaded successfully!");
+                      }}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer"
+                    >
+                      Export CSV Report
+                    </button>
+                  </div>
                 </header>
 
                 <div className="bg-white p-5 rounded-2xl border shadow-sm">
@@ -1166,9 +1267,26 @@
             {/* 7. PRIVILEGE & USERS TAB */}
             {activeTab === 'rights' && (
               <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-slate-900 text-white p-4 rounded-xl shadow">
-                  <h1 className="text-sm font-extrabold uppercase">Privilege Control & User Management</h1>
-                  <p className="text-xs text-slate-400">Create login IDs and assign operational roles.</p>
+                <header className="bg-slate-900 text-white p-4 rounded-xl shadow flex justify-between items-center">
+                  <div>
+                    <h1 className="text-sm font-extrabold uppercase">Privilege Control & User Management</h1>
+                    <p className="text-xs text-slate-400">Create login IDs and assign operational roles.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const jsonStr = JSON.stringify(users, null, 2);
+                      const blob = new Blob([jsonStr], { type: 'application/json' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'System_Users_Export.json';
+                      a.click();
+                      showToast("System users exported successfully!");
+                    }}
+                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer"
+                  >
+                    Export Users JSON
+                  </button>
                 </header>
 
                 <div className="grid grid-cols-12 gap-4">
