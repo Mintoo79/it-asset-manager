@@ -1716,16 +1716,17 @@
             </div>
           )}
 
-          {/* PREVENTIVE MAINTENANCE FULLY EDITABLE TASK MODAL WITH ALL PREVIOUS & NEW FIELDS */}
+          {/* PREVENTIVE MAINTENANCE CATEGORY-WISE SEQUENTIAL TASK MODAL */}
           {isPmModalOpen && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 my-8 text-slate-800">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-5 my-8 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-bold text-sm text-slate-900">
+                  <h3 className="font-extrabold text-sm text-slate-900">
                     {editingPmItem ? 'Edit Preventive Maintenance Task' : 'Schedule New PM Task'}
                   </h3>
                   <button onClick={() => setIsPmModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
+
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   const timestamped = getFormattedDateTime();
@@ -1788,246 +1789,275 @@
 
                   setIsPmModalOpen(false);
                   setEditingPmItem(null);
-                }} className="space-y-3 text-xs">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Target Month *</label>
-                      <select
-                        value={pmForm.targetMonth}
-                        onChange={(e) => {
-                          const mCode = e.target.value;
-                          const mObj = monthsList.find(m => m.code === mCode);
-                          setPmForm({ 
-                            ...pmForm, 
-                            targetMonth: mCode, 
-                            slotRange: mObj && mObj.slots ? mObj.slots[0] : pmForm.slotRange 
-                          });
-                        }}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold outline-none text-slate-900"
-                      >
-                        {monthsList.map(m => (
-                          <option key={m.code} value={m.code}>{m.name} ({m.code})</option>
-                        ))}
-                      </select>
+                }} className="space-y-4 text-xs">
+
+                  {/* CATEGORY 1: SCHEDULE & LOCATION INFO */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div className="font-extrabold text-blue-600 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <span>📅</span> 1. Schedule & Location Info
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Target Month *</label>
+                        <select
+                          value={pmForm.targetMonth}
+                          onChange={(e) => {
+                            const mCode = e.target.value;
+                            const mObj = monthsList.find(m => m.code === mCode);
+                            setPmForm({ 
+                              ...pmForm, 
+                              targetMonth: mCode, 
+                              slotRange: mObj && mObj.slots ? mObj.slots[0] : pmForm.slotRange 
+                            });
+                          }}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-bold outline-none text-slate-900"
+                        >
+                          {monthsList.map(m => (
+                            <option key={m.code} value={m.code}>{m.name} ({m.code})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Date Slot Range *</label>
+                        <select
+                          value={pmForm.slotRange}
+                          onChange={(e) => setPmForm({ ...pmForm, slotRange: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-bold outline-none text-slate-900"
+                        >
+                          {(() => {
+                            const selM = monthsList.find(m => m.code === pmForm.targetMonth);
+                            const slots = selM && selM.slots ? selM.slots : ['01 to 10 January', '11 to 20 January', '21 to 31 January'];
+                            return slots.map(s => <option key={s} value={s}>{s}</option>);
+                          })()}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Due Date *</label>
+                        <input 
+                          type="date"
+                          required
+                          value={pmForm.dueDate}
+                          onChange={(e) => setPmForm({ ...pmForm, dueDate: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900 font-bold"
+                        />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Date Slot Range *</label>
-                      <select
-                        value={pmForm.slotRange}
-                        onChange={(e) => setPmForm({ ...pmForm, slotRange: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold outline-none text-slate-900"
-                      >
-                        {(() => {
-                          const selM = monthsList.find(m => m.code === pmForm.targetMonth);
-                          const slots = selM && selM.slots ? selM.slots : ['01 to 10 January', '11 to 20 January', '21 to 31 January'];
-                          return slots.map(s => <option key={s} value={s}>{s}</option>);
-                        })()}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Due Date *</label>
-                      <input 
-                        type="date"
-                        required
-                        value={pmForm.dueDate}
-                        onChange={(e) => setPmForm({ ...pmForm, dueDate: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Department / Location *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. General Registration"
+                          value={pmForm.department}
+                          onChange={(e) => setPmForm({ ...pmForm, department: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-semibold text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Equipment Name *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. Desktop PC Workstation"
+                          value={pmForm.equipmentName}
+                          onChange={(e) => setPmForm({ ...pmForm, equipmentName: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-semibold text-slate-900"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Department / Location *</label>
-                      <input 
-                        type="text"
-                        required
-                        value={pmForm.department}
-                        onChange={(e) => setPmForm({ ...pmForm, department: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-900"
-                      />
+                  {/* CATEGORY 2: HARDWARE SPECIFICATIONS */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div className="font-extrabold text-blue-600 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <span>💻</span> 2. Hardware Specifications & Tags
                     </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Equipment Name *</label>
-                      <input 
-                        type="text"
-                        required
-                        value={pmForm.equipmentName}
-                        onChange={(e) => setPmForm({ ...pmForm, equipmentName: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-900"
-                      />
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Monitor Brand</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. Dell"
+                          value={pmForm.monitorBrand}
+                          onChange={(e) => setPmForm({ ...pmForm, monitorBrand: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Monitor Tag No</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. MON-TAG-101"
+                          value={pmForm.monitorTagNo}
+                          onChange={(e) => setPmForm({ ...pmForm, monitorTagNo: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">CPU Brand</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. Dell / Intel"
+                          value={pmForm.cpuBrand}
+                          onChange={(e) => setPmForm({ ...pmForm, cpuBrand: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">CPU Processor *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. Intel Core i5-12400 (2.50GHz)"
+                          value={pmForm.cpuProcessor}
+                          onChange={(e) => setPmForm({ ...pmForm, cpuProcessor: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono text-[11px]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Printer Brand</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. HP"
+                          value={pmForm.printerBrand}
+                          onChange={(e) => setPmForm({ ...pmForm, printerBrand: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Printer Model *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. HP LaserJet Pro M126nw"
+                          value={pmForm.printerModel}
+                          onChange={(e) => setPmForm({ ...pmForm, printerModel: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Printer Tag No</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. PRN-TAG-202"
+                          value={pmForm.printerTagNo}
+                          onChange={(e) => setPmForm({ ...pmForm, printerTagNo: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Printer IP</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. 192.168.1.150"
+                          value={pmForm.printerIP}
+                          onChange={(e) => setPmForm({ ...pmForm, printerIP: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">System IP</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. 192.168.1.50"
+                          value={pmForm.systemIP}
+                          onChange={(e) => setPmForm({ ...pmForm, systemIP: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">System MAC</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. 00:1A:2B..."
+                          value={pmForm.systemMac}
+                          onChange={(e) => setPmForm({ ...pmForm, systemMac: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* PREVIOUS FIELDS */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Monitor Brand</label>
-                      <input 
-                        type="text"
-                        value={pmForm.monitorBrand}
-                        onChange={(e) => setPmForm({ ...pmForm, monitorBrand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
+                  {/* CATEGORY 3: SOFTWARE & SECURITY STATUS */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div className="font-extrabold text-blue-600 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                      <span>🛡️</span> 3. Software, Backup & Security Status
                     </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Monitor Tag No</label>
-                      <input 
-                        type="text"
-                        value={pmForm.monitorTagNo}
-                        onChange={(e) => setPmForm({ ...pmForm, monitorTagNo: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">CPU Brand</label>
-                      <input 
-                        type="text"
-                        value={pmForm.cpuBrand}
-                        onChange={(e) => setPmForm({ ...pmForm, cpuBrand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Printer Brand</label>
-                      <input 
-                        type="text"
-                        value={pmForm.printerBrand}
-                        onChange={(e) => setPmForm({ ...pmForm, printerBrand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">MS Office *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. Office 2021 Pro Plus"
+                          value={pmForm.msOffice}
+                          onChange={(e) => setPmForm({ ...pmForm, msOffice: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Outlook *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. Configured & Synced"
+                          value={pmForm.outlook}
+                          onChange={(e) => setPmForm({ ...pmForm, outlook: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Backup *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. Active Daily"
+                          value={pmForm.backup}
+                          onChange={(e) => setPmForm({ ...pmForm, backup: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Printer Tag No</label>
-                      <input 
-                        type="text"
-                        value={pmForm.printerTagNo}
-                        onChange={(e) => setPmForm({ ...pmForm, printerTagNo: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Printer IP</label>
-                      <input 
-                        type="text"
-                        value={pmForm.printerIP}
-                        onChange={(e) => setPmForm({ ...pmForm, printerIP: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">System IP</label>
-                      <input 
-                        type="text"
-                        value={pmForm.systemIP}
-                        onChange={(e) => setPmForm({ ...pmForm, systemIP: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">System Mac</label>
-                      <input 
-                        type="text"
-                        value={pmForm.systemMac}
-                        onChange={(e) => setPmForm({ ...pmForm, systemMac: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  {/* NEW FIELDS */}
-                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">CPU Processor *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g. Intel Core i5-12400 (2.50GHz)"
-                        value={pmForm.cpuProcessor}
-                        onChange={(e) => setPmForm({ ...pmForm, cpuProcessor: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-mono text-[11px]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Printer Model *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g. HP LaserJet Pro M126nw"
-                        value={pmForm.printerModel}
-                        onChange={(e) => setPmForm({ ...pmForm, printerModel: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">MS Office *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g. Office 2021 Pro Plus"
-                        value={pmForm.msOffice}
-                        onChange={(e) => setPmForm({ ...pmForm, msOffice: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Outlook *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g. Configured & Synced"
-                        value={pmForm.outlook}
-                        onChange={(e) => setPmForm({ ...pmForm, outlook: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Backup *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g. Active Daily"
-                        value={pmForm.backup}
-                        onChange={(e) => setPmForm({ ...pmForm, backup: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Anti-Virus *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g. Quick Heal Total Security"
-                        value={pmForm.antiVirus}
-                        onChange={(e) => setPmForm({ ...pmForm, antiVirus: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Status</label>
-                      <select
-                        value={pmForm.status}
-                        onChange={(e) => setPmForm({ ...pmForm, status: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900"
-                      >
-                        <option value="Scheduled">Scheduled</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                      </select>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Anti-Virus *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. Quick Heal Total Security"
+                          value={pmForm.antiVirus}
+                          onChange={(e) => setPmForm({ ...pmForm, antiVirus: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Task Status</label>
+                        <select
+                          value={pmForm.status}
+                          onChange={(e) => setPmForm({ ...pmForm, status: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900"
+                        >
+                          <option value="Scheduled">Scheduled</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
@@ -2041,7 +2071,7 @@
                     </button>
                     <button 
                       type="submit"
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
                     >
                       {editingPmItem ? 'Save & Highlight Changes' : 'Schedule Task'}
                     </button>
