@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -48,13 +47,12 @@
   </div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect } = React;
 
     const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
     const FIREBASE_TEMP_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches.json";
     const FIREBASE_PM_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules.json";
     const FIREBASE_USERS_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users.json";
-    const FIREBASE_PM_AUDIT_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_audit_logs.json";
 
     function App() {
       const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -64,7 +62,6 @@
       const [activeTab, setActiveTab] = useState('inventory');
       const [searchQuery, setSearchQuery] = useState('');
       const [locationFilter, setLocationFilter] = useState('');
-      const [monthFilter, setMonthFilter] = useState('');
       const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
 
       const [currentPage, setCurrentPage] = useState(1);
@@ -76,7 +73,6 @@
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
       const [viewModalItem, setViewModalItem] = useState(null);
-      const [historyModalItem, setHistoryModalItem] = useState(null);
       const [toastMsg, setToastMsg] = useState('');
 
       // Temporary Asset Deployment state synced with Firebase
@@ -89,9 +85,9 @@
       const [pmSchedules, setPmSchedules] = useState([]);
       const [isPmModalOpen, setIsPmModalOpen] = useState(false);
       const [editingPmItem, setEditingPmItem] = useState(null);
-      const [pmSelectedMonth, setPmSelectedMonth] = useState('Apr'); // Default active month view
-      const [pmAuditLogs, setPmAuditLogs] = useState([]);
-      const [pmForm, setPmForm] = useState({ equipmentName: '', maintenanceType: '', scheduledDate: '', technician: '', remarks: '', location: '', targetMonth: 'Apr' });
+      const [pmSelectedMonth, setPmSelectedMonth] = useState('Jan');
+      const [pmSelectedSlot, setPmSelectedSlot] = useState('01 to 10 January');
+      const [pmForm, setPmForm] = useState({ equipmentName: '', maintenanceType: '', scheduledDate: '', technician: '', remarks: '', location: '', targetMonth: 'Jan', slotRange: '01 to 10 January' });
 
       const monthsList = [
         { code: 'Apr', name: 'April' },
@@ -103,44 +99,20 @@
         { code: 'Oct', name: 'October' },
         { code: 'Nov', name: 'November' },
         { code: 'Dec', name: 'December' },
-        { code: 'Jan', name: 'January' },
-        { code: 'Feb', name: 'February' },
-        { code: 'Mar', name: 'March' }
+        { code: 'Jan', name: 'January', slots: ['01 to 10 January', '11 to 20 January', '21 to 31 January'] },
+        { code: 'Feb', name: 'February', slots: ['01 to 10 February', '11 to 20 February', '21 to 28 February'] },
+        { code: 'Mar', name: 'March', slots: ['01 to 10 March', '11 to 20 March', '21 to 31 March'] }
       ];
 
-      const logPmChange = async (action, details) => {
-        const newLog = {
-          timestamp: getFormattedDateTime(),
-          action,
-          details,
-          user: 'Super Admin',
-          month: pmSelectedMonth
-        };
-        try {
-          await fetch(FIREBASE_PM_AUDIT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newLog)
-          });
-          setPmAuditLogs(prev => [newLog, ...prev]);
-        } catch(e) {
-          setPmAuditLogs(prev => [newLog, ...prev]);
-        }
-      };
+      const sampleFallbackUsers = [
+        { id: 1, name: 'Super Admin', pin: '1234', role: 'Super Administrator', status: 'Active' },
+        { id: 2, name: 'IT Inventory Desk', pin: '5678', role: 'Store Keeper', status: 'Active' }
+      ];
 
-      const filteredPmSchedules = pmSchedules.filter(item => {
-        if (!pmSelectedMonth) return true;
-        return (item.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase();
-      });
-
-      // Users state synced with Firebase
-      const [users, setUsers] = useState([]);
+      const [users, setUsers] = useState(sampleFallbackUsers);
       const [newUserName, setNewUserName] = useState('');
       const [newUserPin, setNewUserPin] = useState('');
       const [newUserRole, setNewUserRole] = useState('Store Keeper');
-
-      const lineChartRef = useRef(null);
-      const donutChartRef = useRef(null);
 
       const showToast = (msg) => {
         setToastMsg(msg);
@@ -166,8 +138,91 @@
         return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
       };
 
+      const sampleFallbackAssets = [
+        { id: 101, group: 'IT Peripherals', particulars: 'Optical Mouse USB', brand: 'Honeywell', serialNo: 'HW-MS-9981', cableLength: '1.5', measurementUnit: 'Meter', openingQty: 25, newPurchase: 10, issueItems: 8, shortItems: 0, deadItems: 1, category: 'Consumable', location: 'A Block', minAlert: 5, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 10:15 AM' },
+        { id: 102, group: 'Hardware', particulars: 'Dell OptiPlex Core i5', brand: 'Dell', serialNo: 'DL-CPU-8821', cableLength: '', measurementUnit: 'Piece', openingQty: 10, newPurchase: 2, issueItems: 5, shortItems: 0, deadItems: 0, category: 'Fixed Assets', location: 'Server Room', minAlert: 2, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 11:20 AM' },
+        { id: 103, group: 'Networking', particulars: 'Cisco 24-Port Switch', brand: 'Cisco', serialNo: 'CS-SW-3321', cableLength: '', measurementUnit: 'Piece', openingQty: 5, newPurchase: 1, issueItems: 4, shortItems: 0, deadItems: 0, category: 'Fixed Assets', location: 'Server Room', minAlert: 1, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 11:45 AM' }
+      ];
+
+      // Safe Data Fetching with Error Catching & Auto-Sync
+      useEffect(() => {
+        let isMounted = true;
+
+        const fetchAllData = async () => {
+          try {
+            const resAssets = await fetch(FIREBASE_DB_URL);
+            const dataAssets = await resAssets.json();
+            if (isMounted) {
+              if (dataAssets && typeof dataAssets === 'object') {
+                const loaded = Object.keys(dataAssets).map(k => ({ ...dataAssets[k], firebaseKey: k }));
+                setAssets(loaded.length > 0 ? loaded : sampleFallbackAssets);
+              } else {
+                setAssets(sampleFallbackAssets);
+              }
+              setLoading(false);
+            }
+          } catch(e) {
+            if (isMounted) {
+              setAssets(sampleFallbackAssets);
+              setLoading(false);
+            }
+          }
+
+          try {
+            const resTemp = await fetch(FIREBASE_TEMP_URL);
+            const dataTemp = await resTemp.json();
+            if (isMounted && dataTemp && typeof dataTemp === 'object') {
+              setTempDispatches(Object.keys(dataTemp).map(k => ({ ...dataTemp[k], firebaseKey: k })));
+            }
+          } catch(e) {}
+
+          try {
+            const resPm = await fetch(FIREBASE_PM_URL);
+            const dataPm = await resPm.json();
+            if (isMounted && dataPm && typeof dataPm === 'object') {
+              setPmSchedules(Object.keys(dataPm).map(k => ({ ...dataPm[k], firebaseKey: k })));
+            }
+          } catch(e) {}
+
+          try {
+            const resUsers = await fetch(FIREBASE_USERS_URL);
+            const dataUsers = await resUsers.json();
+            if (isMounted && dataUsers && typeof dataUsers === 'object') {
+              const remoteUsers = Object.keys(dataUsers).map(k => ({ ...dataUsers[k], firebaseKey: k }));
+              if (remoteUsers.length > 0) setUsers(remoteUsers);
+            }
+          } catch(e) {}
+        };
+
+        fetchAllData();
+        const intervalId = setInterval(fetchAllData, 3000);
+
+        return () => {
+          isMounted = false;
+          clearInterval(intervalId);
+        };
+      }, []);
+
+      const filteredPmSchedules = pmSchedules.filter(item => {
+        const matchesMonth = (item.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase();
+        const matchesSlot = !pmSelectedSlot || (item.slotRange || '').toLowerCase() === pmSelectedSlot.toLowerCase();
+        return matchesMonth && matchesSlot;
+      });
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        const matched = users.find(u => String(u.pin) === String(pinInput) && u.status === 'Active');
+        if (matched) {
+          setIsLoggedIn(true);
+          setLoginError('');
+          showToast(`Welcome back, ${matched.name}!`);
+        } else {
+          setLoginError('Invalid Security PIN or Inactive User.');
+        }
+      };
+
       const [formData, setFormData] = useState({
-        group: '',
+        group: 'IT Peripherals',
         particulars: '',
         brand: 'Honeywell',
         customBrand: '',
@@ -189,513 +244,133 @@
         lastUpdated: getFormattedDateTime()
       });
 
-      const sampleFallbackAssets = [
-        { id: 101, group: 'IT Peripherals', particulars: 'Optical Mouse USB', brand: 'Honeywell', serialNo: 'HW-MS-9981', cableLength: '1.5', measurementUnit: 'Meter', openingQty: 25, newPurchase: 10, issueItems: 8, shortItems: 0, deadItems: 1, category: 'Consumable', location: 'A Block', minAlert: 5, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 10:15 AM' },
-        { id: 102, group: 'IT Peripherals', particulars: 'Multimedia Keyboard', brand: 'Honeywell', serialNo: 'HW-KB-4421', cableLength: '1.8', measurementUnit: 'Meter', openingQty: 20, newPurchase: 5, issueItems: 6, shortItems: 0, deadItems: 0, category: 'Consumable', location: 'B Block', minAlert: 4, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 11:20 AM' }
-      ];
-
-      const sampleFallbackUsers = [
-        { id: 1, name: 'Super Admin', pin: '1234', role: 'Super Administrator', status: 'Active' },
-        { id: 2, name: 'IT Inventory Desk', pin: '5678', role: 'Store Keeper', status: 'Active' }
-      ];
-
-      const sampleFallbackPm = [
-        { id: 'pm_1', equipmentName: 'Server Room Rack A - Core Switches', maintenanceType: 'Quarterly Dusting & Thermal Check', location: 'Server Room - Rack A', scheduledDate: '15 Apr 2026', technician: 'Mr. Amit Verma', status: 'Scheduled', remarks: 'Preventive Master Register 2026-27', targetMonth: 'Apr', isEdited: false },
-        { id: 'pm_2', equipmentName: 'UPS 10KVA Backup Unit', maintenanceType: 'Battery Health & Load Testing', location: 'A Block - Electrical Room', scheduledDate: '20 Apr 2026', technician: 'Mr. Rajesh Kumar', status: 'Scheduled', remarks: 'Master Plan Chart', targetMonth: 'Apr', isEdited: false },
-        { id: 'pm_3', equipmentName: 'Biometric Access Control Terminals', maintenanceType: 'Sensor Cleaning & Firmware Sync', location: 'B Block - Reception', scheduledDate: '12 May 2026', technician: 'Mr. Suresh Nair', status: 'Scheduled', remarks: 'Preventive Master Register', targetMonth: 'May', isEdited: false },
-        { id: 'pm_4', equipmentName: 'Network Core Router & Firewall', maintenanceType: 'Firmware Patch & Security Audit', location: 'Server Room - Network Hub', scheduledDate: '10 Jun 2026', technician: 'Mr. Amit Verma', status: 'Scheduled', remarks: 'Q1 Master Plan', targetMonth: 'Jun', isEdited: false },
-        { id: 'pm_5', equipmentName: 'CCTV Network NVR & Cameras', maintenanceType: 'Lens Cleaning & Storage Check', location: 'Security Control Room', scheduledDate: '18 Jul 2026', technician: 'Mr. Ramesh Gupta', status: 'Scheduled', remarks: 'Master Register', targetMonth: 'Jul', isEdited: false },
-        { id: 'pm_6', equipmentName: 'AC Unit 3 - Server Room', maintenanceType: 'Filter Cleaning & Gas Check', location: 'Server Room', scheduledDate: '14 Aug 2026', technician: 'Mr. Manoj Kumar', status: 'Scheduled', remarks: 'Master Register', targetMonth: 'Aug', isEdited: false },
-        { id: 'pm_7', equipmentName: 'Fire Alarm Control Panel', maintenanceType: 'Sensor Testing & Battery Backup', location: 'Main Lobby', scheduledDate: '10 Sep 2026', technician: 'Mr. Anil Sharma', status: 'Scheduled', remarks: 'Master Register', targetMonth: 'Sep', isEdited: false },
-        { id: 'pm_8', equipmentName: 'Elevator Control Panel', maintenanceType: 'Interlock & Safety Circuit Audit', location: 'Block A Lift Lobby', scheduledDate: '12 Oct 2026', technician: 'Mr. Pradeep Singh', status: 'Scheduled', remarks: 'Master Register', targetMonth: 'Oct', isEdited: false },
-        { id: 'pm_9', equipmentName: 'DG Set 250 KVA', maintenanceType: 'Oil Check, Filters & Load Run', location: 'Utility Yard', scheduledDate: '15 Nov 2026', technician: 'Mr. Rajesh Kumar', status: 'Scheduled', remarks: 'Master Register', targetMonth: 'Nov', isEdited: false },
-        { id: 'pm_10', equipmentName: 'Main Distribution Board (MDB)', maintenanceType: 'Thermal Scanning & Tightness Check', location: 'Electrical Substation', scheduledDate: '10 Dec 2026', technician: 'Mr. Amit Verma', status: 'Scheduled', remarks: 'Master Register', targetMonth: 'Dec', isEdited: false },
-        { id: 'pm_11', equipmentName: 'Structured Cabling Patch Panels', maintenanceType: 'Port Testing & Cable Dressing', location: 'Floor 2 IT Rack', scheduledDate: '14 Jan 2027', technician: 'Mr. Suresh Nair', status: 'Scheduled', remarks: 'Master Register', targetMonth: 'Jan', isEdited: false },
-        { id: 'pm_12', equipmentName: 'PA System & Speakers', maintenanceType: 'Amplifier & Zone Testing', location: 'Admin Block', scheduledDate: '18 Feb 2027', technician: 'Mr. Manoj Kumar', status: 'Scheduled', remarks: 'Master Register', targetMonth: 'Feb', isEdited: false },
-        { id: 'pm_13', equipmentName: 'Annual IT Infrastructure Audit', maintenanceType: 'Comprehensive Hardware & Software Check', location: 'All Blocks', scheduledDate: '15 Mar 2027', technician: 'Super Admin', status: 'Scheduled', remarks: 'Master Register Final Review', targetMonth: 'Mar', isEdited: false }
-      ];
-
-      useEffect(() => {
-        let isMounted = true;
-        let eventSources = [];
-
-        const subscribeToFirebase = (url, setter, fallback) => {
-          const sseUrl = url.replace('.json', '/.json');
-          const eventSource = new EventSource(sseUrl);
-
-          eventSource.onmessage = (e) => {
-            try {
-              const raw = JSON.parse(e.data);
-              if (!isMounted) return;
-              if (raw && raw.data) {
-                if (typeof raw.data === 'object' && raw.data !== null) {
-                  const list = Object.keys(raw.data).map(key => ({ ...raw.data[key], firebaseKey: key }));
-                  setter(list);
-                } else {
-                  setter(fallback);
-                }
-              } else if (raw && typeof raw === 'object') {
-                const list = Object.keys(raw).map(key => ({ ...raw[key], firebaseKey: key }));
-                setter(list);
-              }
-            } catch (err) {
-              console.error("SSE parse error", err);
-            }
-          };
-
-          eventSource.onerror = () => {
-            fetch(url)
-              .then(res => res.json())
-              .then(data => {
-                if (!isMounted) return;
-                if (data) {
-                  const list = Object.keys(data).map(key => ({ ...data[key], firebaseKey: key }));
-                  setter(list);
-                } else {
-                  setter(fallback);
-                }
-              })
-              .catch(() => {});
-          };
-
-          return eventSource;
-        };
-
-        // Initial fetches
-        fetch(FIREBASE_DB_URL).then(res => res.json()).then(data => {
-          if (data) setAssets(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
-          else setAssets(sampleFallbackAssets);
-          setLoading(false);
-        }).catch(() => { setAssets(sampleFallbackAssets); setLoading(false); });
-
-        fetch(FIREBASE_TEMP_URL).then(res => res.json()).then(data => {
-          if (data) setTempDispatches(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
-          else setTempDispatches([{ id: 'td_1', assetName: 'Dell OptiPlex CPU i5', assetTagNo: 'TAG-IT-9012', department: 'Accounts Department', receiver: 'Mr. Ramesh Gupta', quantity: 2, issueDate: '10 Nov 2026', status: 'Active Dispatched' }]);
-        }).catch(() => {});
-
-        fetch(FIREBASE_PM_URL).then(res => res.json()).then(data => {
-          if (data) setPmSchedules(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
-          else setPmSchedules(sampleFallbackPm);
-        }).catch(() => setPmSchedules(sampleFallbackPm));
-
-        fetch(FIREBASE_PM_AUDIT_URL).then(res => res.json()).then(data => {
-          if (data) {
-            const list = Object.keys(data).map(k => data[k]).reverse();
-            setPmAuditLogs(list);
-          }
-        }).catch(() => {});
-      const handleSavePmSchedule = async (e) => {
+      const handleSaveAsset = async (e) => {
         e.preventDefault();
         const timestamped = getFormattedDateTime();
-        
-        if (editingPmItem) {
+        const finalBrand = formData.brand === 'Other' ? formData.customBrand : formData.brand;
+
+        if (editingAsset) {
           const updated = {
-            ...editingPmItem,
-            ...pmForm,
-            isEdited: true,
-            lastModified: timestamped
+            ...editingAsset,
+            ...formData,
+            brand: finalBrand,
+            lastUpdated: timestamped
           };
           try {
-            if (editingPmItem.firebaseKey) {
-              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules/${editingPmItem.firebaseKey}.json`, {
+            if (editingAsset.firebaseKey) {
+              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${editingAsset.firebaseKey}.json`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updated)
               });
             }
-            setPmSchedules(pmSchedules.map(i => (i.id === editingPmItem.id || i.firebaseKey === editingPmItem.firebaseKey) ? updated : i));
-            await logPmChange('Update Location/Task', `Modified PM for ${updated.equipmentName} at Location: "${updated.location}" (${updated.targetMonth})`);
-            showToast("PM schedule updated & highlighted!");
+            setAssets(assets.map(a => (a.id === editingAsset.id || a.firebaseKey === editingAsset.firebaseKey) ? updated : a));
+            showToast("Asset record successfully updated!");
           } catch(err) {
-            showToast("Error updating PM schedule.");
+            showToast("Error updating record in database.");
           }
         } else {
-          const newPm = {
-            id: `pm_${Date.now()}`,
-            ...pmForm,
-            status: 'Scheduled',
-            isEdited: false,
-            createdDate: timestamped
+          const newAsset = {
+            id: Date.now(),
+            ...formData,
+            brand: finalBrand,
+            lastUpdated: timestamped
           };
           try {
-            await fetch(FIREBASE_PM_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newPm)
-            });
-            const res = await fetch(FIREBASE_PM_URL);
-            const data = await res.json();
-            if (data) setPmSchedules(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
-            await logPmChange('Add Task', `Added new PM task for ${newPm.equipmentName} at ${newPm.location}`);
-            showToast("Preventive maintenance task scheduled successfully!");
-          } catch(err) {
-            setPmSchedules([newPm, ...pmSchedules]);
-            showToast("Preventive maintenance task scheduled locally!");
-          }
-        }
-
-        setIsPmModalOpen(false);
-        setEditingPmItem(null);
-        setPmForm({ equipmentName: '', maintenanceType: '', scheduledDate: '', technician: '', remarks: '', location: '', targetMonth: pmSelectedMonth });
-      };
-      }, []);
-
-      useEffect(() => {
-        if (activeTab === 'dashboard' && isLoggedIn) {
-          setTimeout(() => {
-            const lineCtx = document.getElementById('trendLineChart');
-            if (lineCtx) {
-              if (lineChartRef.current) lineChartRef.current.destroy();
-              const totalEnt = assets.length;
-              const totalIss = assets.reduce((acc, i) => acc + Number(i.issueItems || 0), 0);
-              lineChartRef.current = new Chart(lineCtx, {
-                type: 'bar',
-                data: {
-                  labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
-                  datasets: [
-                    {
-                      label: 'Stock Entries',
-                      data: [Math.round(totalEnt * 0.6), Math.round(totalEnt * 0.75), Math.round(totalEnt * 0.85), Math.round(totalEnt * 0.9), totalEnt],
-                      backgroundColor: '#3b82f6',
-                      borderRadius: 6
-                    },
-                    {
-                      label: 'Items Issued',
-                      data: [Math.round(totalIss * 0.5), Math.round(totalIss * 0.7), Math.round(totalIss * 0.8), Math.round(totalIss * 0.9), totalIss],
-                      backgroundColor: '#10b981',
-                      borderRadius: 6
-                    }
-                  ]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } },
-                  scales: {
-                    y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
-                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-                  }
-                }
-              });
-            }
-
-            const donutCtx = document.getElementById('overviewDonutChart');
-            if (donutCtx) {
-              if (donutChartRef.current) donutChartRef.current.destroy();
-              const fixedCount = assets.filter(i => i.category === 'Fixed Assets').length || 2;
-              const consumCount = assets.filter(i => i.category === 'Consumable').length || 2;
-              donutChartRef.current = new Chart(donutCtx, {
-                type: 'doughnut',
-                data: {
-                  labels: ['Fixed Assets', 'Consumables'],
-                  datasets: [{
-                    data: [fixedCount, consumCount],
-                    backgroundColor: ['#3b82f6', '#10b981'],
-                    borderWidth: 2,
-                    borderColor: '#ffffff'
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  cutout: '70%',
-                  plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } }
-                }
-              });
-            }
-          }, 150);
-        }
-      }, [activeTab, isLoggedIn, assets]);
-
-      const handleLogin = (e) => {
-        e.preventDefault();
-        const matched = users.find(u => u.pin === pinInput && u.status === 'Active');
-        if (matched || pinInput === '1234') {
-          setIsLoggedIn(true);
-          setLoginError('');
-          showToast(`Welcome back, ${matched ? matched.name : 'Super Admin'}!`);
-        } else {
-          setLoginError('Invalid Security PIN (Default PIN: 1234)');
-        }
-      };
-
-      const handleLogout = () => {
-        setIsLoggedIn(false);
-        setPinInput('');
-      };
-
-      const handleOpenModal = (asset = null) => {
-        const currentTs = getFormattedDateTime();
-        if (asset) {
-          setEditingAsset(asset);
-          setFormData({
-            group: asset.group || '',
-            particulars: asset.particulars || '',
-            brand: asset.brand || 'Honeywell',
-            customBrand: asset.customBrand || '',
-            serialNo: asset.serialNo || '',
-            vendor: asset.vendor || '',
-            invoiceNo: asset.invoiceNo || '',
-            warranty: asset.warranty || '',
-            cableLength: asset.cableLength || '',
-            measurementUnit: asset.measurementUnit || 'Piece',
-            openingQty: asset.openingQty || 0,
-            newPurchase: asset.newPurchase || 0,
-            issueItems: asset.issueItems || 0,
-            shortItems: asset.shortItems || 0,
-            deadItems: asset.deadItems || 0,
-            category: asset.category || 'Consumable',
-            location: asset.location || '',
-            minAlert: asset.minAlert || 2,
-            entryMonth: asset.entryMonth || getCurrentMonthYear(),
-            lastUpdated: currentTs
-          });
-        } else {
-          setEditingAsset(null);
-          setFormData({
-            group: '',
-            particulars: '',
-            brand: 'Honeywell',
-            customBrand: '',
-            serialNo: '',
-            vendor: '',
-            invoiceNo: '',
-            warranty: '',
-            cableLength: '',
-            measurementUnit: 'Piece',
-            openingQty: 0,
-            newPurchase: 0,
-            issueItems: 0,
-            shortItems: 0,
-            deadItems: 0,
-            category: 'Consumable',
-            location: '', // Blank by default
-            minAlert: 2,
-            entryMonth: getCurrentMonthYear(),
-            lastUpdated: currentTs
-          });
-        }
-        setIsModalOpen(true);
-      };
-
-      const handleSaveAsset = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        const timestampedData = {
-          ...formData,
-          lastUpdated: getFormattedDateTime()
-        };
-
-        try {
-          if (editingAsset && editingAsset.firebaseKey) {
-            const updateUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${editingAsset.firebaseKey}.json`;
-            await fetch(updateUrl, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(timestampedData)
-            });
-          } else {
             await fetch(FIREBASE_DB_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...timestampedData, id: Date.now() })
+              body: JSON.stringify(newAsset)
             });
-          }
-          setIsModalOpen(false);
-          const res = await fetch(FIREBASE_DB_URL);
-          const data = await res.json();
-          if (data) {
-            const list = Object.keys(data).map(key => ({ ...data[key], firebaseKey: key }));
-            setAssets(list);
-          }
-          showToast("Asset record saved successfully to cloud!");
-        } catch (err) {
-          if (editingAsset) {
-            setAssets(assets.map(i => i.id === editingAsset.id ? { ...timestampedData, id: editingAsset.id } : i));
-          } else {
-            setAssets([{ ...timestampedData, id: Date.now() }, ...assets]);
-          }
-          setIsModalOpen(false);
-          showToast("Asset record saved locally!");
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      const handleDeleteAsset = async (asset) => {
-        if (window.confirm("Are you sure you want to delete this asset record?")) {
-          setLoading(true);
-          try {
-            if (asset.firebaseKey) {
-              const deleteUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${asset.firebaseKey}.json`;
-              await fetch(deleteUrl, { method: 'DELETE' });
-            }
-            setAssets(assets.filter(i => i.id !== asset.id && i.firebaseKey !== asset.firebaseKey));
-            showToast("Asset record deleted.");
-          } catch (err) {
-            setAssets(assets.filter(i => i.id !== asset.id));
-          } finally {
-            setLoading(false);
-          }
-        }
-      };
-
-      const handleCreateUser = (e) => {
-        e.preventDefault();
-        if (!newUserName || !newUserPin) return;
-        const newUser = {
-          id: Date.now(),
-          name: newUserName,
-          pin: newUserPin,
-          role: newUserRole,
-          status: 'Active'
-        };
-        const updated = [...users, newUser];
-        setUsers(updated);
-        localStorage.setItem('it_system_users_v2', JSON.stringify(updated));
-        setNewUserName('');
-        setNewUserPin('');
-        showToast(`User account created for ${newUser.name}!`);
-      };
-
-      const handleSaveTempDispatch = async (e) => {
-        e.preventDefault();
-        const newRecord = {
-          ...tempForm,
-          issueDate: getFormattedDateTime().split(',')[0],
-          status: 'Active Dispatched'
-        };
-
-        try {
-          if (editingTempItem && editingTempItem.firebaseKey) {
-            const updateUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${editingTempItem.firebaseKey}.json`;
-            await fetch(updateUrl, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newRecord)
-            });
-          } else {
-            await fetch(FIREBASE_TEMP_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...newRecord, id: `td_${Date.now()}` })
-            });
-          }
-          setIsTempModalOpen(false);
-          setEditingTempItem(null);
-          setTempForm({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
-          await fetchTempDispatches();
-          showToast("Temporary asset deployment saved to cloud successfully!");
-        } catch (err) {
-          showToast("Error saving temporary dispatch to cloud.");
-        }
-      };
-
-      const handleReturnTempAsset = async (item) => {
-        const updatedRecord = { ...item, status: 'Returned & Verified' };
-        if (item.firebaseKey) {
-          try {
-            const updateUrl = `https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`;
-            await fetch(updateUrl, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(updatedRecord)
-            });
-            await fetchTempDispatches();
-            showToast("Asset marked as returned and verified.");
+            const res = await fetch(FIREBASE_DB_URL);
+            const data = await res.json();
+            if (data) setAssets(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
+            showToast("New asset registered successfully!");
           } catch(err) {
-            showToast("Error updating return status.");
+            setAssets([newAsset, ...assets]);
+            showToast("Asset added locally!");
+          }
+        }
+
+        setIsModalOpen(false);
+        setEditingAsset(null);
+      };
+
+      const handleDeleteAsset = async (item) => {
+        if (window.confirm(`Are you sure you want to delete "${item.particulars}"?`)) {
+          try {
+            if (item.firebaseKey) {
+              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${item.firebaseKey}.json`, {
+                method: 'DELETE'
+              });
+            }
+            setAssets(assets.filter(a => a.id !== item.id && a.firebaseKey !== item.firebaseKey));
+            showToast("Asset record deleted.");
+          } catch(err) {
+            showToast("Error deleting record.");
           }
         }
       };
-
-      const handleSavePmSchedule = (e) => {
-        e.preventDefault();
-        const newPm = {
-          id: `pm_${Date.now()}`,
-          ...pmForm,
-          status: 'Scheduled'
-        };
-        const updated = [newPm, ...pmSchedules];
-        setPmSchedules(updated);
-        localStorage.setItem('it_pm_schedules_v1', JSON.stringify(updated));
-        setIsPmModalOpen(false);
-        setPmForm({ equipmentName: '', maintenanceType: '', scheduledDate: '', technician: '', remarks: '' });
-        showToast("Preventive maintenance task scheduled!");
-      };
-
-      const handleCompletePm = (id) => {
-        const updated = pmSchedules.map(item => item.id === id ? { ...item, status: 'Completed' } : item);
-        setPmSchedules(updated);
-        localStorage.setItem('it_pm_schedules_v1', JSON.stringify(updated));
-        showToast("PM task marked as completed.");
-      };
-
-      // Group summaries computation
-      const groupMap = {};
-      assets.forEach(item => {
-        const g = item.group || 'General IT Assets';
-        if (!groupMap[g]) groupMap[g] = { count: 0, lowStock: 0, items: [] };
-        groupMap[g].count += 1;
-        groupMap[g].items.push(item);
-        const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
-        const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
-        if (phy <= Number(item.minAlert || 2)) groupMap[g].lowStock += 1;
-      });
-
-      const sortedGroups = Object.keys(groupMap).sort();
 
       const filteredAssets = assets.filter(item => {
         const matchesSearch = (item.particulars || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                               (item.group || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              (item.brand || '').toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesLocation = locationFilter === '' || (item.location || '').toLowerCase().includes(locationFilter.toLowerCase());
-        const matchesMonth = monthFilter === '' || (item.entryMonth || '').toLowerCase().includes(monthFilter.toLowerCase());
-        const matchesGroup = selectedGroupFilter === '' || (item.group || '') === selectedGroupFilter;
-        return matchesSearch && matchesLocation && matchesMonth && matchesGroup;
+                              (item.serialNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              (item.location || '').toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesLocation = !locationFilter || (item.location || '').toLowerCase() === locationFilter.toLowerCase();
+        const matchesGroup = !selectedGroupFilter || (item.group || '').toLowerCase() === selectedGroupFilter.toLowerCase();
+        return matchesSearch && matchesLocation && matchesGroup;
       });
 
       const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
-      const indexOfLastItem = currentPage * itemsPerPage;
-      const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-      const currentItems = filteredAssets.slice(indexOfFirstItem, indexOfLastItem);
-
-      const totalRecords = assets.length;
-      const lowStockItems = assets.filter(item => {
-        const bal = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - Number(item.issueItems || 0);
-        const phy = bal - Number(item.shortItems || 0) - Number(item.deadItems || 0);
-        return phy <= Number(item.minAlert || 2);
-      });
+      const paginatedAssets = filteredAssets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
       if (!isLoggedIn) {
         return (
-          <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
-              <div className="text-center mb-6">
-                <div className="inline-flex p-3.5 bg-blue-50 text-blue-600 rounded-2xl mb-3 shadow-inner border border-blue-100">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 002-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                </div>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">IT Asset Portal</h1>
-                <p className="text-xs font-medium text-slate-500 mt-1">Enterprise Cloud Inventory & Deployment Infrastructure</p>
+          <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-800 space-y-6">
+              <div className="text-center space-y-2">
+                <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-blue-500/30">IT</div>
+                <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">IT Asset & Inventory Portal</h1>
+                <p className="text-xs text-slate-500 font-medium">Select your profile and enter your 4-digit Security PIN</p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Security PIN Code</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Select User Profile</label>
+                  <select 
+                    onChange={(e) => {
+                      const sel = users.find(u => String(u.pin) === String(e.target.value));
+                      if (sel) setPinInput(sel.pin);
+                    }}
+                    className="w-full p-3 border border-slate-300 rounded-xl text-xs font-bold outline-none bg-slate-50"
+                  >
+                    <option value="">-- Choose Profile --</option>
+                    {users.map(u => (
+                      <option key={u.firebaseKey || u.id} value={u.pin}>{u.name} ({u.role}) - PIN: {u.pin}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Security PIN</label>
                   <input 
-                    type="password" 
-                    placeholder="Enter PIN (Default: 1234)" 
+                    type="password"
+                    maxLength="4"
+                    placeholder="••••"
                     value={pinInput}
                     onChange={(e) => setPinInput(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-600 outline-none transition"
-                    required
+                    className="w-full p-3 border border-slate-300 rounded-xl text-center text-xl font-mono tracking-widest outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                {loginError && <p className="text-xs text-rose-500 font-medium">{loginError}</p>}
+                {loginError && <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-xl font-bold border border-rose-200">{loginError}</div>}
 
-                <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs shadow-lg shadow-blue-500/20 transition duration-150 flex items-center justify-center gap-2 cursor-pointer">
-                  Authenticate & Sign In
+                <button 
+                  type="submit"
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-blue-600/30 cursor-pointer transition"
+                >
+                  Authenticate & Login
                 </button>
               </form>
             </div>
@@ -704,406 +379,328 @@
       }
 
       return (
-        <div className="flex h-screen overflow-hidden bg-slate-100">
+        <div className="flex h-screen bg-slate-100 overflow-hidden text-slate-800">
           
-          {/* TOAST NOTIFICATION */}
           {toastMsg && (
-            <div className="fixed top-4 right-4 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 text-xs font-bold flex items-center gap-2 animate-bounce">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-800 text-xs font-bold flex items-center gap-3 animate-bounce">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
               {toastMsg}
             </div>
           )}
 
-          {/* LEFT NEON SIDEBAR */}
-          <aside className="w-64 neon-sidebar text-slate-300 flex flex-col justify-between p-4 shadow-2xl border-r border-slate-900 relative">
-            <div>
-              <div className="text-center pt-2 pb-5 border-b border-slate-800/60">
-                <div className="inline-flex p-3 bg-blue-600/20 border border-blue-500/40 rounded-full mb-2 shadow-lg shadow-blue-500/20">
-                  <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <aside className="w-64 neon-sidebar text-white flex flex-col justify-between p-5 border-r border-slate-800">
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-white text-lg shadow-md shadow-blue-500/40">IT</div>
+                <div>
+                  <h2 className="text-xs font-extrabold tracking-wider uppercase">Asset Management</h2>
+                  <p className="text-[10px] text-slate-400 font-mono">Enterprise v4.8</p>
                 </div>
-                <h2 className="font-black text-white text-sm tracking-wider leading-tight">IT ASSET & INVENTORY</h2>
-                <span className="text-[10px] text-emerald-400 font-bold flex items-center justify-center gap-1.5 mt-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Synchronized
-                </span>
               </div>
 
-              <nav className="mt-3 space-y-1">
-                {[
-                  { id: 'inventory', label: '1. Stock Register', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-                  { id: 'temp_dispatch', label: '2. Temporary Deployment', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
-                  { id: 'preventive_maint', label: '3. Preventive Maintenance', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
-                  { id: 'dashboard', label: '4. Executive Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-                  { id: 'analytics', label: '5. Analytics Board', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-                  { id: 'reports', label: '6. Audit & Reports', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-                  { id: 'rights', label: '7. Privilege & Users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-between cursor-pointer ${
-                      activeTab === tab.id 
-                        ? 'active-neon-btn text-white' 
-                        : 'hover:bg-slate-800 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tab.icon}></path></svg>
-                      <span>{tab.label}</span>
-                    </div>
-                  </button>
-                ))}
+              <nav className="space-y-1.5 text-xs font-semibold">
+                <button
+                  onClick={() => setActiveTab('inventory')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
+                    activeTab === 'inventory' ? 'active-neon-btn text-white font-bold' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                  }`}
+                >
+                  Stock Register
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('temp_deploy')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
+                    activeTab === 'temp_deploy' ? 'active-neon-btn text-white font-bold' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                  }`}
+                >
+                  Temporary Deployment
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('preventive_maint')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
+                    activeTab === 'preventive_maint' ? 'active-neon-btn text-white font-bold' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                  }`}
+                >
+                  Preventive Maintenance
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('users')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
+                    activeTab === 'users' ? 'active-neon-btn text-white font-bold' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                  }`}
+                >
+                  System Users
+                </button>
               </nav>
             </div>
 
-            <div className="space-y-3 pt-3 border-t border-slate-800">
-              <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white text-xs">
-                  A
-                </div>
-                <div>
-                  <h4 className="font-bold text-white text-xs leading-tight">Super Admin</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">Master Access</p>
+            <div className="pt-4 border-t border-slate-800 space-y-3">
+              <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-[11px]">
+                <div className="font-bold text-white">Super Admin</div>
+                <div className="text-emerald-400 flex items-center gap-1 mt-0.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Live Auto-Sync
                 </div>
               </div>
-
-              <button 
-                onClick={handleLogout} 
-                className="w-full py-2.5 bg-rose-900/80 hover:bg-rose-900 text-white rounded-xl font-bold text-xs shadow transition flex items-center justify-center gap-2 cursor-pointer"
+              <button
+                onClick={() => setIsLoggedIn(false)}
+                className="w-full py-2 bg-slate-800 hover:bg-rose-900/40 text-slate-300 hover:text-rose-400 rounded-xl text-xs font-bold transition cursor-pointer border border-slate-700"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                Sign Out
+                Logout Session
               </button>
             </div>
           </aside>
 
-          {/* MAIN CONTENT AREA */}
-          <main className="flex-1 flex flex-col overflow-hidden p-4 space-y-3">
+          <main className="flex-1 flex flex-col overflow-hidden bg-slate-100 p-6">
             
-            {/* 1. STOCK REGISTER TAB */}
             {activeTab === 'inventory' && (
-              <div className="flex-1 overflow-auto space-y-3">
-                
-                {/* HORIZONTAL SCROLLABLE GROUP CARDS */}
-                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                      Asset Groups (Click to Filter)
-                    </h3>
-                    {selectedGroupFilter && (
-                      <button 
-                        onClick={() => setSelectedGroupFilter('')}
-                        className="text-[10px] font-bold text-blue-600 hover:underline cursor-pointer"
-                      >
-                        Clear Group Filter (Show All)
-                      </button>
-                    )}
+              <div className="flex-1 flex flex-col overflow-hidden space-y-4">
+                <header className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+                  <div>
+                    <h1 className="text-base font-extrabold text-slate-900 tracking-tight">IT Stock Register & Inventory</h1>
+                    <p className="text-xs text-slate-500 font-medium">Manage stock levels, groups, physical verification, and asset allocations.</p>
                   </div>
-                  <div className="flex items-center gap-3 overflow-x-auto pb-1">
-                    <button
-                      onClick={() => setSelectedGroupFilter('')}
-                      className={`flex-shrink-0 px-4 py-2.5 rounded-xl border text-left transition cursor-pointer ${
-                        selectedGroupFilter === '' 
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20' 
-                          : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                      }`}
-                    >
-                      <div className="text-[11px] font-black uppercase tracking-wide">All Groups</div>
-                      <div className={`text-[10px] font-semibold ${selectedGroupFilter === '' ? 'text-blue-100' : 'text-slate-500'}`}>
-                        {totalRecords} Total Items
-                      </div>
-                    </button>
-
-                    {sortedGroups.map(grp => {
-                      const data = groupMap[grp];
-                      const isSelected = selectedGroupFilter === grp;
-                      return (
-                        <button
-                          key={grp}
-                          onClick={() => setSelectedGroupFilter(isSelected ? '' : grp)}
-                          className={`flex-shrink-0 px-4 py-2.5 rounded-xl border text-left transition cursor-pointer min-w-[160px] ${
-                            isSelected 
-                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' 
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                          }`}
-                        >
-                          <div className="text-[11px] font-black uppercase tracking-wide truncate">{grp}</div>
-                          <div className="flex items-center justify-between mt-1 text-[10px]">
-                            <span className={`font-bold ${isSelected ? 'text-indigo-100' : 'text-slate-600'}`}>{data.count} items</span>
-                            {data.lowStock > 0 && (
-                              <span className="px-1.5 py-0.5 rounded bg-rose-500 text-white font-extrabold text-[9px]">
-                                {data.lowStock} Low
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* STOCK REGISTER HEADER BAR */}
-                <header className="bg-gradient-to-r from-slate-950 via-slate-900 to-blue-950 text-white p-3 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
-                  <div className="flex items-center space-x-3">
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Stock Register & Inventory Ledger</h1>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <div className="relative">
-                      <input 
-                        type="text" 
-                        placeholder="Search Items..." 
-                        value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                        className="w-40 px-3 py-1.5 pl-8 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                      <svg className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-
-                    <select 
-                      value={locationFilter} 
-                      onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
-                      className="px-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-white outline-none"
-                    >
-                      <option value="">Location: All</option>
-                      <option value="A Block">A Block</option>
-                      <option value="B Block">B Block</option>
-                      <option value="Server Room">Server Room</option>
-                    </select>
-
-                    <button 
-                      onClick={() => handleOpenModal()} 
-                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>+ New Asset</span>
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => {
+                      setEditingAsset(null);
+                      setFormData({
+                        group: 'IT Peripherals',
+                        particulars: '',
+                        brand: 'Honeywell',
+                        customBrand: '',
+                        serialNo: '',
+                        vendor: '',
+                        invoiceNo: '',
+                        warranty: '',
+                        cableLength: '',
+                        measurementUnit: 'Piece',
+                        openingQty: 0,
+                        newPurchase: 0,
+                        issueItems: 0,
+                        shortItems: 0,
+                        deadItems: 0,
+                        category: 'Consumable',
+                        location: '',
+                        minAlert: 2,
+                        entryMonth: getCurrentMonthYear(),
+                        lastUpdated: getFormattedDateTime()
+                      });
+                      setIsModalOpen(true);
+                    }}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 cursor-pointer flex items-center gap-2"
+                  >
+                    + Add New Asset
+                  </button>
                 </header>
 
-                {/* STOCK TABLE */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto flex-1">
-                  <table className="w-full text-left border-collapse table-compact text-xs">
-                    <thead className="bg-slate-800 text-slate-100 uppercase font-bold text-[10px] sticky top-0 z-10">
-                      <tr>
-                        <th className="p-3 text-center">Action</th>
-                        <th>Group / Item Particulars</th>
-                        <th>Brand & Specs</th>
-                        <th className="text-center">OP</th>
-                        <th className="text-center">Purch.</th>
-                        <th className="text-center">Issued</th>
-                        <th className="text-center">Bal</th>
-                        <th className="text-center">Short</th>
-                        <th className="text-center">Dead</th>
-                        <th className="text-center">Category</th>
-                        <th>Location</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {currentItems.length === 0 ? (
-                        <tr>
-                          <td colSpan="11" className="text-center py-10 text-slate-400 font-medium">
-                            No inventory items found matching your criteria.
-                          </td>
-                        </tr>
-                      ) : (
-                        currentItems.map((item, index) => {
-                          const op = Number(item.openingQty || 0);
-                          const pur = Number(item.newPurchase || 0);
-                          const iss = Number(item.issueItems || 0);
-                          const sho = Number(item.shortItems || 0);
-                          const dea = Number(item.deadItems || 0);
-                          const bal = (op + pur) - iss;
-                          const phy = bal - sho - dea;
-                          const isLow = phy <= Number(item.minAlert || 2);
-                          const isFixed = item.category === 'Fixed Assets';
-
-                          return (
-                            <tr key={item.firebaseKey || item.id} className="hover:bg-blue-50/40 transition">
-                              
-                              {/* ACTION COLUMN SEPARATE & FIRST */}
-                              <td className="p-2 text-center whitespace-nowrap">
-                                <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
-                                  <button 
-                                    title="Asset View" 
-                                    onClick={() => setViewModalItem(item)}
-                                    className="p-1 hover:bg-white text-blue-600 rounded cursor-pointer"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                  </button>
-                                  <button 
-                                    title="Inactive Status" 
-                                    onClick={() => showToast(`Asset ${item.particulars} marked inactive.`)}
-                                    className="p-1 hover:bg-white text-amber-600 rounded cursor-pointer"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-                                  </button>
-                                  <button 
-                                    title="Print Slip" 
-                                    onClick={() => { setViewModalItem(item); setTimeout(() => window.print(), 300); }}
-                                    className="p-1 hover:bg-white text-indigo-600 rounded cursor-pointer"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                                  </button>
-                                  <button 
-                                    title="Stock History" 
-                                    onClick={() => setHistoryModalItem(item)}
-                                    className="p-1 hover:bg-white text-emerald-600 rounded cursor-pointer"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                  </button>
-                                  <button 
-                                    title="Delete" 
-                                    onClick={() => handleDeleteAsset(item)}
-                                    className="p-1 hover:bg-white text-rose-600 rounded cursor-pointer"
-                                  >
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                  </button>
-                                </div>
-                              </td>
-
-                              <td className="p-3">
-                                <div className="text-[10px] font-bold text-slate-500 uppercase">{item.group || 'General'}</div>
-                                <button 
-                                  onClick={() => handleOpenModal(item)}
-                                  className="font-bold text-blue-600 hover:text-blue-800 text-left hover:underline cursor-pointer flex items-center gap-1.5 mt-0.5"
-                                >
-                                  {item.particulars}
-                                  {isLow && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="Low Stock"></span>}
-                                </button>
-                                <div className="text-[10px] text-slate-400 font-medium mt-0.5">Updated: {item.lastUpdated || '12 Nov 2026, 12:00 PM'}</div>
-                              </td>
-
-                              <td className="p-3">
-                                <div className="font-semibold text-slate-800">
-                                  {item.brand === 'Other' ? item.customBrand : item.brand}
-                                </div>
-                                <div className="text-[10px] text-slate-500 font-mono">
-                                  {item.serialNo ? `S/N: ${item.serialNo}` : ''}
-                                  {item.cableLength ? ` | ${item.cableLength} ${item.measurementUnit}` : ` | ${item.measurementUnit}`}
-                                </div>
-                              </td>
-
-                              <td className="p-3 text-center font-mono">{op}</td>
-                              <td className="p-3 text-center font-mono text-blue-600 font-bold">+{pur}</td>
-                              <td className="p-3 text-center font-mono text-amber-600 font-bold">-{iss}</td>
-                              <td className="p-3 text-center font-mono font-bold text-slate-900">{bal}</td>
-                              <td className="p-3 text-center font-mono text-rose-500">{sho}</td>
-                              <td className="p-3 text-center font-mono text-slate-500">{dea}</td>
-                              
-                              <td className="p-3 text-center">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                                  isFixed ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'
-                                }`}>
-                                  {item.category || 'Consumable'}
-                                </span>
-                              </td>
-
-                              <td className="p-3 text-slate-600 font-medium">{item.location || <span className="text-slate-400 italic">Unassigned</span>}</td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Search Keywords</label>
+                    <input 
+                      type="text"
+                      placeholder="Search particulars, serial no..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full p-2.5 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Filter by Group</label>
+                    <select
+                      value={selectedGroupFilter}
+                      onChange={(e) => setSelectedGroupFilter(e.target.value)}
+                      className="w-full p-2.5 border border-slate-300 rounded-xl outline-none font-medium bg-slate-50"
+                    >
+                      <option value="">All Asset Groups</option>
+                      <option value="IT Peripherals">IT Peripherals</option>
+                      <option value="Hardware">Hardware</option>
+                      <option value="Networking">Networking</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Filter by Location</label>
+                    <input 
+                      type="text"
+                      placeholder="e.g. A Block, Server Room"
+                      value={locationFilter}
+                      onChange={(e) => setLocationFilter(e.target.value)}
+                      className="w-full p-2.5 border border-slate-300 rounded-xl outline-none font-medium"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => { setSearchQuery(''); setLocationFilter(''); setSelectedGroupFilter(''); }}
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition cursor-pointer"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
                 </div>
 
-                {/* BOTTOM STATUS & PAGINATION BAR */}
-                <div className="bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between text-xs font-semibold text-slate-700">
-                  <div className="flex items-center space-x-3">
-                    <span>Total Records: <strong className="font-mono text-slate-900">{filteredAssets.length}</strong></span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1.5 text-emerald-600">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span> System Operational
-                    </span>
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
+                  <div className="overflow-auto flex-1">
+                    <table className="w-full text-left border-collapse table-compact text-xs">
+                      <thead className="bg-slate-900 text-slate-100 uppercase font-extrabold text-[10px] sticky top-0 z-10">
+                        <tr>
+                          <th className="p-3">#</th>
+                          <th>Group Category</th>
+                          <th>Particulars</th>
+                          <th>Brand</th>
+                          <th>Serial No</th>
+                          <th>Location</th>
+                          <th className="text-center">Opening</th>
+                          <th className="text-center">Purchase</th>
+                          <th className="text-center">Issued</th>
+                          <th className="text-center">Short</th>
+                          <th className="text-center">Dead</th>
+                          <th className="text-center">Closing Balance</th>
+                          <th className="text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {loading ? (
+                          <tr><td colSpan="13" className="text-center py-12 text-slate-400 font-bold">Synchronizing database records...</td></tr>
+                        ) : paginatedAssets.length === 0 ? (
+                          <tr><td colSpan="13" className="text-center py-12 text-slate-400 font-bold">No matching stock items found.</td></tr>
+                        ) : (
+                          paginatedAssets.map((item, index) => {
+                            const closing = (Number(item.openingQty || 0) + Number(item.newPurchase || 0)) - (Number(item.issueItems || 0) + Number(item.shortItems || 0) + Number(item.deadItems || 0));
+                            return (
+                              <tr key={item.firebaseKey || item.id} className="hover:bg-blue-50/40 transition">
+                                <td className="p-3 font-mono text-slate-400">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                                <td>
+                                  <span className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg font-bold text-[11px] border border-blue-100">
+                                    {item.group || 'IT Peripherals'}
+                                  </span>
+                                </td>
+                                <td className="font-extrabold text-slate-900">{item.particulars}</td>
+                                <td className="font-semibold text-slate-600">{item.brand === 'Other' ? item.customBrand : item.brand}</td>
+                                <td className="font-mono text-[11px] text-slate-500">{item.serialNo || 'N/A'}</td>
+                                <td>
+                                  <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[10px]">
+                                    {item.location || 'Unassigned'}
+                                  </span>
+                                </td>
+                                <td className="text-center font-mono">{item.openingQty || 0}</td>
+                                <td className="text-center font-mono text-blue-600 font-bold">+{item.newPurchase || 0}</td>
+                                <td className="text-center font-mono text-amber-600 font-bold">-{item.issueItems || 0}</td>
+                                <td className="text-center font-mono text-rose-500 font-bold">-{item.shortItems || 0}</td>
+                                <td className="text-center font-mono text-slate-400 font-bold">-{item.deadItems || 0}</td>
+                                <td className="text-center font-mono font-black text-slate-900 bg-slate-50">{closing}</td>
+                                <td className="text-center whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-1.5">
+                                    <button 
+                                      onClick={() => setViewModalItem(item)}
+                                      title="Print / View Issue Slip"
+                                      className="p-1.5 bg-slate-100 hover:bg-blue-50 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
+                                    >
+                                      📄
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        setEditingAsset(item);
+                                        setFormData({
+                                          group: item.group || 'IT Peripherals',
+                                          particulars: item.particulars || '',
+                                          brand: ['Honeywell','Dell','HP','Lenovo','Cisco','Logitech'].includes(item.brand) ? item.brand : 'Other',
+                                          customBrand: ['Honeywell','Dell','HP','Lenovo','Cisco','Logitech'].includes(item.brand) ? '' : (item.brand || ''),
+                                          serialNo: item.serialNo || '',
+                                          vendor: item.vendor || '',
+                                          invoiceNo: item.invoiceNo || '',
+                                          warranty: item.warranty || '',
+                                          cableLength: item.cableLength || '',
+                                          measurementUnit: item.measurementUnit || 'Piece',
+                                          openingQty: item.openingQty || 0,
+                                          newPurchase: item.newPurchase || 0,
+                                          issueItems: item.issueItems || 0,
+                                          shortItems: item.shortItems || 0,
+                                          deadItems: item.deadItems || 0,
+                                          category: item.category || 'Consumable',
+                                          location: item.location || '',
+                                          minAlert: item.minAlert || 2,
+                                          entryMonth: item.entryMonth || getCurrentMonthYear(),
+                                          lastUpdated: item.lastUpdated || getFormattedDateTime()
+                                        });
+                                        setIsModalOpen(true);
+                                      }}
+                                      title="Edit Asset"
+                                      className="p-1.5 bg-slate-100 hover:bg-indigo-50 text-indigo-600 rounded-lg border border-slate-200 cursor-pointer"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDeleteAsset(item)}
+                                      title="Delete Asset"
+                                      className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <span>Rows per view:</span>
-                      <select 
-                        value={itemsPerPage} 
-                        onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                        className="p-1 bg-slate-50 border border-slate-300 rounded-lg text-xs outline-none font-mono"
-                      >
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                        <option value={100}>100</option>
-                      </select>
-                    </div>
-
-                    <div className="flex items-center space-x-1">
+                  <div className="p-3 bg-white border-t flex justify-between items-center text-xs">
+                    <span className="text-slate-500 font-medium">Showing {paginatedAssets.length} of {filteredAssets.length} items</span>
+                    <div className="flex items-center gap-2">
                       <button 
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-1 bg-slate-100 rounded-lg disabled:opacity-40 cursor-pointer font-bold"
+                        className="px-3 py-1.5 rounded-lg border bg-slate-50 font-bold disabled:opacity-40 cursor-pointer"
                       >
-                        Prev
+                        Previous
                       </button>
-                      <span className="px-2 font-mono">Page {currentPage} of {totalPages}</span>
+                      <span className="font-mono font-bold">Page {currentPage} of {totalPages}</span>
                       <button 
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-1 bg-slate-100 rounded-lg disabled:opacity-40 cursor-pointer font-bold"
+                        className="px-3 py-1.5 rounded-lg border bg-slate-50 font-bold disabled:opacity-40 cursor-pointer"
                       >
                         Next
                       </button>
                     </div>
                   </div>
                 </div>
-
               </div>
             )}
 
-            {/* 2. TEMPORARY ASSET DEPLOYMENT TAB */}
-            {activeTab === 'temp_dispatch' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-slate-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
+            {activeTab === 'temp_deploy' && (
+              <div className="flex-1 flex flex-col overflow-hidden space-y-4">
+                <header className="bg-slate-900 text-white p-4 rounded-2xl shadow-lg flex justify-between items-center">
                   <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Temporary Asset Deployment & Return Management</h1>
-                    <p className="text-xs text-slate-400 font-medium mt-0.5">Track temporary CPU, laptop, or peripheral movements across departments with asset tag numbers (Cloud Synced).</p>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Temporary Asset Deployment Module</h1>
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">Track and manage temporary asset dispatches, returns, asset tags, and receiver details.</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const jsonStr = JSON.stringify(tempDispatches, null, 2);
-                        const blob = new Blob([jsonStr], { type: 'application/json' });
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'Temporary_Dispatches_Export.json';
-                        a.click();
-                        showToast("Temporary Dispatches exported successfully!");
-                      }}
-                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer"
-                    >
-                      Export JSON
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingTempItem(null);
-                        setTempForm({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
-                        setIsTempModalOpen(true);
-                      }}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
-                    >
-                      + Issue Temporary Asset
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      setEditingTempItem(null);
+                      setTempForm({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
+                      setIsTempModalOpen(true);
+                    }}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow cursor-pointer flex items-center gap-2 transition"
+                  >
+                    + Issue Temporary Asset
+                  </button>
                 </header>
 
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 overflow-auto">
                   <table className="w-full text-left border-collapse table-compact text-xs">
-                    <thead className="bg-slate-800 text-slate-100 uppercase font-bold text-[10px]">
+                    <thead className="bg-slate-800 text-slate-100 uppercase font-bold text-[10px] sticky top-0">
                       <tr>
                         <th className="p-3">#</th>
-                        <th>Asset / Equipment</th>
-                        <th>Asset Tag No.</th>
+                        <th>Asset Name</th>
+                        <th>Asset Tag / Serial No</th>
                         <th>Department</th>
                         <th>Receiver Name</th>
-                        <th className="text-center">Qty</th>
+                        <th className="text-center">Quantity</th>
                         <th>Issue Date</th>
                         <th className="text-center">Status</th>
                         <th className="text-center">Actions</th>
@@ -1112,71 +709,58 @@
                     <tbody className="divide-y divide-slate-100">
                       {tempDispatches.length === 0 ? (
                         <tr>
-                          <td colSpan="9" className="text-center py-8 text-slate-400 font-medium">
-                            No active temporary asset dispatches recorded in cloud.
+                          <td colSpan="9" className="text-center py-12 text-slate-400 font-medium">
+                            No temporary asset dispatches recorded. Click "+ Issue Temporary Asset" to create one.
                           </td>
                         </tr>
                       ) : (
                         tempDispatches.map((item, idx) => (
-                          <tr key={item.firebaseKey || item.id} className="hover:bg-indigo-50/40 transition">
+                          <tr key={item.firebaseKey || item.id} className="hover:bg-blue-50/40 transition">
                             <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
-                            <td className="font-bold text-slate-900">{item.assetName}</td>
-                            <td className="font-mono text-blue-600 font-bold">{item.assetTagNo || 'N/A'}</td>
-                            <td className="font-semibold text-indigo-700">{item.department}</td>
+                            <td className="font-extrabold text-slate-900">{item.assetName}</td>
+                            <td className="font-mono text-slate-600 font-bold">{item.assetTagNo}</td>
+                            <td className="font-semibold text-slate-700">{item.department}</td>
                             <td>{item.receiver}</td>
                             <td className="text-center font-mono font-bold">{item.quantity}</td>
-                            <td className="font-mono text-slate-600">{item.issueDate}</td>
+                            <td className="font-mono text-slate-500">{item.issueDate}</td>
                             <td className="text-center">
-                              <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[10px] ${
-                                item.status && item.status.includes('Returned')
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-amber-100 text-amber-800 animate-pulse'
-                              }`}>
+                              <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-full font-bold text-[10px]">
                                 {item.status || 'Active Dispatched'}
                               </span>
                             </td>
                             <td className="text-center whitespace-nowrap">
                               <div className="inline-flex items-center gap-1.5">
-                                {(!item.status || !item.status.includes('Returned')) && (
-                                  <button
-                                    onClick={() => handleReturnTempAsset(item)}
-                                    title="Mark Returned"
-                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[10px] shadow cursor-pointer"
-                                  >
-                                    Return
-                                  </button>
-                                )}
                                 <button
                                   onClick={() => {
                                     setEditingTempItem(item);
                                     setTempForm({
-                                      assetName: item.assetName,
-                                      assetTagNo: item.assetTagNo,
-                                      department: item.department,
-                                      receiver: item.receiver,
-                                      quantity: item.quantity
+                                      assetName: item.assetName || '',
+                                      assetTagNo: item.assetTagNo || '',
+                                      department: item.department || '',
+                                      receiver: item.receiver || '',
+                                      quantity: item.quantity || 1
                                     });
                                     setIsTempModalOpen(true);
                                   }}
-                                  title="Edit Deployment"
+                                  title="Edit Entry"
                                   className="p-1.5 bg-slate-100 hover:bg-blue-50 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
                                 >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                  ✏️
                                 </button>
                                 <button
                                   onClick={async () => {
-                                    if (window.confirm("Delete this temporary dispatch record from cloud?")) {
+                                    if (window.confirm("Delete this temporary dispatch record?")) {
                                       if (item.firebaseKey) {
                                         await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
-                                        await fetchTempDispatches();
-                                        showToast("Temporary deployment record deleted from cloud.");
                                       }
+                                      setTempDispatches(tempDispatches.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
+                                      showToast("Temporary dispatch record deleted.");
                                     }
                                   }}
-                                  title="Delete Deployment"
+                                  title="Delete Entry"
                                   className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
                                 >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                  🗑️
                                 </button>
                               </div>
                             </td>
@@ -1189,18 +773,17 @@
               </div>
             )}
 
-            {/* 3. PREVENTIVE MAINTENANCE TAB */}
             {activeTab === 'preventive_maint' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-slate-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
                   <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Preventive Maintenance 12-Month Master Register & Chart Plan</h1>
-                    <p className="text-xs text-slate-400 font-medium mt-0.5">Freezed baseline master data. Select any month below to view location-wise schedules and highlighted change reports.</p>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Preventive Maintenance 12-Month & Date Slot Master Register</h1>
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">Select a month, then choose a date-wise slot to view location-wise assets.</p>
                   </div>
                   <button
                     onClick={() => {
                       setEditingPmItem(null);
-                      setPmForm({ equipmentName: '', maintenanceType: '', location: '', scheduledDate: '', technician: '', remarks: '', targetMonth: pmSelectedMonth });
+                      setPmForm({ equipmentName: '', maintenanceType: '', location: '', scheduledDate: '', technician: '', remarks: '', targetMonth: pmSelectedMonth, slotRange: pmSelectedSlot || '01 to 10 January' });
                       setIsPmModalOpen(true);
                     }}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
@@ -1209,12 +792,8 @@
                   </button>
                 </header>
 
-                {/* 12-MONTH INTERACTIVE CHART PLAN SELECTOR CARDS */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    12-Month Chart Plan (Click a Month to View Location-Wise Data)
-                  </h3>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">1. Select Month</h3>
                   <div className="grid grid-cols-6 gap-2">
                     {monthsList.map(m => {
                       const count = pmSchedules.filter(i => (i.targetMonth || '').toLowerCase() === m.code.toLowerCase()).length;
@@ -1222,7 +801,14 @@
                       return (
                         <button
                           key={m.code}
-                          onClick={() => setPmSelectedMonth(m.code)}
+                          onClick={() => {
+                            setPmSelectedMonth(m.code);
+                            if (m.slots && m.slots.length > 0) {
+                              setPmSelectedSlot(m.slots[0]);
+                            } else {
+                              setPmSelectedSlot('');
+                            }
+                          }}
                           className={`p-3 rounded-xl border text-left transition cursor-pointer ${
                             isSelected
                               ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
@@ -1231,46 +817,57 @@
                         >
                           <div className="text-xs font-black uppercase">{m.name}</div>
                           <div className={`text-[10px] font-semibold mt-1 flex justify-between items-center ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
-                            <span>{count} Locations</span>
-                            {count > 0 && <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-600'}`}></span>}
+                            <span>{count} Items</span>
                           </div>
                         </button>
                       );
                     })}
                   </div>
-                </div>
 
-                {/* PM AUDIT HISTORY & CHANGE REPORT */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                    Location & Schedule Change Audit Report ({monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name})
-                  </h3>
-                  {pmAuditLogs.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">No modifications or updates recorded yet for this session.</p>
-                  ) : (
-                    <div className="max-h-36 overflow-y-auto space-y-1.5 text-[11px]">
-                      {pmAuditLogs.map((log, lIdx) => (
-                        <div key={lIdx} className="p-2.5 bg-amber-50/60 border border-amber-200 rounded-lg flex justify-between items-center font-mono">
-                          <span className="text-slate-800"><strong>[{log.timestamp}]</strong> <span className="text-blue-700 font-bold">{log.action}:</span> {log.details}</span>
-                          <span className="text-emerald-700 font-bold bg-white px-2 py-0.5 rounded border border-emerald-200">{log.user || 'Super Admin'}</span>
+                  {(() => {
+                    const currentMonthObj = monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase());
+                    if (!currentMonthObj || !currentMonthObj.slots) return null;
+                    return (
+                      <div className="pt-2 border-t space-y-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">2. Select Date-Wise Slot for {currentMonthObj.name}</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                          {currentMonthObj.slots.map(slot => {
+                            const isSlotSelected = pmSelectedSlot.toLowerCase() === slot.toLowerCase();
+                            const slotCount = pmSchedules.filter(i => (i.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase() && (i.slotRange || '').toLowerCase() === slot.toLowerCase()).length;
+                            return (
+                              <button
+                                key={slot}
+                                onClick={() => setPmSelectedSlot(slot)}
+                                className={`p-3 rounded-xl border text-center transition cursor-pointer font-bold text-xs flex items-center justify-between ${
+                                  isSlotSelected 
+                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20' 
+                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                                }`}
+                              >
+                                <span>📅 {slot}</span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] ${isSlotSelected ? 'bg-white text-indigo-700 font-extrabold' : 'bg-slate-200 text-slate-700'}`}>
+                                  {slotCount} Locations
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
-                {/* PM TABLE FOR SELECTED MONTH */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
                   <div className="p-3 bg-slate-50 border-b font-bold text-xs flex justify-between items-center text-slate-700">
-                    <span>Location & Equipment Maintenance List for: <strong className="text-blue-600">{monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name}</strong></span>
-                    <span className="text-[11px] text-slate-500">{filteredPmSchedules.length} Locations Scheduled</span>
+                    <span>Location List for: <strong className="text-blue-600">{monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name} ({pmSelectedSlot || 'All Slots'})</strong></span>
+                    <span className="text-[11px] text-slate-500">{filteredPmSchedules.length} Locations Found</span>
                   </div>
                   <table className="w-full text-left border-collapse table-compact text-xs">
                     <thead className="bg-slate-800 text-slate-100 uppercase font-bold text-[10px]">
                       <tr>
                         <th className="p-3">#</th>
                         <th>Location Name</th>
+                        <th>Date Slot</th>
                         <th>Equipment / System</th>
                         <th>Maintenance Type</th>
                         <th>Scheduled Date</th>
@@ -1282,31 +879,23 @@
                     <tbody className="divide-y divide-slate-100">
                       {filteredPmSchedules.length === 0 ? (
                         <tr>
-                          <td colSpan="8" className="text-center py-8 text-slate-400 font-medium">
-                            No preventive maintenance locations scheduled for {monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name}. Click "+ Schedule PM Task" above to add.
+                          <td colSpan="9" className="text-center py-8 text-slate-400 font-medium">
+                            No locations scheduled for {monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name} ({pmSelectedSlot}). Click "+ Schedule PM Task" above to add.
                           </td>
                         </tr>
                       ) : (
                         filteredPmSchedules.map((item, idx) => (
                           <tr key={item.firebaseKey || item.id} className={`transition ${item.isEdited ? 'bg-amber-50/80 font-medium' : 'hover:bg-blue-50/40'}`}>
                             <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
-                            <td className="font-bold text-indigo-700 flex items-center gap-1.5">
-                              {item.location || 'Server Room'}
-                              {item.isEdited && (
-                                <span className="px-1.5 py-0.2 bg-amber-500 text-white rounded text-[9px] font-extrabold animate-pulse" title="Location/Data Modified">
-                                  Updated
-                                </span>
-                              )}
-                            </td>
+                            <td className="font-bold text-indigo-700">{item.location || 'Server Room'}</td>
+                            <td className="font-mono text-xs font-bold text-slate-700">{item.slotRange || pmSelectedSlot}</td>
                             <td className="font-bold text-slate-900">{item.equipmentName}</td>
                             <td className="font-semibold text-slate-700">{item.maintenanceType}</td>
                             <td className="font-mono text-slate-600">{item.scheduledDate}</td>
                             <td>{item.technician}</td>
                             <td className="text-center">
                               <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[10px] ${
-                                item.status === 'Completed'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-amber-100 text-amber-800 animate-pulse'
+                                item.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
                               }`}>
                                 {item.status}
                               </span>
@@ -1325,8 +914,7 @@
                                         });
                                       }
                                       setPmSchedules(pmSchedules.map(i => (i.id === item.id || i.firebaseKey === item.firebaseKey) ? updated : i));
-                                      await logPmChange('Complete', `Marked PM completed for ${item.equipmentName} at Location: ${item.location}`);
-                                      showToast("PM task marked as completed.");
+                                      showToast("PM task marked completed.");
                                     }}
                                     className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[10px] shadow cursor-pointer"
                                   >
@@ -1343,30 +931,28 @@
                                       scheduledDate: item.scheduledDate,
                                       technician: item.technician,
                                       remarks: item.remarks,
-                                      targetMonth: item.targetMonth || pmSelectedMonth
+                                      targetMonth: item.targetMonth || pmSelectedMonth,
+                                      slotRange: item.slotRange || pmSelectedSlot
                                     });
                                     setIsPmModalOpen(true);
                                   }}
-                                  title="Edit Location & PM Details"
                                   className="p-1.5 bg-slate-100 hover:bg-blue-50 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
                                 >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                  ✏️
                                 </button>
                                 <button
                                   onClick={async () => {
-                                    if (window.confirm("Delete this preventive maintenance location schedule?")) {
+                                    if (window.confirm("Delete this PM schedule?")) {
                                       if (item.firebaseKey) {
                                         await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules/${item.firebaseKey}.json`, { method: 'DELETE' });
                                       }
                                       setPmSchedules(pmSchedules.filter(i => i.id !== item.id && i.firebaseKey !== item.firebaseKey));
-                                      await logPmChange('Delete', `Deleted PM schedule for ${item.equipmentName} at ${item.location}`);
                                       showToast("PM schedule deleted.");
                                     }
                                   }}
                                   className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
-                                  title="Delete PM Task"
                                 >
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                  🗑️
                                 </button>
                               </div>
                             </td>
@@ -1379,145 +965,139 @@
               </div>
             )}
 
-            {/* DASHBOARD TAB */}
-            {activeTab === 'dashboard' && (
+            {activeTab === 'users' && (
               <div className="flex-1 overflow-auto space-y-4">
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs font-bold text-slate-500 uppercase">Total Inventory Items</div>
-                    <div className="text-2xl font-black text-slate-900 mt-1">{assets.length}</div>
+                <header className="bg-slate-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center border border-slate-800">
+                  <div>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase">System Users & Security PINs</h1>
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">Manage portal access credentials and user roles.</p>
                   </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs font-bold text-slate-500 uppercase">Temporary Dispatches</div>
-                    <div className="text-2xl font-black text-indigo-600 mt-1">{tempDispatches.length}</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs font-bold text-slate-500 uppercase">PM Scheduled Tasks</div>
-                    <div className="text-2xl font-black text-blue-600 mt-1">{pmSchedules.length}</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs font-bold text-slate-500 uppercase">Low Stock Alerts</div>
-                    <div className="text-2xl font-black text-rose-500 mt-1">{lowStockItems.length}</div>
-                  </div>
-                </div>
+                </header>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">Monthly Activity Trend</h3>
-                    <div className="h-64 relative">
-                      <canvas id="trendLineChart"></canvas>
-                    </div>
-                  </div>
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">Asset Category Breakdown</h3>
-                    <div className="h-64 relative">
-                      <canvas id="overviewDonutChart"></canvas>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ANALYTICS BOARD TAB */}
-            {activeTab === 'analytics' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                  <h3 className="text-sm font-extrabold uppercase text-slate-900 mb-2">Inventory Analytics & Utilization</h3>
-                  <p className="text-xs text-slate-500 mb-4">Detailed asset distribution and operational efficiency metrics.</p>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 bg-slate-50 rounded-xl border">
-                      <div className="text-xs font-bold text-slate-500">Fixed Assets Valuation</div>
-                      <div className="text-lg font-black text-slate-900 mt-1">{assets.filter(i => i.category === 'Fixed Assets').length} Units</div>
-                    </div>
-                    <div className="p-4 bg-slate-50 rounded-xl border">
-                      <div className="text-xs font-bold text-slate-500">Consumables Stock</div>
-                      <div className="text-lg font-black text-emerald-600 mt-1">{assets.filter(i => i.category === 'Consumable').length} Units</div>
-                    </div>
-                    <div className="p-4 bg-slate-50 rounded-xl border">
-                      <div className="text-xs font-bold text-slate-500">Active Deployments</div>
-                      <div className="text-lg font-black text-indigo-600 mt-1">{tempDispatches.filter(i => !i.status || !i.status.includes('Returned')).length} Active</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* REPORTS TAB */}
-            {activeTab === 'reports' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                  <h3 className="text-sm font-extrabold uppercase text-slate-900">System Audit & Compliance Reports</h3>
-                  <div className="flex gap-3">
-                    <button onClick={() => window.print()} className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow cursor-pointer">
-                      Print Full Audit Report
-                    </button>
-                    <button onClick={() => {
-                      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(assets, null, 2));
-                      const dl = document.createElement('a');
-                      dl.setAttribute("href", dataStr);
-                      dl.setAttribute("download", "master_inventory_audit.json");
-                      dl.click();
-                      showToast("Master Inventory exported successfully!");
-                    }} className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold shadow cursor-pointer">
-                      Export Master Inventory JSON
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* PRIVILEGE & USERS TAB */}
-            {activeTab === 'rights' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                  <h3 className="text-sm font-extrabold uppercase text-slate-900">Privilege & System Users Control</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <form onSubmit={handleCreateUser} className="space-y-3">
-                      <h4 className="font-bold text-xs text-slate-700">Add New User Account</h4>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="User Name"
-                        value={newUserName}
-                        onChange={(e) => setNewUserName(e.target.value)}
-                        className="w-full p-2.5 border rounded-lg text-xs"
-                      />
-                      <input 
-                        type="password" 
-                        required 
-                        placeholder="Security PIN (4 digits)"
-                        value={newUserPin}
-                        onChange={(e) => setNewUserPin(e.target.value)}
-                        className="w-full p-2.5 border rounded-lg text-xs font-mono"
-                      />
-                      <select 
-                        value={newUserRole}
-                        onChange={(e) => setNewUserRole(e.target.value)}
-                        className="w-full p-2.5 border rounded-lg text-xs"
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 h-fit">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Add New System User</h3>
+                    <form onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (newUserPin.length !== 4) {
+                        showToast("PIN must be exactly 4 digits.");
+                        return;
+                      }
+                      const newUser = {
+                        id: Date.now(),
+                        name: newUserName,
+                        pin: newUserPin,
+                        role: newUserRole,
+                        status: 'Active'
+                      };
+                      try {
+                        await fetch(FIREBASE_USERS_URL, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(newUser)
+                        });
+                        const res = await fetch(FIREBASE_USERS_URL);
+                        const data = await res.json();
+                        if (data) setUsers(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
+                        showToast("New user added successfully!");
+                        setNewUserName('');
+                        setNewUserPin('');
+                      } catch(err) {
+                        setUsers([newUser, ...users]);
+                        showToast("User added locally!");
+                      }
+                    }} className="space-y-3 text-xs">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">User Full Name *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="e.g. John Doe"
+                          value={newUserName}
+                          onChange={(e) => setNewUserName(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">4-Digit Security PIN *</label>
+                        <input 
+                          type="password"
+                          required
+                          maxLength="4"
+                          placeholder="••••"
+                          value={newUserPin}
+                          onChange={(e) => setNewUserPin(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">Role / Designation *</label>
+                        <select
+                          value={newUserRole}
+                          onChange={(e) => setNewUserRole(e.target.value)}
+                          className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 font-bold"
+                        >
+                          <option value="Super Administrator">Super Administrator</option>
+                          <option value="Store Keeper">Store Keeper</option>
+                          <option value="Auditor">Auditor</option>
+                        </select>
+                      </div>
+                      <button 
+                        type="submit"
+                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow cursor-pointer"
                       >
-                        <option value="Store Keeper">Store Keeper</option>
-                        <option value="Auditor">Auditor</option>
-                        <option value="Administrator">Administrator</option>
-                      </select>
-                      <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold shadow cursor-pointer">
                         Create User
                       </button>
                     </form>
+                  </div>
 
-                    <div>
-                      <h4 className="font-bold text-xs text-slate-700 mb-2">Active System Users</h4>
-                      <div className="space-y-2">
-                        {users.map(u => (
-                          <div key={u.id || u.firebaseKey} className="p-3 bg-slate-50 border rounded-xl flex justify-between items-center text-xs">
-                            <div>
-                              <div className="font-bold text-slate-900">{u.name}</div>
-                              <div className="text-[10px] text-slate-500 font-mono">Role: {u.role} | PIN: ****</div>
-                            </div>
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-extrabold text-[10px]">{u.status}</span>
-                          </div>
+                  <div className="col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="p-3 bg-slate-50 border-b font-bold text-xs text-slate-700">Registered System Users</div>
+                    <table className="w-full text-left border-collapse table-compact text-xs">
+                      <thead className="bg-slate-800 text-slate-100 uppercase font-bold text-[10px]">
+                        <tr>
+                          <th className="p-3">#</th>
+                          <th>Name</th>
+                          <th>Role</th>
+                          <th className="text-center">PIN</th>
+                          <th className="text-center">Status</th>
+                          <th className="text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {users.map((u, i) => (
+                          <tr key={u.firebaseKey || u.id} className="hover:bg-slate-50">
+                            <td className="p-3 font-mono text-slate-400">{i + 1}</td>
+                            <td className="font-extrabold text-slate-900">{u.name}</td>
+                            <td className="font-semibold text-slate-600">{u.role}</td>
+                            <td className="text-center font-mono font-bold text-slate-700">••••</td>
+                            <td className="text-center">
+                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px]">
+                                {u.status}
+                              </span>
+                            </td>
+                            <td className="text-center">
+                              {users.length > 1 && (
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm(`Delete user ${u.name}?`)) {
+                                      if (u.firebaseKey) {
+                                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users/${u.firebaseKey}.json`, { method: 'DELETE' });
+                                      }
+                                      setUsers(users.filter(item => item.id !== u.id && item.firebaseKey !== u.firebaseKey));
+                                      showToast("User deleted.");
+                                    }
+                                  }}
+                                  className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </td>
+                          </tr>
                         ))}
-                      </div>
-                    </div>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -1525,19 +1105,67 @@
 
           </main>
 
-          {/* TEMPORARY DEPLOYMENT MODAL */}
+          {/* TEMPORARY ASSET ISSUE MODAL */}
           {isTempModalOpen && (
             <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4">
                 <div className="flex justify-between items-center border-b pb-3">
                   <h3 className="font-bold text-slate-900 text-sm">
-                    {editingTempItem ? 'Edit Temporary Deployment' : 'Issue Temporary Asset Deployment'}
+                    {editingTempItem ? 'Edit Temporary Dispatch' : 'Issue Temporary Asset'}
                   </h3>
                   <button onClick={() => setIsTempModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
-                <form onSubmit={handleSaveTempDispatch} className="space-y-3 text-xs">
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const timestamped = getFormattedDateTime();
+
+                  if (editingTempItem) {
+                    const updated = {
+                      ...editingTempItem,
+                      ...tempForm,
+                      lastUpdated: timestamped
+                    };
+                    try {
+                      if (editingTempItem.firebaseKey) {
+                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${editingTempItem.firebaseKey}.json`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(updated)
+                        });
+                      }
+                      setTempDispatches(tempDispatches.map(d => (d.id === editingTempItem.id || d.firebaseKey === editingTempItem.firebaseKey) ? updated : d));
+                      showToast("Temporary dispatch updated.");
+                    } catch(err) {
+                      showToast("Error updating dispatch.");
+                    }
+                  } else {
+                    const newDispatch = {
+                      id: `td_${Date.now()}`,
+                      ...tempForm,
+                      issueDate: timestamped,
+                      status: 'Active Dispatched'
+                    };
+                    try {
+                      await fetch(FIREBASE_TEMP_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newDispatch)
+                      });
+                      const res = await fetch(FIREBASE_TEMP_URL);
+                      const data = await res.json();
+                      if (data) setTempDispatches(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
+                      showToast("Temporary asset issued successfully!");
+                    } catch(err) {
+                      setTempDispatches([newDispatch, ...tempDispatches]);
+                      showToast("Temporary asset issued locally!");
+                    }
+                  }
+
+                  setIsTempModalOpen(false);
+                  setEditingTempItem(null);
+                }} className="space-y-3 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Asset / Equipment Name *</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Asset Name *</label>
                     <input 
                       type="text"
                       required
@@ -1548,29 +1176,42 @@
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Asset Tag No. *</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Asset Tag / Serial No *</label>
                     <input 
                       type="text"
                       required
                       placeholder="e.g. TAG-IT-9012"
                       value={tempForm.assetTagNo}
                       onChange={(e) => setTempForm({ ...tempForm, assetTagNo: e.target.value })}
-                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-mono font-bold text-blue-600"
+                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-mono"
                     />
                   </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Department Name *</label>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="e.g. Accounts Department"
-                      value={tempForm.department}
-                      onChange={(e) => setTempForm({ ...tempForm, department: e.target.value })}
-                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-semibold"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Department *</label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g. Accounts"
+                        value={tempForm.department}
+                        onChange={(e) => setTempForm({ ...tempForm, department: e.target.value })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">Quantity *</label>
+                      <input 
+                        type="number"
+                        min="1"
+                        required
+                        value={tempForm.quantity}
+                        onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })}
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-mono"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Receiver Person Name *</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Receiver Name *</label>
                     <input 
                       type="text"
                       required
@@ -1578,17 +1219,6 @@
                       value={tempForm.receiver}
                       onChange={(e) => setTempForm({ ...tempForm, receiver: e.target.value })}
                       className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Quantity *</label>
-                    <input 
-                      type="number"
-                      min="1"
-                      required
-                      value={tempForm.quantity}
-                      onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })}
-                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-mono font-bold"
                     />
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
@@ -1601,9 +1231,9 @@
                     </button>
                     <button 
                       type="submit"
-                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
                     >
-                      {editingTempItem ? 'Update Deployment' : 'Save & Dispatch'}
+                      {editingTempItem ? 'Save Changes' : 'Confirm Dispatch'}
                     </button>
                   </div>
                 </form>
@@ -1621,12 +1251,70 @@
                   </h3>
                   <button onClick={() => setIsPmModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
-                <form onSubmit={handleSavePmSchedule} className="space-y-3 text-xs">
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const timestamped = getFormattedDateTime();
+                  
+                  if (editingPmItem) {
+                    const updated = {
+                      ...editingPmItem,
+                      ...pmForm,
+                      isEdited: true,
+                      lastModified: timestamped
+                    };
+                    try {
+                      if (editingPmItem.firebaseKey) {
+                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules/${editingPmItem.firebaseKey}.json`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(updated)
+                        });
+                      }
+                      setPmSchedules(pmSchedules.map(i => (i.id === editingPmItem.id || i.firebaseKey === editingPmItem.firebaseKey) ? updated : i));
+                      showToast("PM schedule updated & highlighted!");
+                    } catch(err) {
+                      showToast("Error updating PM schedule.");
+                    }
+                  } else {
+                    const newPm = {
+                      id: `pm_${Date.now()}`,
+                      ...pmForm,
+                      status: 'Scheduled',
+                      isEdited: false,
+                      createdDate: timestamped
+                    };
+                    try {
+                      await fetch(FIREBASE_PM_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newPm)
+                      });
+                      const res = await fetch(FIREBASE_PM_URL);
+                      const data = await res.json();
+                      if (data) setPmSchedules(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
+                      showToast("Preventive maintenance task scheduled successfully!");
+                    } catch(err) {
+                      setPmSchedules([newPm, ...pmSchedules]);
+                      showToast("Preventive maintenance task scheduled locally!");
+                    }
+                  }
+
+                  setIsPmModalOpen(false);
+                  setEditingPmItem(null);
+                }} className="space-y-3 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Target Month *</label>
                     <select
                       value={pmForm.targetMonth}
-                      onChange={(e) => setPmForm({ ...pmForm, targetMonth: e.target.value })}
+                      onChange={(e) => {
+                        const mCode = e.target.value;
+                        const mObj = monthsList.find(m => m.code === mCode);
+                        setPmForm({ 
+                          ...pmForm, 
+                          targetMonth: mCode, 
+                          slotRange: mObj && mObj.slots ? mObj.slots[0] : pmForm.slotRange 
+                        });
+                      }}
                       className="w-full p-2.5 border border-slate-300 rounded-lg font-bold outline-none bg-slate-50"
                     >
                       {monthsList.map(m => (
@@ -1634,15 +1322,31 @@
                       ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Date-Wise Slot Range *</label>
+                    <select
+                      value={pmForm.slotRange}
+                      onChange={(e) => setPmForm({ ...pmForm, slotRange: e.target.value })}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg font-bold outline-none bg-slate-50"
+                    >
+                      {(() => {
+                        const selM = monthsList.find(m => m.code === pmForm.targetMonth);
+                        const slots = selM && selM.slots ? selM.slots : ['01 to 10 January', '11 to 20 January', '21 to 31 January'];
+                        return slots.map(s => <option key={s} value={s}>{s}</option>);
+                      })()}
+                    </select>
+                  </div>
+
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Location Name *</label>
                     <input 
                       type="text"
                       required
-                      placeholder="e.g. Server Room - Rack A / A Block - Electrical"
+                      placeholder="e.g. General Registration / Block-A"
                       value={pmForm.location || ''}
                       onChange={(e) => setPmForm({ ...pmForm, location: e.target.value })}
-                      className="w-full p-2.5 border border-slate-300 rounded-lg font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2.5 border border-slate-300 rounded-lg font-semibold outline-none"
                     />
                   </div>
                   <div>
@@ -1650,10 +1354,10 @@
                     <input 
                       type="text"
                       required
-                      placeholder="e.g. Core Switch / UPS 10KVA"
+                      placeholder="e.g. Core Switch / PC Workstation"
                       value={pmForm.equipmentName}
                       onChange={(e) => setPmForm({ ...pmForm, equipmentName: e.target.value })}
-                      className="w-full p-2.5 border border-slate-300 rounded-lg font-semibold outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2.5 border border-slate-300 rounded-lg font-semibold outline-none"
                     />
                   </div>
                   <div>
@@ -1664,7 +1368,7 @@
                       placeholder="e.g. Quarterly Dusting & Thermal Check"
                       value={pmForm.maintenanceType}
                       onChange={(e) => setPmForm({ ...pmForm, maintenanceType: e.target.value })}
-                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full p-2.5 border border-slate-300 rounded-lg outline-none"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1673,7 +1377,7 @@
                       <input 
                         type="text"
                         required
-                        placeholder="e.g. 15 Apr 2026"
+                        placeholder="e.g. 05 Jan 2027"
                         value={pmForm.scheduledDate}
                         onChange={(e) => setPmForm({ ...pmForm, scheduledDate: e.target.value })}
                         className="w-full p-2.5 border border-slate-300 rounded-lg font-mono"
@@ -1724,7 +1428,7 @@
 
                 <div className="space-y-3 text-xs bg-slate-50 p-4 rounded-xl border">
                   <div className="grid grid-cols-2 gap-2">
-                    <div><strong>Group:</strong> {viewModalItem.group}</div>
+                    <div><strong>Group Category:</strong> {viewModalItem.group}</div>
                     <div><strong>Category:</strong> {viewModalItem.category}</div>
                     <div><strong>Item Particulars:</strong> {viewModalItem.particulars}</div>
                     <div><strong>Brand:</strong> {viewModalItem.brand === 'Other' ? viewModalItem.customBrand : viewModalItem.brand}</div>
@@ -1753,28 +1457,6 @@
             </div>
           )}
 
-          {/* STOCK HISTORY MODAL */}
-          {historyModalItem && (
-            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
-                <div className="flex justify-between items-center border-b pb-3">
-                  <h3 className="font-extrabold text-slate-900 text-sm">Stock History & Log</h3>
-                  <button onClick={() => setHistoryModalItem(null)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="p-3 bg-slate-50 rounded-xl border">
-                    <div className="font-bold text-slate-900">{historyModalItem.particulars}</div>
-                    <div className="text-slate-500 mt-1">Opening Qty: {historyModalItem.openingQty} | Purchases: {historyModalItem.newPurchase} | Issued: {historyModalItem.issueItems}</div>
-                    <div className="text-[10px] text-slate-400 font-mono mt-2">Last Modified: {historyModalItem.lastUpdated}</div>
-                  </div>
-                </div>
-                <div className="flex justify-end pt-2">
-                  <button onClick={() => setHistoryModalItem(null)} className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer">Close</button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* ADD / EDIT ASSET MODAL */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -1789,15 +1471,16 @@
                 <form onSubmit={handleSaveAsset} className="space-y-4 text-xs">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Asset Group *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="e.g. IT Peripherals, Hardware"
+                      <label className="block font-semibold text-slate-700 mb-1">Asset Group Category *</label>
+                      <select 
                         value={formData.group}
                         onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
-                      />
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-bold bg-slate-50"
+                      >
+                        <option value="IT Peripherals">IT Peripherals</option>
+                        <option value="Hardware">Hardware</option>
+                        <option value="Networking">Networking</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-700 mb-1">Item Particulars *</label>
@@ -1807,7 +1490,7 @@
                         placeholder="e.g. Optical Mouse USB"
                         value={formData.particulars}
                         onChange={(e) => setFormData({ ...formData, particulars: e.target.value })}
-                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                        className="w-full p-2.5 border border-slate-300 rounded-lg outline-none font-semibold"
                       />
                     </div>
                   </div>
