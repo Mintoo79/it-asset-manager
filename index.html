@@ -92,7 +92,7 @@
         status: 'Temporary Given' 
       });
 
-      // Preventive Maintenance (PM) 12-Month Chart Plan state in Calendar Order (Jan to Dec)
+      // Preventive Maintenance (PM) 12-Month Chart Plan state in Calendar Order (Jan to Dec) with ALL fields
       const [pmSchedules, setPmSchedules] = useState([]);
       const [pmAuditLogs, setPmAuditLogs] = useState([]);
       const [isPmModalOpen, setIsPmModalOpen] = useState(false);
@@ -1716,10 +1716,10 @@
             </div>
           )}
 
-          {/* PREVENTIVE MAINTENANCE FULLY EDITABLE TASK MODAL WITH ALL NEW FIELDS */}
+          {/* PREVENTIVE MAINTENANCE FULLY EDITABLE TASK MODAL WITH ALL PREVIOUS & NEW FIELDS */}
           {isPmModalOpen && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8 text-slate-800">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 my-8 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                   <h3 className="font-bold text-sm text-slate-900">
                     {editingPmItem ? 'Edit Preventive Maintenance Task' : 'Schedule New PM Task'}
@@ -1861,7 +1861,90 @@
                     </div>
                   </div>
 
+                  {/* PREVIOUS FIELDS */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Monitor Brand</label>
+                      <input 
+                        type="text"
+                        value={pmForm.monitorBrand}
+                        onChange={(e) => setPmForm({ ...pmForm, monitorBrand: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Monitor Tag No</label>
+                      <input 
+                        type="text"
+                        value={pmForm.monitorTagNo}
+                        onChange={(e) => setPmForm({ ...pmForm, monitorTagNo: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">CPU Brand</label>
+                      <input 
+                        type="text"
+                        value={pmForm.cpuBrand}
+                        onChange={(e) => setPmForm({ ...pmForm, cpuBrand: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Printer Brand</label>
+                      <input 
+                        type="text"
+                        value={pmForm.printerBrand}
+                        onChange={(e) => setPmForm({ ...pmForm, printerBrand: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Printer Tag No</label>
+                      <input 
+                        type="text"
+                        value={pmForm.printerTagNo}
+                        onChange={(e) => setPmForm({ ...pmForm, printerTagNo: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Printer IP</label>
+                      <input 
+                        type="text"
+                        value={pmForm.printerIP}
+                        onChange={(e) => setPmForm({ ...pmForm, printerIP: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">System IP</label>
+                      <input 
+                        type="text"
+                        value={pmForm.systemIP}
+                        onChange={(e) => setPmForm({ ...pmForm, systemIP: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">System Mac</label>
+                      <input 
+                        type="text"
+                        value={pmForm.systemMac}
+                        onChange={(e) => setPmForm({ ...pmForm, systemMac: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  {/* NEW FIELDS */}
+                  <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">CPU Processor *</label>
                       <input 
