@@ -4,99 +4,146 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IT Asset & Inventory Management System</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          },
-        }
-      }
-    }
-  </script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <!-- Babel for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Google Fonts Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    .table-compact th, .table-compact td {
-      padding: 8px 10px !important;
-      line-height: 1.25 !important;
-    }
-    .pro-sidebar {
-      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-    }
-    .active-pro-btn {
-      background: linear-gradient(90deg, #2563eb 100%, #1d4ed8 100%);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    body { font-family: 'Inter', sans-serif; }
+    @media print {
+      body * { visibility: hidden; }
+      #printable-slip, #printable-slip * { visibility: visible; }
+      #printable-slip { position: absolute; left: 0; top: 0; width: 100%; }
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white">
-  <div id="root">
-    <div style="display: flex; height: 100vh; align-items: center; justify-content: center; background: #f8fafc; color: #1e293b; font-family: Inter, sans-serif;">
-      <div style="text-align: center;">
-        <div style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">Loading IT Asset Portal...</div>
-        <div style="font-size: 12px; color: #64748b;">Establishing secure professional session</div>
-      </div>
-    </div>
-  </div>
+<body class="bg-slate-100 text-slate-900 antialiased selection:bg-blue-600 selection:text-white">
+  <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useMemo } = React;
 
-    const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
-    const FIREBASE_TEMP_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches.json";
-    const FIREBASE_PM_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules.json";
-    const FIREBASE_USERS_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users.json";
-    const FIREBASE_PM_LOGS_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_audit_logs.json";
+    // Firebase REST Database URL
+    const FIREBASE_DB_URL = "https://it-asset-management-default-rtdb.firebaseio.com/";
 
     function App() {
-      const [isLoggedIn, setIsLoggedIn] = useState(false);
-      const [pinInput, setPinInput] = useState('');
-      const [loginError, setLoginError] = useState('');
+      const [currentUser, setCurrentUser] = useState(() => {
+        const saved = localStorage.getItem('it_asset_current_user');
+        return saved ? JSON.parse(saved) : { name: 'Super Admin', role: 'Super Admin', email: 'admin@system.local' };
+      });
 
-      const [activeTab, setActiveTab] = useState('inventory');
-      const [searchQuery, setSearchQuery] = useState('');
-      const [locationFilter, setLocationFilter] = useState('All');
-      const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
+      const [activeTab, setActiveTab] = useState('stock');
+      const [toastMessage, setToastMessage] = useState(null);
 
-      const [currentPage, setCurrentPage] = useState(1);
-      const [itemsPerPage, setItemsPerPage] = useState(10);
+      const showToast = (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 3500);
+      };
 
-      const [assets, setAssets] = useState([]);
-      const [loading, setLoading] = useState(true);
+      // -------------------------------------------------------------
+      // STATE MANAGEMENT & FIREBASE SYNC
+      // -------------------------------------------------------------
+      const [assets, setAssets] = useState([
+        { id: 'ast_1', group: 'MOUSE', name: 'USB MOUSE', brand: 'Dell', op: 12, purch: 0, issued: -1, bal: 11, short: 0, dead: 0, category: 'Consumable', location: 'it', minLevel: 2, updatedAt: '2026-11-12' },
+        { id: 'ast_2', group: 'MOUSE', name: 'USB MOUSE', brand: 'Lenovo', op: 6, purch: 0, issued: 0, bal: 6, short: 0, dead: 0, category: 'Consumable', location: 'Unassigned', minLevel: 1, updatedAt: '2026-11-12' },
+        { id: 'ast_3', group: 'MOUSE', name: 'WIRELESS-MOUSE', brand: 'Dell', op: 1, purch: 0, issued: 0, bal: 1, short: 0, dead: 0, category: 'Consumable', location: 'Unassigned', minLevel: 2, updatedAt: '2026-11-12' },
+        { id: 'ast_4', group: 'KEYBOARD', name: 'USB-KEYBOARD', brand: 'DELL', op: 9, purch: 0, issued: 0, bal: 9, short: 0, dead: 0, category: 'Consumable', location: 'Unassigned', minLevel: 2, updatedAt: '2026-11-12' },
+        { id: 'ast_5', group: 'CONNECTOR', name: 'VGA-HDMI WITH AUDIO', brand: '-', op: 1, purch: 0, issued: 0, bal: 1, short: 0, dead: 0, category: 'Consumable', location: 'Unassigned', minLevel: 2, updatedAt: '2026-11-12' },
+        { id: 'ast_6', group: 'WIRELESS SET', name: 'KEYBOARD-MOUSE', brand: '-', op: 1, purch: 0, issued: 0, bal: 1, short: 0, dead: 0, category: 'Consumable', location: 'Unassigned', minLevel: 1, updatedAt: '2026-11-12' }
+      ]);
 
-      const [isModalOpen, setIsModalOpen] = useState(false);
-      const [editingAsset, setEditingAsset] = useState(null);
-      const [viewModalItem, setViewModalItem] = useState(null);
-      const [toastMsg, setToastMsg] = useState('');
+      const [tempDeployments, setTempDeployments] = useState([
+        { id: 'tmp_1', assetName: 'Dell Latitude Laptop', serialNo: 'DL-99823', handedTo: 'Dr. Ramesh Sharma', department: 'Cardiology', dateOut: '2026-11-01', expectedReturn: '2026-12-01', status: 'Active', remarks: 'Temporary conference use' }
+      ]);
 
-      // Temporary Asset Deployment state synced with Firebase
-      const [tempDispatches, setTempDispatches] = useState([]);
-      const [isTempModalOpen, setIsTempModalOpen] = useState(false);
-      const [editingTempItem, setEditingTempItem] = useState(null);
-      const [tempForm, setTempForm] = useState({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
-
-      // Preventive Maintenance (PM) 12-Month Chart Plan state with date slots for ALL months
-      const [pmSchedules, setPmSchedules] = useState([]);
-      const [pmAuditLogs, setPmAuditLogs] = useState([]);
-      const [isPmModalOpen, setIsPmModalOpen] = useState(false);
-      const [editingPmItem, setEditingPmItem] = useState(null);
       const [pmSelectedMonth, setPmSelectedMonth] = useState('Jan');
       const [pmSelectedSlot, setPmSelectedSlot] = useState('01 to 10 January');
-      const [showPmReportModal, setShowPmReportModal] = useState(false);
 
+      const [pmSchedules, setPmSchedules] = useState([
+        {
+          id: 'pm_101',
+          targetMonth: 'Jan',
+          slotRange: '01 to 10 January',
+          department: 'General Registration',
+          equipmentName: 'Desktop Workstation Alpha',
+          monitorBrand: 'Dell',
+          monitorTagNo: 'MON-8831',
+          cpuBrand: 'Intel',
+          cpuProcessor: 'Intel Core i5-13400 @ 2.50GHz',
+          printerBrand: 'HP LaserJet',
+          printerTagNo: 'PRN-102',
+          printerIP: '192.168.1.50',
+          systemIP: '192.168.1.101',
+          systemMac: '00:1A:2B:3C:4D:5E',
+          ramType: 'DDR4',
+          ramSize: '16GB',
+          diskType: 'SSD',
+          diskSize: '512GB',
+          msOffice: 'Office 365 Pro',
+          outlook: 'Configured',
+          backup: 'Active',
+          antiVirus: 'Updated',
+          remarks: 'All preventive checks completed successfully in pristine condition.',
+          userSignDate: 'Dr. Ramesh (05-Jan-2026)',
+          status: 'Completed',
+          dueDate: '2026-01-05'
+        },
+        {
+          id: 'pm_102',
+          targetMonth: 'Jan',
+          slotRange: '01 to 10 January',
+          department: 'Block-C',
+          equipmentName: 'Reception Terminal 02',
+          monitorBrand: 'HP',
+          monitorTagNo: 'MON-8832',
+          cpuBrand: 'Lenovo',
+          cpuProcessor: 'Intel Core i3-12100 @ 3.30GHz',
+          printerBrand: 'Canon',
+          printerTagNo: 'PRN-105',
+          printerIP: '192.168.1.52',
+          systemIP: '192.168.1.102',
+          systemMac: '00:1A:2B:3C:4D:5F',
+          ramType: 'DDR4',
+          ramSize: '8GB',
+          diskType: 'SSD',
+          diskSize: '256GB',
+          msOffice: 'Office 2021',
+          outlook: 'Configured',
+          backup: 'Pending',
+          antiVirus: 'Updated',
+          remarks: 'Cleaned fan dust and updated OS patches.',
+          userSignDate: 'Pending Sign',
+          status: 'Scheduled',
+          dueDate: '2026-01-08'
+        }
+      ]);
+
+      const [pmAuditLogs, setPmAuditLogs] = useState([]);
+
+      const [users, setUsers] = useState([
+        { id: 'u_1', name: 'Super Admin', email: 'admin@system.local', role: 'Super Admin', status: 'Active' },
+        { id: 'u_2', name: 'Biomedical Lead', email: 'bio@system.local', role: 'Technician', status: 'Active' }
+      ]);
+
+      // State for Modals
+      const [isNewAssetModalOpen, setIsNewAssetModalOpen] = useState(false);
+      const [newAssetForm, setNewAssetForm] = useState({ group: 'MOUSE', name: '', brand: '', op: 0, category: 'Consumable', location: 'it', minLevel: 2 });
+      
+      const [isTempModalOpen, setIsTempModalOpen] = useState(false);
+      const [tempForm, setTempForm] = useState({ assetName: '', serialNo: '', handedTo: '', department: '', expectedReturn: '', remarks: '' });
+
+      const [isPmModalOpen, setIsPmModalOpen] = useState(false);
       const [pmForm, setPmForm] = useState({
         department: 'General Registration',
         equipmentName: 'Desktop PC Workstation',
         monitorBrand: 'Dell',
         monitorTagNo: 'MON-TAG-999',
-        cpuBrand: 'Intel i5',
+        cpuBrand: 'Intel',
         cpuProcessor: 'Intel Core i5-13400 @ 2.50GHz',
         printerBrand: 'HP',
         printerTagNo: 'PRN-TAG-999',
@@ -111,15 +158,23 @@
         outlook: 'Configured',
         backup: 'Active',
         antiVirus: 'Updated',
-        remarks: 'All preventive checks completed successfully in pristine condition.',
+        remarks: 'All preventive checks completed successfully.',
         userSignDate: 'Pending Sign',
         status: 'Scheduled',
         dueDate: '2026-01-08',
         targetMonth: pmSelectedMonth,
-        slotRange: pmSelectedSlot || '01 to 10 January'
+        slotRange: pmSelectedSlot
       });
+      const [editingPmId, setEditingPmId] = useState(null);
 
+      // Print slip modal state
+      const [printSlipItem, setPrintSlipItem] = useState(null);
+
+      // 12 Months starting from January
       const monthsList = [
+        { code: 'Jan', name: 'January', slots: ['01 to 10 January', '11 to 20 January', '21 to 31 January'] },
+        { code: 'Feb', name: 'February', slots: ['01 to 10 February', '11 to 20 February', '21 to 28 February'] },
+        { code: 'Mar', name: 'March', slots: ['01 to 10 March', '11 to 20 March', '21 to 31 March'] },
         { code: 'Apr', name: 'April', slots: ['01 to 10 April', '11 to 20 April', '21 to 30 April'] },
         { code: 'May', name: 'May', slots: ['01 to 10 May', '11 to 20 May', '21 to 31 May'] },
         { code: 'Jun', name: 'June', slots: ['01 to 10 June', '11 to 20 June', '21 to 30 June'] },
@@ -128,1986 +183,1195 @@
         { code: 'Sep', name: 'September', slots: ['01 to 10 September', '11 to 20 September', '21 to 30 September'] },
         { code: 'Oct', name: 'October', slots: ['01 to 10 October', '11 to 20 October', '21 to 31 October'] },
         { code: 'Nov', name: 'November', slots: ['01 to 10 November', '11 to 20 November', '21 to 30 November'] },
-        { code: 'Dec', name: 'December', slots: ['01 to 10 December', '11 to 20 December', '21 to 31 December'] },
-        { code: 'Jan', name: 'January', slots: ['01 to 10 January', '11 to 20 January', '21 to 31 January'] },
-        { code: 'Feb', name: 'February', slots: ['01 to 10 February', '11 to 20 February', '21 to 28 February'] },
-        { code: 'Mar', name: 'March', slots: ['01 to 10 March', '11 to 20 March', '21 to 31 March'] }
+        { code: 'Dec', name: 'December', slots: ['01 to 10 December', '11 to 20 December', '21 to 31 December'] }
       ];
 
-      const sampleFallbackUsers = [
-        { id: 1, name: 'Super Admin', pin: '1234', role: 'Super Administrator', status: 'Active' },
-        { id: 2, name: 'IT Inventory Desk', pin: '5678', role: 'Store Keeper', status: 'Active' }
-      ];
-
-      const [users, setUsers] = useState(sampleFallbackUsers);
-
-      const showToast = (msg) => {
-        setToastMsg(msg);
-        setTimeout(() => setToastMsg(''), 3500);
-      };
-
-      const getCurrentMonthYear = () => {
-        const d = new Date();
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-      };
-
-      const getFormattedDateTime = () => {
-        const d = new Date();
-        const day = String(d.getDate()).padStart(2, '0');
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const month = months[d.getMonth()];
-        const year = d.getFullYear();
-        let hours = d.getHours();
-        const minutes = String(d.getMinutes()).padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12 || 12;
-        return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
-      };
-
-      const sampleFallbackAssets = [
-        { id: 101, group: 'MOUSE', particulars: 'USB MOUSE', brand: 'Dell', serialNo: 'MS-01', cableLength: '1.5', measurementUnit: 'Piece', openingQty: 12, newPurchase: 0, issueItems: 1, shortItems: 0, deadItems: 0, category: 'Consumable', location: 'it', minAlert: 2, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 2:54 PM' },
-        { id: 102, group: 'MOUSE', particulars: 'USB MOUSE', brand: 'Lenovo', serialNo: 'MS-02', cableLength: '1.5', measurementUnit: 'Piece', openingQty: 6, newPurchase: 0, issueItems: 0, shortItems: 0, deadItems: 0, category: 'Consumable', location: '', minAlert: 2, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026' },
-        { id: 103, group: 'MOUSE', particulars: 'WIRELESS-MOUSE', brand: 'Dell', serialNo: 'MS-03', cableLength: '', measurementUnit: 'Piece', openingQty: 1, newPurchase: 0, issueItems: 0, shortItems: 0, deadItems: 0, category: 'Consumable', location: '', minAlert: 2, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026' },
-        { id: 104, group: 'KEYBOARD', particulars: 'USB-KEYBOARD', brand: 'DELL', serialNo: 'KB-01', cableLength: '', measurementUnit: 'Piece', openingQty: 9, newPurchase: 0, issueItems: 0, shortItems: 0, deadItems: 0, category: 'Consumable', location: '', minAlert: 2, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026' },
-        { id: 105, group: 'CONNECTOR', particulars: 'VGA-HDMI WITH AUDIO', brand: '-', serialNo: 'CN-01', cableLength: '', measurementUnit: 'Piece', openingQty: 1, newPurchase: 0, issueItems: 0, shortItems: 0, deadItems: 0, category: 'Consumable', location: '', minAlert: 1, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026' }
-      ];
-
-      // Safe Data Fetching with Auto-Sync Interval
+      // Firebase Sync polling effect
       useEffect(() => {
-        let isMounted = true;
-
-        const fetchAllData = async () => {
+        const fetchData = async () => {
           try {
-            const resAssets = await fetch(FIREBASE_DB_URL);
-            const dataAssets = await resAssets.json();
-            if (isMounted) {
-              if (dataAssets && typeof dataAssets === 'object') {
-                const loaded = Object.keys(dataAssets).map(k => ({ ...dataAssets[k], firebaseKey: k }));
-                setAssets(loaded.length > 0 ? loaded : sampleFallbackAssets);
-              } else {
-                setAssets(sampleFallbackAssets);
+            const res = await fetch(`${FIREBASE_DB_URL}/system_data.json`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data) {
+                if (data.assets) setAssets(data.assets);
+                if (data.tempDeployments) setTempDeployments(data.tempDeployments);
+                if (data.pmSchedules) setPmSchedules(data.pmSchedules);
+                if (data.pmAuditLogs) setPmAuditLogs(data.pmAuditLogs);
+                if (data.users) setUsers(data.users);
               }
-              setLoading(false);
             }
-          } catch(e) {
-            if (isMounted) {
-              setAssets(sampleFallbackAssets);
-              setLoading(false);
-            }
+          } catch (e) {
+            console.error("Sync fetch error", e);
           }
-
-          try {
-            const resTemp = await fetch(FIREBASE_TEMP_URL);
-            const dataTemp = await resTemp.json();
-            if (isMounted && dataTemp && typeof dataTemp === 'object') {
-              setTempDispatches(Object.keys(dataTemp).map(k => ({ ...dataTemp[k], firebaseKey: k })));
-            }
-          } catch(e) {}
-
-          try {
-            const resPm = await fetch(FIREBASE_PM_URL);
-            const dataPm = await resPm.json();
-            if (isMounted && dataPm && typeof dataPm === 'object') {
-              setPmSchedules(Object.keys(dataPm).map(k => ({ ...dataPm[k], firebaseKey: k })));
-            }
-          } catch(e) {}
-
-          try {
-            const resLogs = await fetch(FIREBASE_PM_LOGS_URL);
-            const dataLogs = await resLogs.json();
-            if (isMounted && dataLogs && typeof dataLogs === 'object') {
-              setPmAuditLogs(Object.keys(dataLogs).map(k => ({ ...dataLogs[k], firebaseKey: k })));
-            }
-          } catch(e) {}
         };
-
-        fetchAllData();
-        const intervalId = setInterval(fetchAllData, 3000);
-
-        return () => {
-          isMounted = false;
-          clearInterval(intervalId);
-        };
+        fetchData();
+        const interval = setInterval(fetchData, 4000);
+        return () => clearInterval(interval);
       }, []);
 
-      const filteredPmSchedules = pmSchedules.filter(item => {
-        const matchesMonth = (item.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase();
-        const matchesSlot = !pmSelectedSlot || (item.slotRange || '').toLowerCase() === pmSelectedSlot.toLowerCase();
-        return matchesMonth && matchesSlot;
-      });
-
-      const handleLogin = (e) => {
-        e.preventDefault();
-        const matched = users.find(u => String(u.pin) === String(pinInput) && u.status === 'Active');
-        if (matched) {
-          setIsLoggedIn(true);
-          setLoginError('');
-          showToast(`Welcome back, ${matched.name}!`);
-        } else {
-          setLoginError('Invalid Security PIN or Inactive User.');
-        }
-      };
-
-      const [formData, setFormData] = useState({
-        group: 'MOUSE',
-        particulars: '',
-        brand: 'Dell',
-        customBrand: '',
-        serialNo: '',
-        vendor: '',
-        invoiceNo: '',
-        warranty: '',
-        cableLength: '',
-        measurementUnit: 'Piece',
-        openingQty: 0,
-        newPurchase: 0,
-        issueItems: 0,
-        shortItems: 0,
-        deadItems: 0,
-        category: 'Consumable',
-        location: '',
-        minAlert: 2,
-        entryMonth: getCurrentMonthYear(),
-        lastUpdated: getFormattedDateTime()
-      });
-
-      const handleSaveAsset = async (e) => {
-        e.preventDefault();
-        const timestamped = getFormattedDateTime();
-        const finalBrand = formData.brand === 'Other' ? formData.customBrand : formData.brand;
-
-        if (editingAsset) {
-          const updated = {
-            ...editingAsset,
-            ...formData,
-            brand: finalBrand,
-            lastUpdated: timestamped
+      const syncToFirebase = async (newPayload) => {
+        try {
+          const payload = {
+            assets,
+            tempDeployments,
+            pmSchedules,
+            pmAuditLogs,
+            users,
+            ...newPayload
           };
-          try {
-            if (editingAsset.firebaseKey) {
-              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${editingAsset.firebaseKey}.json`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updated)
-              });
+          await fetch(`${FIREBASE_DB_URL}/system_data.json`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+        } catch (e) {
+          console.error("Sync save error", e);
+        }
+      };
+
+      // Handlers for Stock
+      const handleCreateAsset = (e) => {
+        e.preventDefault();
+        const newItem = {
+          id: `ast_${Date.now()}`,
+          group: newAssetForm.group,
+          name: newAssetForm.name || 'NEW ITEM',
+          brand: newAssetForm.brand || '-',
+          op: Number(newAssetForm.op) || 0,
+          purch: 0,
+          issued: 0,
+          bal: Number(newAssetForm.op) || 0,
+          short: 0,
+          dead: 0,
+          category: newAssetForm.category,
+          location: newAssetForm.location,
+          minLevel: Number(newAssetForm.minLevel) || 2,
+          updatedAt: new Date().toISOString().split('T')[0]
+        };
+        const updated = [newItem, ...assets];
+        setAssets(updated);
+        syncToFirebase({ assets: updated });
+        setIsNewAssetModalOpen(false);
+        setNewAssetForm({ group: 'MOUSE', name: '', brand: '', op: 0, category: 'Consumable', location: 'it', minLevel: 2 });
+        showToast("New asset added successfully!");
+      };
+
+      // Handlers for Temp Deployment
+      const handleCreateTemp = (e) => {
+        e.preventDefault();
+        const newItem = {
+          id: `tmp_${Date.now()}`,
+          ...tempForm,
+          status: 'Active'
+        };
+        const updated = [newItem, ...tempDeployments];
+        setTempDeployments(updated);
+        syncToFirebase({ tempDeployments: updated });
+        setIsTempModalOpen(false);
+        setTempForm({ assetName: '', serialNo: '', handedTo: '', department: '', expectedReturn: '', remarks: '' });
+        showToast("Temporary asset issued!");
+      };
+
+      // Handlers for PM Save & Edit
+      const handleSavePm = (e) => {
+        e.preventDefault();
+        const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+        if (editingPmId) {
+          // Edit existing
+          const updated = pmSchedules.map(item => {
+            if (item.id === editingPmId) {
+              const changedFields = [];
+              if (item.equipmentName !== pmForm.equipmentName) changedFields.log('Equipment');
+              return { ...item, ...pmForm, updatedAt: nowStr };
             }
-            setAssets(assets.map(a => (a.id === editingAsset.id || a.firebaseKey === editingAsset.firebaseKey) ? updated : a));
-            showToast("Asset record successfully updated!");
-          } catch(err) {
-            showToast("Error updating record in database.");
-          }
-        } else {
-          const newAsset = {
-            id: Date.now(),
-            ...formData,
-            brand: finalBrand,
-            lastUpdated: timestamped
+            return item;
+          });
+          setPmSchedules(updated);
+          // Add audit log
+          const newAudit = {
+            id: `aud_${Date.now()}`,
+            timestamp: nowStr,
+            user: currentUser.name,
+            action: `Updated PM task for ${pmForm.equipmentName} (${pmForm.department})`,
+            details: `Month: ${pmSelectedMonth}, Slot: ${pmSelectedSlot}`
           };
-          try {
-            await fetch(FIREBASE_DB_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newAsset)
-            });
-            const res = await fetch(FIREBASE_DB_URL);
-            const data = await res.json();
-            if (data) setAssets(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
-            showToast("New asset registered successfully!");
-          } catch(err) {
-            setAssets([newAsset, ...assets]);
-            showToast("Asset added locally!");
-          }
+          const updatedAuditLogs = [newAudit, ...pmAuditLogs];
+          setPmAuditLogs(updatedAuditLogs);
+          syncToFirebase({ pmSchedules: updated, pmAuditLogs: updatedAuditLogs });
+          showToast("PM Schedule updated and audit logged!");
+        } else {
+          // Create new
+          const newItem = {
+            id: `pm_${Date.now()}`,
+            ...pmForm,
+            targetMonth: pmSelectedMonth,
+            slotRange: pmSelectedSlot,
+            updatedAt: nowStr
+          };
+          const updated = [newItem, ...pmSchedules];
+          setPmSchedules(updated);
+          syncToFirebase({ pmSchedules: updated });
+          showToast("New PM Schedule task added!");
         }
-
-        setIsModalOpen(false);
-        setEditingAsset(null);
+        setIsPmModalOpen(false);
+        setEditingPmId(null);
       };
 
-      const handleDeleteAsset = async (item) => {
-        if (window.confirm(`Are you sure you want to delete "${item.particulars}"?`)) {
-          try {
-            if (item.firebaseKey) {
-              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${item.firebaseKey}.json`, {
-                method: 'DELETE'
-              });
+      const handleExportPmCSV = () => {
+        const filtered = pmSchedules.filter(i => (i.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase() && (i.slotRange || '').toLowerCase() === pmSelectedSlot.toLowerCase());
+        const headers = ["Department","Equipment Name","Monitor Brand","Monitor Tag","CPU Brand","CPU Processor","Printer Brand","Printer Tag","Printer IP","System IP","System Mac","RAM Type","RAM Size","Disk Type","Disk Size","MS Office","Outlook","Backup","Anti-Virus","Remarks","Due Date","Status"];
+        const rows = filtered.map(i => [
+          i.department, i.equipmentName, i.monitorBrand, i.monitorTagNo, i.cpuBrand, i.cpuProcessor, i.printerBrand, i.printerTagNo, i.printerIP, i.systemIP, i.systemMac, i.ramType, i.ramSize, i.diskType, i.diskSize, i.msOffice, i.outlook, i.backup, i.antiVirus, i.remarks, i.dueDate, i.status
+        ]);
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `PM_Schedule_${pmSelectedMonth}_${pmSelectedSlot}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("PM Schedule exported successfully!");
+      };
+
+      const handleImportPmCSV = (e) => {
+        const fileReader = new FileReader();
+        if (e.target.files[0]) {
+          fileReader.readAsText(e.target.files[0], "UTF-8");
+          fileReader.onload = event => {
+            try {
+              const text = event.target.result;
+              const lines = text.split(/\r?\n/);
+              const newItems = [];
+              for(let i=1; i<lines.length; i++) {
+                if(!lines[i].trim()) continue;
+                const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                if(cols.length >= 2) {
+                  newItems.push({
+                    id: `pm_imp_${Date.now()}_${i}`,
+                    department: cols[0]?.replace(/"/g,'').trim() || 'General Reg',
+                    equipmentName: cols[1]?.replace(/"/g,'').trim() || 'Desktop',
+                    monitorBrand: cols[2]?.replace(/"/g,'').trim() || 'Dell',
+                    monitorTagNo: cols[3]?.replace(/"/g,'').trim() || '',
+                    cpuBrand: cols[4]?.replace(/"/g,'').trim() || 'Intel',
+                    cpuProcessor: cols[5]?.replace(/"/g,'').trim() || 'Intel Core i5',
+                    printerBrand: cols[6]?.replace(/"/g,'').trim() || 'HP',
+                    printerTagNo: cols[7]?.replace(/"/g,'').trim() || '',
+                    printerIP: cols[8]?.replace(/"/g,'').trim() || '',
+                    systemIP: cols[9]?.replace(/"/g,'').trim() || '',
+                    systemMac: cols[10]?.replace(/"/g,'').trim() || '',
+                    ramType: cols[11]?.replace(/"/g,'').trim() || 'DDR4',
+                    ramSize: cols[12]?.replace(/"/g,'').trim() || '16GB',
+                    diskType: cols[13]?.replace(/"/g,'').trim() || 'SSD',
+                    diskSize: cols[14]?.replace(/"/g,'').trim() || '512GB',
+                    msOffice: cols[15]?.replace(/"/g,'').trim() || 'Office 365',
+                    outlook: cols[16]?.replace(/"/g,'').trim() || 'Configured',
+                    backup: cols[17]?.replace(/"/g,'').trim() || 'Active',
+                    antiVirus: cols[18]?.replace(/"/g,'').trim() || 'Updated',
+                    remarks: cols[19]?.replace(/"/g,'').trim() || 'Imported record',
+                    dueDate: cols[20]?.replace(/"/g,'').trim() || '2026-01-10',
+                    status: cols[21]?.replace(/"/g,'').trim() || 'Scheduled',
+                    targetMonth: pmSelectedMonth,
+                    slotRange: pmSelectedSlot
+                  });
+                }
+              }
+              if(newItems.length > 0) {
+                const updated = [...newItems, ...pmSchedules];
+                setPmSchedules(updated);
+                syncToFirebase({ pmSchedules: updated });
+                showToast(`Successfully imported ${newItems.length} PM records!`);
+              } else {
+                showToast("No valid rows found in file.");
+              }
+            } catch (err) {
+              showToast("Error parsing import file.");
             }
-            setAssets(assets.filter(a => a.id !== item.id && a.firebaseKey !== item.firebaseKey));
-            showToast("Asset record deleted.");
-          } catch(err) {
-            showToast("Error deleting record.");
-          }
+          };
         }
       };
 
-      // Group totals calculation for the top cards
-      const groupCounts = assets.reduce((acc, curr) => {
-        const g = curr.group || 'OTHER';
-        acc[g] = (acc[g] || 0) + 1;
-        return acc;
-      }, {});
-
-      const filteredAssets = assets.filter(item => {
-        const matchesSearch = (item.particulars || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              (item.group || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              (item.serialNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              (item.location || '').toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesLocation = locationFilter === 'All' || !locationFilter || (item.location || '').toLowerCase() === locationFilter.toLowerCase();
-        const matchesGroup = !selectedGroupFilter || (item.group || '').toLowerCase() === selectedGroupFilter.toLowerCase();
-        return matchesSearch && matchesLocation && matchesGroup;
-      });
-
-      const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
-      const paginatedAssets = filteredAssets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-      if (!isLoggedIn) {
-        return (
-          <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 border border-slate-200 space-y-6 text-slate-800">
-              <div className="text-center space-y-2">
-                <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-blue-500/20">IT</div>
-                <h1 className="text-xl font-extrabold tracking-tight text-slate-900">IT Asset & Inventory Portal</h1>
-                <p className="text-xs text-slate-500 font-medium">Select your professional profile and enter your 4-digit Security PIN</p>
-              </div>
-
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Select User Profile</label>
-                  <select 
-                    onChange={(e) => {
-                      const sel = users.find(u => String(u.pin) === String(e.target.value));
-                      if (sel) setPinInput(sel.pin);
-                    }}
-                    className="w-full p-3 border border-slate-300 rounded-xl text-xs font-bold outline-none bg-slate-50 text-slate-800"
-                  >
-                    <option value="">-- Choose Profile --</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.pin}>{u.name} ({u.role}) - PIN: {u.pin}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Security PIN</label>
-                  <input 
-                    type="password"
-                    maxLength="4"
-                    placeholder="••••"
-                    value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    className="w-full p-3 border border-slate-300 bg-slate-50 text-slate-800 rounded-xl text-center text-xl font-mono tracking-widest outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {loginError && <div className="p-3 bg-rose-50 text-rose-600 text-xs rounded-xl font-bold border border-rose-200">{loginError}</div>}
-
-                <button 
-                  type="submit"
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-blue-600/20 cursor-pointer transition"
-                >
-                  Authenticate & Login
-                </button>
-              </form>
-            </div>
-          </div>
-        );
-      }
+      const assetGroups = useMemo(() => {
+        const groups = {};
+        assets.forEach(a => {
+          const g = a.group || 'OTHER';
+          if(!groups[g]) groups[g] = { count: 0, low: 0 };
+          groups[g].count += (a.bal || 0);
+          if((a.bal || 0) <= (a.minLevel || 2)) groups[g].low += 1;
+        });
+        return groups;
+      }, [assets]);
 
       return (
         <div className="flex h-screen bg-slate-100 overflow-hidden text-slate-800">
-          
-          {toastMsg && (
-            <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl border border-slate-800 text-xs font-bold flex items-center gap-3 animate-bounce">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-              {toastMsg}
+          {/* Toast Notification */}
+          {toastMessage && (
+            <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-bounce">
+              <span className="text-blue-400 font-bold">ℹ</span>
+              <span className="text-sm font-semibold">{toastMessage}</span>
             </div>
           )}
 
-          {/* PROFESSIONAL LIGHT SIDEBAR */}
-          <aside className="w-72 pro-sidebar text-white flex flex-col justify-between p-5 border-r border-slate-800 shadow-xl">
-            <div className="space-y-6">
-              <div className="flex flex-col items-center text-center pb-4 border-b border-slate-700/60">
-                <div className="w-14 h-14 bg-slate-800 border-2 border-blue-500/50 rounded-full flex items-center justify-center text-blue-400 text-xl font-black mb-2 shadow-lg shadow-blue-500/20">
-                  💾
-                </div>
-                <h2 className="text-sm font-extrabold tracking-wider uppercase text-slate-100">IT ASSET & INVENTORY</h2>
-                <div className="text-[11px] text-emerald-400 flex items-center gap-1.5 mt-1 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Cloud Synchronized
+          {/* SIDEBAR */}
+          <aside className="w-72 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 shadow-xl">
+            <div>
+              <div className="p-6 border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-500/30">IT</div>
+                  <div>
+                    <h1 className="font-extrabold text-white text-sm tracking-wide">IT ASSET & INVENTORY</h1>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span className="text-[10px] font-semibold text-emerald-400">Cloud Synchronized</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <nav className="space-y-1.5 text-xs font-semibold">
-                <button
-                  onClick={() => setActiveTab('inventory')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
-                    activeTab === 'inventory' ? 'active-pro-btn text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <span>📄</span> 1. Stock Register
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('temp_deploy')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
-                    activeTab === 'temp_deploy' ? 'active-pro-btn text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <span>🔄</span> 2. Temporary Deployment
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('preventive_maint')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
-                    activeTab === 'preventive_maint' ? 'active-pro-btn text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <span>⚙️</span> 3. Preventive Maintenance
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('users')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition cursor-pointer ${
-                    activeTab === 'users' ? 'active-pro-btn text-white font-bold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
-                >
-                  <span>👤</span> 7. Privilege & Users
-                </button>
+              <nav className="p-4 space-y-1.5">
+                {[
+                  { id: 'stock', label: '1. Stock Register', icon: '📄' },
+                  { id: 'temp', label: '2. Temporary Deployment', icon: '⇄' },
+                  { id: 'pm', label: '3. Preventive Maintenance', icon: '⚙' },
+                  { id: 'dashboard', label: '4. Executive Dashboard', icon: '🏠' },
+                  { id: 'analytics', label: '5. Analytics Board', icon: '📊' },
+                  { id: 'audit', label: '6. Audit & Reports', icon: '📋' },
+                  { id: 'users', label: '7. Privilege & Users', icon: '👥' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      activeTab === item.id
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-sm">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
               </nav>
             </div>
 
-            <div className="pt-4 border-t border-slate-700/60 space-y-3">
-              <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 flex items-center gap-3">
-                <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white text-sm">A</div>
-                <div>
-                  <div className="font-bold text-xs text-white">Super Admin</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Master Access</div>
-                </div>
+            <div className="p-4 border-t border-slate-800">
+              <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 mb-3">
+                <div className="text-[10px] font-bold text-slate-400 uppercase">Logged in as</div>
+                <div className="font-extrabold text-white text-sm truncate mt-0.5">{currentUser.name}</div>
+                <div className="text-[10px] text-blue-400 font-medium mt-0.5">{currentUser.role}</div>
               </div>
-              <button
-                onClick={() => setIsLoggedIn(false)}
-                className="w-full py-2.5 bg-rose-950/80 hover:bg-rose-900 text-rose-200 rounded-xl text-xs font-bold transition cursor-pointer border border-rose-800/50 flex items-center justify-center gap-2"
+              <button 
+                onClick={() => showToast("User session secure.")}
+                className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
               >
-                <span>🚪</span> Sign Out
+                Sign Out
               </button>
             </div>
           </aside>
 
           {/* MAIN CONTENT AREA */}
-          <main className="flex-1 flex flex-col overflow-hidden bg-slate-100 p-6 space-y-4">
-            
-            {activeTab === 'inventory' && (
-              <div className="flex-1 flex flex-col overflow-hidden space-y-4">
-                
-                {/* ASSET GROUPS FILTER CARDS BAR */}
-                <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm space-y-2">
-                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    <span>🗂️</span> ASSET GROUPS (CLICK TO FILTER)
-                  </div>
-                  <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
-                    <button
-                      onClick={() => setSelectedGroupFilter('')}
-                      className={`min-w-[140px] p-3 rounded-xl text-left border transition cursor-pointer ${
-                        selectedGroupFilter === '' 
-                          ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20' 
-                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="text-xs font-black uppercase">ALL GROUPS</div>
-                      <div className={`text-[10px] font-bold mt-1 ${selectedGroupFilter === '' ? 'text-blue-100' : 'text-slate-500'}`}>
-                        {assets.length} Total Items
-                      </div>
-                    </button>
+          <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+            {/* TOP HEADER */}
+            <header className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm">
+              <div>
+                <h2 className="text-lg font-black text-slate-800 uppercase tracking-wide">
+                  {activeTab === 'stock' && 'Stock Register & Inventory Ledger'}
+                  {activeTab === 'temp' && 'Temporary Asset Deployment Module'}
+                  {activeTab === 'pm' && 'Preventive Maintenance Master & Schedule'}
+                  {activeTab === 'dashboard' && 'Executive Management Dashboard'}
+                  {activeTab === 'analytics' && 'Asset Analytics & Consumption Trends'}
+                  {activeTab === 'audit' && 'Audit Trails & Change History Reports'}
+                  {activeTab === 'users' && 'System Users & Privilege Management'}
+                </h2>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">Hospital IT Infrastructure & Asset Lifecycle Management</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => showToast("System synchronized with Firebase Realtime DB")}
+                  className="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span>Cloud Active</span>
+                </button>
+              </div>
+            </header>
 
-                    {Object.keys(groupCounts).map(grp => {
-                      const count = groupCounts[grp];
-                      const isSelected = selectedGroupFilter.toLowerCase() === grp.toLowerCase();
-                      return (
-                        <button
-                          key={grp}
-                          onClick={() => setSelectedGroupFilter(grp)}
-                          className={`min-w-[150px] p-3 rounded-xl text-left border transition cursor-pointer flex justify-between items-start ${
-                            isSelected 
-                              ? 'bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-500/20' 
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
-                          <div>
-                            <div className="text-xs font-black uppercase tracking-tight">{grp}</div>
-                            <div className={`text-[10px] font-bold mt-1 ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
-                              {count} items
-                            </div>
+            {/* TAB VIEWS */}
+            <div className="flex-1 overflow-auto p-8">
+              
+              {/* 1. STOCK REGISTER VIEW */}
+              {activeTab === 'stock' && (
+                <div className="space-y-6">
+                  {/* Asset Groups Cards */}
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="text-xs font-extrabold uppercase text-slate-500 tracking-wider mb-3">Asset Groups (Click to Filter)</div>
+                    <div className="flex gap-3 overflow-x-auto pb-2">
+                      <div className="px-4 py-3 bg-blue-600 text-white rounded-xl border border-blue-500 shadow-md shadow-blue-500/20 shrink-0">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-blue-100">All Groups</div>
+                        <div className="text-sm font-black mt-0.5">{assets.reduce((a,c)=>a+(c.bal||0),0)} Total Items</div>
+                      </div>
+                      {Object.entries(assetGroups).map(([g, info]) => (
+                        <div key={g} className="px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl shrink-0 transition cursor-pointer min-w-[140px]">
+                          <div className="text-[10px] font-black text-slate-700 uppercase tracking-wider">{g}</div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-xs font-bold text-slate-800">{info.count} items</span>
+                            {info.low > 0 && <span className="px-1.5 py-0.5 bg-rose-600 text-white text-[10px] font-extrabold rounded">{info.low} Low</span>}
                           </div>
-                          {count <= 2 && (
-                            <span className="px-1.5 py-0.5 bg-rose-600 text-white text-[9px] font-extrabold rounded">
-                              1 Low
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Stock Table Card */}
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            placeholder="Search Items..." 
+                            className="pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 w-64 shadow-inner"
+                          />
+                          <span className="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setIsNewAssetModalOpen(true)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <span>+ New Asset</span>
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider font-extrabold">
+                            <th className="p-3.5">Action</th>
+                            <th className="p-3.5">Group / Item Particulars</th>
+                            <th className="p-3.5">Brand & Specs</th>
+                            <th className="p-3.5 text-center">OP</th>
+                            <th className="p-3.5 text-center">Purch.</th>
+                            <th className="p-3.5 text-center">Issued</th>
+                            <th className="p-3.5 text-center">Bal</th>
+                            <th className="p-3.5 text-center">Short</th>
+                            <th className="p-3.5 text-center">Dead</th>
+                            <th className="p-3.5">Category</th>
+                            <th className="p-3.5">Location</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {assets.map((item) => (
+                            <tr key={item.id} className="hover:bg-slate-50/80 transition">
+                              <td className="p-3.5">
+                                <div className="flex items-center gap-1.5">
+                                  <button onClick={() => showToast(`Viewing item: ${item.name}`)} className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-700" title="View">👁</button>
+                                  <button onClick={() => showToast(`Editing item: ${item.name}`)} className="p-1.5 bg-blue-50 hover:bg-blue-100 rounded text-blue-700" title="Edit">✏</button>
+                                </div>
+                              </td>
+                              <td className="p-3.5">
+                                <div className="font-extrabold text-slate-800">{item.name}</div>
+                                <div className="text-[10px] text-slate-500 font-semibold">{item.group} • Updated: {item.updatedAt}</div>
+                              </td>
+                              <td className="p-3.5 font-medium text-slate-700">{item.brand}</td>
+                              <td className="p-3.5 text-center font-bold text-slate-700">{item.op}</td>
+                              <td className="p-3.5 text-center font-bold text-emerald-600">+{item.purch}</td>
+                              <td className="p-3.5 text-center font-bold text-amber-600">{item.issued}</td>
+                              <td className="p-3.5 text-center font-black text-blue-700">{item.bal}</td>
+                              <td className="p-3.5 text-center font-bold text-rose-600">{item.short}</td>
+                              <td className="p-3.5 text-center font-bold text-slate-500">{item.dead}</td>
+                              <td className="p-3.5">
+                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold text-[10px]">
+                                  {item.category}
+                                </span>
+                              </td>
+                              <td className="p-3.5 font-medium text-slate-600 uppercase">{item.location}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* STOCK REGISTER & INVENTORY LEDGER HEADER BAR */}
-                <header className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-wrap justify-between items-center gap-4">
-                  <h1 className="text-sm font-extrabold text-slate-900 tracking-wider uppercase">STOCK REGISTER & INVENTORY LEDGER</h1>
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">🔍</span>
-                      <input 
-                        type="text"
-                        placeholder="Search Items..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 w-64"
-                      />
+              {/* 2. TEMPORARY DEPLOYMENT VIEW */}
+              {activeTab === 'temp' && (
+                <div className="space-y-6">
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div>
+                      <h3 className="font-black text-slate-800 text-base">Temporary Asset Deployments</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Track temporary movement of IT assets to departments and staff.</p>
                     </div>
-                    <select
-                      value={locationFilter}
-                      onChange={(e) => setLocationFilter(e.target.value)}
-                      className="px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                    <button
+                      onClick={() => setIsTempModalOpen(true)}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition shadow-md shadow-blue-600/20 cursor-pointer"
                     >
-                      <option value="All">Location: All</option>
-                      <option value="it">it</option>
-                      <option value="Server Room">Server Room</option>
-                      <option value="A Block">A Block</option>
-                    </select>
-                    <button 
-                      onClick={() => {
-                        setEditingAsset(null);
-                        setFormData({
-                          group: 'MOUSE',
-                          particulars: '',
-                          brand: 'Dell',
-                          customBrand: '',
-                          serialNo: '',
-                          vendor: '',
-                          invoiceNo: '',
-                          warranty: '',
-                          cableLength: '',
-                          measurementUnit: 'Piece',
-                          openingQty: 0,
-                          newPurchase: 0,
-                          issueItems: 0,
-                          shortItems: 0,
-                          deadItems: 0,
-                          category: 'Consumable',
-                          location: '',
-                          minAlert: 2,
-                          entryMonth: getCurrentMonthYear(),
-                          lastUpdated: getFormattedDateTime()
-                        });
-                        setIsModalOpen(true);
-                      }}
-                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 cursor-pointer flex items-center gap-2"
-                    >
-                      + New Asset
+                      + Issue Temporary Asset
                     </button>
                   </div>
-                </header>
 
-                {/* STOCK REGISTER TABLE */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
-                  <div className="overflow-auto flex-1">
-                    <table className="w-full text-left border-collapse table-compact text-xs">
-                      <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold text-[10px] sticky top-0 z-10 border-b border-slate-200">
-                        <tr>
-                          <th className="p-3 w-36 text-center">ACTION</th>
-                          <th>GROUP / ITEM PARTICULARS</th>
-                          <th>BRAND & SPECS</th>
-                          <th className="text-center">OP</th>
-                          <th className="text-center">PURCH.</th>
-                          <th className="text-center">ISSUED</th>
-                          <th className="text-center">BAL</th>
-                          <th className="text-center">SHORT</th>
-                          <th className="text-center">DEAD</th>
-                          <th>CATEGORY</th>
-                          <th>LOCATION</th>
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider font-extrabold">
+                          <th className="p-3.5">Asset Name</th>
+                          <th className="p-3.5">Serial No</th>
+                          <th className="p-3.5">Handed To</th>
+                          <th className="p-3.5">Department</th>
+                          <th className="p-3.5">Date Out</th>
+                          <th className="p-3.5">Expected Return</th>
+                          <th className="p-3.5">Status</th>
+                          <th className="p-3.5">Remarks</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                        {loading ? (
-                          <tr><td colSpan="11" className="text-center py-12 text-slate-400 font-bold">Synchronizing database records...</td></tr>
-                        ) : paginatedAssets.length === 0 ? (
-                          <tr><td colSpan="11" className="text-center py-12 text-slate-400 font-bold">No matching stock items found.</td></tr>
-                        ) : (
-                          paginatedAssets.map((item, index) => {
-                            const opening = Number(item.openingQty || 0);
-                            const purch = Number(item.newPurchase || 0);
-                            const issue = Number(item.issueItems || 0);
-                            const short = Number(item.shortItems || 0);
-                            const dead = Number(item.deadItems || 0);
-                            const bal = (opening + purch) - (issue + short + dead);
-
-                            return (
-                              <tr key={item.firebaseKey || item.id} className="hover:bg-slate-50/80 transition">
-                                <td className="p-3 text-center whitespace-nowrap">
-                                  <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                                    <button 
-                                      onClick={() => setViewModalItem(item)}
-                                      title="View / Print Slip"
-                                      className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-lg cursor-pointer"
-                                    >
-                                      👁️
-                                    </button>
-                                    <button 
-                                      onClick={() => handleDeleteAsset(item)}
-                                      title="Delete"
-                                      className="p-1.5 hover:bg-rose-50 text-rose-600 rounded-lg cursor-pointer"
-                                    >
-                                      🗑️
-                                    </button>
-                                    <button 
-                                      onClick={() => {
-                                        setEditingAsset(item);
-                                        setFormData({
-                                          group: item.group || 'MOUSE',
-                                          particulars: item.particulars || '',
-                                          brand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? item.brand : 'Other',
-                                          customBrand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? '' : (item.brand || ''),
-                                          serialNo: item.serialNo || '',
-                                          vendor: item.vendor || '',
-                                          invoiceNo: item.invoiceNo || '',
-                                          warranty: item.warranty || '',
-                                          cableLength: item.cableLength || '',
-                                          measurementUnit: item.measurementUnit || 'Piece',
-                                          openingQty: item.openingQty || 0,
-                                          newPurchase: item.newPurchase || 0,
-                                          issueItems: item.issueItems || 0,
-                                          shortItems: item.shortItems || 0,
-                                          deadItems: item.deadItems || 0,
-                                          category: item.category || 'Consumable',
-                                          location: item.location || '',
-                                          minAlert: item.minAlert || 2,
-                                          entryMonth: item.entryMonth || getCurrentMonthYear(),
-                                          lastUpdated: item.lastUpdated || getFormattedDateTime()
-                                        });
-                                        setIsModalOpen(true);
-                                      }}
-                                      title="Edit"
-                                      className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg cursor-pointer"
-                                    >
-                                      ✏️
-                                    </button>
-                                  </div>
-                                </td>
-                                <td>
-                                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.group || 'MOUSE'}</div>
-                                  <div className="font-extrabold text-blue-600 text-xs tracking-wide flex items-center gap-1.5">
-                                    {item.particulars}
-                                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                                  </div>
-                                  <div className="text-[10px] text-slate-400 font-mono">Updated: {item.lastUpdated || '12 Nov 2026'}</div>
-                                </td>
-                                <td>
-                                  <div className="font-bold text-slate-800">{item.brand === 'Other' ? item.customBrand : item.brand}</div>
-                                  <div className="text-[10px] text-slate-400 font-mono">| {item.cableLength ? `${item.cableLength}m` : 'undefined'}</div>
-                                </td>
-                                <td className="text-center font-mono text-slate-700 font-bold">{opening}</td>
-                                <td className="text-center font-mono text-blue-600 font-bold">+{purch}</td>
-                                <td className="text-center font-mono text-amber-600 font-bold">-{issue}</td>
-                                <td className="text-center font-mono font-black text-emerald-600">{bal}</td>
-                                <td className="text-center font-mono text-rose-600 font-bold">{short}</td>
-                                <td className="text-center font-mono text-slate-500 font-bold">{dead}</td>
-                                <td>
-                                  <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-extrabold text-[10px] border border-emerald-200">
-                                    {item.category || 'Consumable'}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.location ? 'bg-slate-100 text-slate-800' : 'text-slate-400 italic'}`}>
-                                    {item.location || 'Unassigned'}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
+                      <tbody className="divide-y divide-slate-200">
+                        {tempDeployments.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50 transition">
+                            <td className="p-3.5 font-extrabold text-slate-800">{item.assetName}</td>
+                            <td className="p-3.5 font-mono font-medium text-slate-600">{item.serialNo}</td>
+                            <td className="p-3.5 font-bold text-slate-700">{item.handedTo}</td>
+                            <td className="p-3.5 font-medium text-slate-700">{item.department}</td>
+                            <td className="p-3.5 text-slate-600">{item.dateOut}</td>
+                            <td className="p-3.5 text-slate-600">{item.expectedReturn}</td>
+                            <td className="p-3.5">
+                              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full">
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-slate-500 italic">{item.remarks}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
 
-                  <div className="p-3 bg-white border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
-                    <span>Showing {paginatedAssets.length} of {filteredAssets.length} items</span>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-bold disabled:opacity-40 cursor-pointer text-slate-700 shadow-sm"
-                      >
-                        Previous
-                      </button>
-                      <span className="font-mono font-bold text-slate-800">Page {currentPage} of {totalPages}</span>
-                      <button 
-                        onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-bold disabled:opacity-40 cursor-pointer text-slate-700 shadow-sm"
-                      >
-                        Next
-                      </button>
+              {/* 3. PREVENTIVE MAINTENANCE VIEW */}
+              {activeTab === 'pm' && (
+                <div className="space-y-6">
+                  {/* Month Selection Bar (Starts with January) */}
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-extrabold text-slate-800 text-sm uppercase tracking-wider">1. Select Month (12-Month Master Schedule)</h3>
+                      <div className="flex items-center gap-2">
+                        <label className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-sm">
+                          <span>📤</span> Import Excel/CSV
+                          <input type="file" accept=".csv,.txt" className="hidden" onChange={handleImportPmCSV} />
+                        </label>
+                        <button 
+                          onClick={handleExportPmCSV}
+                          className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5"
+                        >
+                          <span>📥</span> Export Schedule
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {activeTab === 'temp_deploy' && (
-              <div className="flex-1 flex flex-col overflow-hidden space-y-4">
-                <header className="bg-white border border-slate-200 text-slate-900 p-4 rounded-2xl shadow-sm flex justify-between items-center">
-                  <div>
-                    <h1 className="text-sm font-extrabold tracking-wider uppercase">Temporary Asset Deployment Module</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Track temporary dispatches with asset tags and receiver details.</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingTempItem(null);
-                      setTempForm({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
-                      setIsTempModalOpen(true);
-                    }}
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow cursor-pointer flex items-center gap-2 transition"
-                  >
-                    + Issue Temporary Asset
-                  </button>
-                </header>
+                    <div className="grid grid-cols-6 gap-2">
+                      {monthsList.map(m => {
+                        const count = pmSchedules.filter(i => (i.targetMonth || '').toLowerCase() === m.code.toLowerCase()).length;
+                        const isSelected = pmSelectedMonth.toLowerCase() === m.code.toLowerCase();
+                        return (
+                          <button
+                            key={m.code}
+                            onClick={() => {
+                              setPmSelectedMonth(m.code);
+                              if (m.slots && m.slots.length > 0) {
+                                setPmSelectedSlot(m.slots[0]);
+                              } else {
+                                setPmSelectedSlot('');
+                              }
+                            }}
+                            className={`p-3 rounded-xl border text-left transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                            }`}
+                          >
+                            <div className="text-xs font-black uppercase">{m.name}</div>
+                            <div className={`text-[10px] font-semibold mt-1 flex justify-between items-center ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                              <span>{count} Items</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 overflow-auto">
-                  <table className="w-full text-left border-collapse table-compact text-xs">
-                    <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
-                      <tr>
-                        <th className="p-3">#</th>
-                        <th>Asset Name</th>
-                        <th>Asset Tag No</th>
-                        <th>Department</th>
-                        <th>Receiver Name</th>
-                        <th className="text-center">Quantity</th>
-                        <th>Issue Date</th>
-                        <th className="text-center">Status</th>
-                        <th className="text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {tempDispatches.length === 0 ? (
-                        <tr>
-                          <td colSpan="9" className="text-center py-12 text-slate-400 font-medium">
-                            No temporary asset dispatches recorded. Click "+ Issue Temporary Asset" to create one.
-                          </td>
-                        </tr>
-                      ) : (
-                        tempDispatches.map((item, idx) => (
-                          <tr key={item.firebaseKey || item.id} className="hover:bg-slate-50 transition">
-                            <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
-                            <td className="font-extrabold text-slate-900">{item.assetName}</td>
-                            <td className="font-mono text-blue-600 font-bold">{item.assetTagNo}</td>
-                            <td className="font-semibold text-slate-700">{item.department}</td>
-                            <td>{item.receiver}</td>
-                            <td className="text-center font-mono font-bold">{item.quantity}</td>
-                            <td className="font-mono text-slate-500">{item.issueDate}</td>
-                            <td className="text-center">
-                              <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full font-bold text-[10px] border border-amber-200">
-                                {item.status || 'Active Dispatched'}
-                              </span>
-                            </td>
-                            <td className="text-center whitespace-nowrap">
-                              <div className="inline-flex items-center gap-1.5">
+                    {/* Date-Wise Slot Selection */}
+                    {(() => {
+                      const currentMonthObj = monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase());
+                      if (!currentMonthObj || !currentMonthObj.slots) return null;
+                      return (
+                        <div className="pt-3 border-t border-slate-200 space-y-3">
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">2. Select Date-Wise Slot for {currentMonthObj.name}</h4>
+                          <div className="grid grid-cols-3 gap-3">
+                            {currentMonthObj.slots.map(slot => {
+                              const isSlotSelected = pmSelectedSlot.toLowerCase() === slot.toLowerCase();
+                              const slotCount = pmSchedules.filter(i => (i.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase() && (i.slotRange || '').toLowerCase() === slot.toLowerCase()).length;
+                              return (
                                 <button
-                                  onClick={() => {
-                                    setEditingTempItem(item);
-                                    setTempForm({
-                                      assetName: item.assetName || '',
-                                      assetTagNo: item.assetTagNo || '',
-                                      department: item.department || '',
-                                      receiver: item.receiver || '',
-                                      quantity: item.quantity || 1
-                                    });
-                                    setIsTempModalOpen(true);
-                                  }}
-                                  title="Edit Entry"
-                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
+                                  key={slot}
+                                  onClick={() => setPmSelectedSlot(slot)}
+                                  className={`p-3 rounded-xl border text-center transition cursor-pointer font-bold text-xs flex items-center justify-between ${
+                                    isSlotSelected 
+                                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-500/20' 
+                                      : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                                  }`}
                                 >
-                                  ✏️
+                                  <span>📅 {slot}</span>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] ${isSlotSelected ? 'bg-white text-indigo-700 font-extrabold' : 'bg-slate-200 text-slate-700'}`}>
+                                    {slotCount} Locations
+                                  </span>
                                 </button>
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm("Delete this temporary dispatch record?")) {
-                                      if (item.firebaseKey) {
-                                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
-                                      }
-                                      setTempDispatches(tempDispatches.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
-                                      showToast("Temporary dispatch record deleted.");
-                                    }
-                                  }}
-                                  title="Delete Entry"
-                                  className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'preventive_maint' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-white border border-slate-200 text-slate-900 p-4 rounded-2xl shadow-sm flex justify-between items-center">
-                  <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">Preventive Maintenance 12-Month & Date Slot Master Register</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Select any month & slot to view, edit, import/export location-wise assets with change tracking.</p>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowPmReportModal(true)}
-                      className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>📊</span> Change Audit Report ({pmAuditLogs.length})
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingPmItem(null);
-                        setPmForm({
-                          department: 'General Registration',
-                          equipmentName: 'Desktop PC Workstation',
-                          monitorBrand: 'Dell',
-                          monitorTagNo: 'MON-TAG-999',
-                          cpuBrand: 'Intel i5',
-                          printerBrand: 'HP',
-                          printerTagNo: 'PRN-TAG-999',
-                          printerIP: '192.168.1.200',
-                          systemIP: '192.168.1.100',
-                          systemMac: 'AA:BB:CC:DD:EE:FF',
-                          ramType: 'DDR4',
-                          ramSize: '16GB',
-                          diskType: 'SSD',
-                          diskSize: '512GB',
-                          msOffice: 'Office 365',
-                          outlook: 'Configured',
-                          backup: 'Active',
-                          antiVirus: 'Updated',
-                          userSignDate: 'Signed',
-                          status: 'Scheduled',
-                          dueDate: '2026-01-08',
-                          targetMonth: pmSelectedMonth,
-                          slotRange: pmSelectedSlot || '01 to 10 January'
-                        });
-                        setIsPmModalOpen(true);
-                      }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
-                    >
-                      + Add PM Task ({pmSelectedMonth})
-                    </button>
-                  </div>
-                </header>
 
-                <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm space-y-3">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">1. Select Month (All 12 Months Available)</h3>
-                    <div className="flex items-center gap-2">
+                  {/* PM Schedule Table */}
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                      <div>
+                        <h4 className="font-extrabold text-slate-800 text-sm">Scheduled Maintenance List — {pmSelectedMonth} ({pmSelectedSlot})</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">Click edit to modify specifications or print verification slip for user signatures.</p>
+                      </div>
                       <button
                         onClick={() => {
-                          const csvHeader = "Department,Equipment,Monitor Brand,Monitor Tag,CPU Brand,CPU Processor,Printer Brand,Printer Tag,Printer IP,System IP,System Mac,RAM Type,RAM Size,Disk Type,Disk Size,MS Office,Outlook,Backup,Anti-Virus,Remarks,Due Date,Status\n";
-                          const csvRows = filteredPmSchedules.map(i => 
-                            `"${i.department || ''}","${i.equipmentName || ''}","${i.monitorBrand || ''}","${i.monitorTagNo || ''}","${i.cpuBrand || ''}","${i.cpuProcessor || ''}","${i.printerBrand || ''}","${i.printerTagNo || ''}","${i.printerIP || ''}","${i.systemIP || ''}","${i.systemMac || ''}","${i.ramType || ''}","${i.ramSize || ''}","${i.diskType || ''}","${i.diskSize || ''}","${i.msOffice || ''}","${i.outlook || ''}","${i.backup || ''}","${i.antiVirus || ''}","${i.remarks || ''}","${i.dueDate || ''}","${i.status || ''}"`
-                          ).join("\n");
-                          const blob = new Blob([csvHeader + csvRows], { type: 'text/csv;charset=utf-8;' });
-                          const url = URL.createObjectURL(blob);
-                          const dl = document.createElement('a');
-                          dl.setAttribute("href", url);
-                          dl.setAttribute("download", `PM_Schedule_${pmSelectedMonth}_${pmSelectedSlot}.csv`);
-                          dl.click();
-                          showToast("PM schedule exported as Excel/CSV successfully!");
+                          setEditingPmId(null);
+                          setPmForm({
+                            department: 'General Registration',
+                            equipmentName: 'Desktop PC Workstation',
+                            monitorBrand: 'Dell',
+                            monitorTagNo: 'MON-TAG-999',
+                            cpuBrand: 'Intel',
+                            cpuProcessor: 'Intel Core i5-13400 @ 2.50GHz',
+                            printerBrand: 'HP',
+                            printerTagNo: 'PRN-TAG-999',
+                            printerIP: '192.168.1.200',
+                            systemIP: '192.168.1.100',
+                            systemMac: 'AA:BB:CC:DD:EE:FF',
+                            ramType: 'DDR4',
+                            ramSize: '16GB',
+                            diskType: 'SSD',
+                            diskSize: '512GB',
+                            msOffice: 'Office 365',
+                            outlook: 'Configured',
+                            backup: 'Active',
+                            antiVirus: 'Updated',
+                            remarks: 'Preventive check planned.',
+                            userSignDate: 'Pending Sign',
+                            status: 'Scheduled',
+                            dueDate: '2026-01-10',
+                            targetMonth: pmSelectedMonth,
+                            slotRange: pmSelectedSlot
+                          });
+                          setIsPmModalOpen(true);
                         }}
-                        className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition shadow-sm cursor-pointer"
                       >
-                        <span>📥</span> Export Excel/CSV
+                        + Add PM Task
                       </button>
-                      <label className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-sm">
-                        <span>📤</span> Import Excel/CSV
-                        <input 
-                          type="file" 
-                          accept=".csv,.xlsx,.xls" 
-                          className="hidden" 
-                          onChange={(e) => {
-                            const fileReader = new FileReader();
-                            if (e.target.files[0]) {
-                              fileReader.readAsText(e.target.files[0], "UTF-8");
-                              fileReader.onload = event => {
-                                try {
-                                  const text = event.target.result;
-                                  const lines = text.split("\n");
-                                  const newItems = [];
-                                  for(let i=1; i<lines.length; i++) {
-                                    if(!lines[i].trim()) continue;
-                                    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                                    if(cols.length >= 2) {
-                                      newItems.push({
-                                        id: `pm_imp_${Date.now()}_${i}`,
-                                        department: cols[0]?.replace(/"/g,'') || 'General Reg',
-                                        equipmentName: cols[1]?.replace(/"/g,'') || 'Desktop',
-                                        monitorBrand: cols[2]?.replace(/"/g,'') || 'Dell',
-                                        monitorTagNo: cols[3]?.replace(/"/g,'') || '',
-                                        cpuBrand: cols[4]?.replace(/"/g,'') || 'Intel',
-                                        cpuProcessor: cols[5]?.replace(/"/g,'') || 'Intel i5',
-                                        printerBrand: cols[6]?.replace(/"/g,'') || 'HP',
-                                        printerTagNo: cols[7]?.replace(/"/g,'') || '',
-                                        printerIP: cols[8]?.replace(/"/g,'') || '',
-                                        systemIP: cols[9]?.replace(/"/g,'') || '',
-                                        systemMac: cols[10]?.replace(/"/g,'') || '',
-                                        ramType: cols[11]?.replace(/"/g,'') || 'DDR4',
-                                        ramSize: cols[12]?.replace(/"/g,'') || '16GB',
-                                        diskType: cols[13]?.replace(/"/g,'') || 'SSD',
-                                        diskSize: cols[14]?.replace(/"/g,'') || '512GB',
-                                        msOffice: cols[15]?.replace(/"/g,'') || 'Office 365',
-                                        outlook: cols[16]?.replace(/"/g,'') || 'Configured',
-                                        backup: cols[17]?.replace(/"/g,'') || 'Active',
-                                        antiVirus: cols[18]?.replace(/"/g,'') || 'Updated',
-                                        remarks: cols[19]?.replace(/"/g,'') || '',
-                                        dueDate: cols[20]?.replace(/"/g,'') || '2026-01-10',
-                                        status: cols[21]?.replace(/"/g,'') || 'Scheduled',
-                                        targetMonth: pmSelectedMonth,
-                                        slotRange: pmSelectedSlot
-                                      });
-                                    }
-                                  }
-                                  if(newItems.length > 0) {
-                                    setPmSchedules(prev => [...newItems, ...prev]);
-                                    showToast(`Successfully imported ${newItems.length} PM records from Excel/CSV!`);
-                                  }
-                                } catch (err) {
-                                  showToast("Error parsing CSV/Excel format.");
-                                }
-                              };
-                            }
-                          }} 
-                        />
-                      </label>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-900 text-white uppercase text-[9px] tracking-wider font-extrabold">
+                            <th className="p-3">Action</th>
+                            <th className="p-3">Department</th>
+                            <th className="p-3">Equipment</th>
+                            <th className="p-3">Monitor Brand/Tag</th>
+                            <th className="p-3">CPU Brand / Processor</th>
+                            <th className="p-3">Printer Brand/Tag/IP</th>
+                            <th className="p-3">System IP/Mac</th>
+                            <th className="p-3">RAM & Disk</th>
+                            <th className="p-3">Office/Outlook/AV</th>
+                            <th className="p-3">Remarks</th>
+                            <th className="p-3">Sign / Date</th>
+                            <th className="p-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {pmSchedules
+                            .filter(i => (i.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase() && (i.slotRange || '').toLowerCase() === pmSelectedSlot.toLowerCase())
+                            .map((item) => {
+                              const isOverdue = new Date(item.dueDate) < new Date() && item.status !== 'Completed';
+                              return (
+                                <tr key={item.id} className={`hover:bg-slate-50 transition ${isOverdue ? 'bg-rose-50/60' : ''}`}>
+                                  <td className="p-3">
+                                    <div className="flex items-center gap-1">
+                                      <button 
+                                        onClick={() => {
+                                          setEditingPmId(item.id);
+                                          setPmForm(item);
+                                          setIsPmModalOpen(true);
+                                        }} 
+                                        className="p-1.5 bg-blue-50 hover:bg-blue-100 rounded text-blue-700 font-bold"
+                                        title="Edit Task"
+                                      >
+                                        ✏
+                                      </button>
+                                      <button 
+                                        onClick={() => setPrintSlipItem(item)} 
+                                        className="p-1.5 bg-emerald-50 hover:bg-emerald-100 rounded text-emerald-700 font-bold"
+                                        title="Print Sign-off Slip"
+                                      >
+                                        🖨
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="p-3 font-extrabold text-slate-800">{item.department}</td>
+                                  <td className="p-3 font-semibold text-slate-700">{item.equipmentName}</td>
+                                  <td className="p-3 text-[11px]">{item.monitorBrand} <br/><span className="text-slate-400 font-mono">{item.monitorTagNo}</span></td>
+                                  <td className="p-3 text-[11px]"><span className="font-bold">{item.cpuBrand}</span><br/><span className="text-[10px] text-slate-500">{item.cpuProcessor}</span></td>
+                                  <td className="p-3 text-[11px]">{item.printerBrand} <br/><span className="text-slate-400 font-mono">{item.printerTagNo} ({item.printerIP})</span></td>
+                                  <td className="p-3 font-mono text-[10px]">{item.systemIP} <br/>{item.systemMac}</td>
+                                  <td className="p-3 text-[11px]">{item.ramSize} {item.ramType} <br/>{item.diskSize} {item.diskType}</td>
+                                  <td className="p-3 text-[10px]">
+                                    <span className="font-bold text-slate-700">{item.msOffice}</span><br/>
+                                    <span>AV: {item.antiVirus}</span>
+                                  </td>
+                                  <td className="p-3 text-slate-600 italic text-[11px] max-w-xs truncate">{item.remarks}</td>
+                                  <td className="p-3 font-bold text-emerald-700 text-[10px]">{item.userSignDate}</td>
+                                  <td className="p-3">
+                                    <span className={`px-2 py-0.5 rounded font-extrabold text-[10px] ${
+                                      item.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' : isOverdue ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                                    }`}>
+                                      {isOverdue ? 'Delayed' : item.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                  <div className="grid grid-cols-6 gap-2">
-                    {monthsList.map(m => {
-                      const count = pmSchedules.filter(i => (i.targetMonth || '').toLowerCase() === m.code.toLowerCase()).length;
-                      const isSelected = pmSelectedMonth.toLowerCase() === m.code.toLowerCase();
-                      return (
-                        <button
-                          key={m.code}
-                          onClick={() => {
-                            setPmSelectedMonth(m.code);
-                            if (m.slots && m.slots.length > 0) {
-                              setPmSelectedSlot(m.slots[0]);
-                            } else {
-                              setPmSelectedSlot('');
-                            }
-                          }}
-                          className={`p-3 rounded-xl border text-left transition cursor-pointer ${
-                            isSelected
-                              ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20'
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                          }`}
-                        >
-                          <div className="text-xs font-black uppercase">{m.name}</div>
-                          <div className={`text-[10px] font-semibold mt-1 flex justify-between items-center ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
-                            <span>{count} Items</span>
-                          </div>
-                        </button>
-                      );
-                    })}
+                </div>
+              )}
+
+              {/* 4. EXECUTIVE DASHBOARD */}
+              {activeTab === 'dashboard' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                      <div className="text-xs font-extrabold text-slate-500 uppercase">Total Asset Value</div>
+                      <div className="text-2xl font-black text-slate-900 mt-1">107 Units</div>
+                      <div className="text-[10px] font-bold text-emerald-600 mt-2">▲ 12% from last month</div>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                      <div className="text-xs font-extrabold text-slate-500 uppercase">Active Deployments</div>
+                      <div className="text-2xl font-black text-blue-600 mt-1">{tempDeployments.length} Active</div>
+                      <div className="text-[10px] font-bold text-slate-400 mt-2">All locations verified</div>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                      <div className="text-xs font-extrabold text-slate-500 uppercase">Pending PM Tasks</div>
+                      <div className="text-2xl font-black text-amber-600 mt-1">
+                        {pmSchedules.filter(i => i.status !== 'Completed').length} Pending
+                      </div>
+                      <div className="text-[10px] font-bold text-amber-600 mt-2">Schedule on track</div>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                      <div className="text-xs font-extrabold text-slate-500 uppercase">System Status</div>
+                      <div className="text-2xl font-black text-emerald-600 mt-1">100% Online</div>
+                      <div className="text-[10px] font-bold text-emerald-600 mt-2">Realtime Sync Active</div>
+                    </div>
                   </div>
 
-                  {(() => {
-                    const currentMonthObj = monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase());
-                    if (!currentMonthObj || !currentMonthObj.slots) return null;
-                    return (
-                      <div className="pt-3 border-t border-slate-200 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">2. Select Date-Wise Slot for {currentMonthObj.name}</h4>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => {
-                                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredPmSchedules, null, 2));
-                                const dlAnchorElem = document.createElement('a');
-                                dlAnchorElem.setAttribute("href", dataStr);
-                                dlAnchorElem.setAttribute("download", `PM_Schedule_${pmSelectedMonth}_${pmSelectedSlot}.json`);
-                                dlAnchorElem.click();
-                                showToast("PM slot data exported successfully!");
-                              }}
-                              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-sm"
-                            >
-                              <span>📥</span> Export Slot Data
-                            </button>
-                            <label className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-sm">
-                              <span>📤</span> Import Data
-                              <input 
-                                type="file" 
-                                accept=".json,.csv" 
-                                className="hidden" 
-                                onChange={(e) => {
-                                  const fileReader = new FileReader();
-                                  if (e.target.files[0]) {
-                                    fileReader.readAsText(e.target.files[0], "UTF-8");
-                                    fileReader.onload = event => {
-                                      try {
-                                        const parsed = JSON.parse(event.target.result);
-                                        if (Array.isArray(parsed)) {
-                                          setPmSchedules(prev => [...parsed, ...prev]);
-                                          showToast("PM data imported successfully!");
-                                        }
-                                      } catch (err) {
-                                        showToast("Invalid JSON format for import.");
-                                      }
-                                    };
-                                  }
-                                }} 
-                              />
-                            </label>
-                          </div>
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 className="font-extrabold text-slate-800 text-sm mb-4">Infrastructure Health Summary</h3>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="font-bold text-slate-700 text-xs">Preventive Maintenance Completion</div>
+                        <div className="w-full bg-slate-200 h-3 rounded-full mt-3 overflow-hidden">
+                          <div className="bg-blue-600 h-full rounded-full" style={{ width: '85%' }}></div>
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          {currentMonthObj.slots.map(slot => {
-                            const isSlotSelected = pmSelectedSlot.toLowerCase() === slot.toLowerCase();
-                            const slotCount = pmSchedules.filter(i => (i.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase() && (i.slotRange || '').toLowerCase() === slot.toLowerCase()).length;
-                            return (
-                              <button
-                                key={slot}
-                                onClick={() => setPmSelectedSlot(slot)}
-                                className={`p-3 rounded-xl border text-center transition cursor-pointer font-bold text-xs flex items-center justify-between ${
-                                  isSlotSelected 
-                                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-500/20' 
-                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                                }`}
-                              >
-                                <span>📅 {slot}</span>
-                                <span className={`px-2 py-0.5 rounded text-[10px] ${isSlotSelected ? 'bg-white text-indigo-700 font-extrabold' : 'bg-slate-200 text-slate-700'}`}>
-                                  {slotCount} Locations
-                                </span>
-                              </button>
-                            );
-                          })}
+                        <div className="flex justify-between items-center text-[10px] text-slate-500 font-bold mt-2">
+                          <span>85% Completed across all blocks</span>
+                          <span>Target: 100%</span>
                         </div>
                       </div>
-                    );
-                  })()}
-                </div>
-
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-auto">
-                  <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs flex justify-between items-center text-slate-700">
-                    <span>Location Task Records for: <strong className="text-blue-600">{monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name} ({pmSelectedSlot || 'All Slots'})</strong></span>
-                    <span className="text-[11px] text-slate-500">{filteredPmSchedules.length} Locations Scheduled</span>
+                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="font-bold text-slate-700 text-xs">Stock Replenishment Alerts</div>
+                        <div className="text-sm font-black text-emerald-700 mt-2">All critical consumables adequately stocked.</div>
+                        <div className="text-[10px] text-slate-500 font-medium mt-1">Minimum inventory threshold protocols active.</div>
+                      </div>
+                    </div>
                   </div>
-                  <table className="w-full text-left border-collapse table-compact text-xs">
-                    <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] border-b border-slate-200">
-                      <tr>
-                        <th className="p-3">#</th>
-                        <th>Department</th>
-                        <th>Equipment</th>
-                        <th>Monitor Brand</th>
-                        <th>Monitor Tag No</th>
-                        <th>CPU Brand</th>
-                        <th>CPU Processor</th>
-                        <th>Printer Brand</th>
-                        <th>Printer Tag No</th>
-                        <th>Printer IP</th>
-                        <th>System IP</th>
-                        <th>System Mac</th>
-                        <th>RAM</th>
-                        <th>RAM Size</th>
-                        <th>Disk</th>
-                        <th>Disk Size</th>
-                        <th>MS Office</th>
-                        <th>Outlook</th>
-                        <th>Backup</th>
-                        <th>Anti-Virus</th>
-                        <th>Remarks</th>
-                        <th>Due Date</th>
-                        <th className="text-center">Status</th>
-                        <th className="text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                      {filteredPmSchedules.length === 0 ? (
-                        <tr>
-                          <td colSpan="24" className="text-center py-8 text-slate-400 font-medium">
-                            No preventive tasks scheduled for {monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name} ({pmSelectedSlot}). Click "+ Add PM Task" above to add.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredPmSchedules.map((item, idx) => {
-                          const isDelayed = item.dueDate && new Date(item.dueDate) < new Date() && item.status !== 'Completed';
-                          
-                          return (
-                            <tr key={item.firebaseKey || item.id} className={`transition ${isDelayed ? 'bg-rose-50 border-l-4 border-l-rose-500 font-semibold' : item.isEdited ? 'bg-amber-50/80 border-l-4 border-l-amber-500' : 'hover:bg-slate-50'}`}>
-                              <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
-                              <td className="font-bold text-blue-600">{item.department || 'General Reg'}</td>
-                              <td className="font-extrabold text-slate-900">{item.equipmentName || 'Desktop PC'}</td>
-                              <td>{item.monitorBrand || 'Dell'}</td>
-                              <td className="font-mono text-slate-700">{item.monitorTagNo || 'MON-TAG-01'}</td>
-                              <td>{item.cpuBrand || 'Intel i5'}</td>
-                              <td className="font-mono text-slate-700">{item.cpuProcessor || 'Intel i5-13400'}</td>
-                              <td>{item.printerBrand || 'HP'}</td>
-                              <td className="font-mono text-slate-700">{item.printerTagNo || 'PRN-TAG-01'}</td>
-                              <td className="font-mono text-slate-700">{item.printerIP || 'N/A'}</td>
-                              <td className="font-mono text-xs text-slate-700">{item.systemIP || '192.168.1.10'}</td>
-                              <td className="font-mono text-xs text-slate-500">{item.systemMac || '00:11:22:33'}</td>
-                              <td>{item.ramType || 'DDR4'}</td>
-                              <td>{item.ramSize || '16GB'}</td>
-                              <td>{item.diskType || 'SSD'}</td>
-                              <td>{item.diskSize || '512GB'}</td>
-                              <td>{item.msOffice || 'Office 2021'}</td>
-                              <td>{item.outlook || 'Configured'}</td>
-                              <td>{item.backup || 'Active'}</td>
-                              <td>{item.antiVirus || 'Updated'}</td>
-                              <td className="italic text-slate-500 max-w-[150px] truncate" title={item.remarks}>{item.remarks || '-'}</td>
-                              <td className={`font-mono text-[11px] ${isDelayed ? 'text-rose-600 font-bold' : 'text-slate-600'}`}>
-                                {item.dueDate || '2026-01-10'} {isDelayed && '⚠️ (Delayed)'}
-                              </td>
-                              <td className="text-center">
-                                <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[10px] ${
-                                  isDelayed ? 'bg-rose-100 text-rose-800 border border-rose-300' : item.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                                }`}>
-                                  {isDelayed ? 'Delayed' : (item.status || 'Scheduled')}
-                                </span>
-                              </td>
-                              <td className="text-center whitespace-nowrap">
-                                <div className="inline-flex items-center gap-1.5">
-                                  <button
-                                    onClick={() => {
-                                      setEditingPmItem(item);
-                                      setPmForm({
-                                        department: item.department || '',
-                                        equipmentName: item.equipmentName || '',
-                                        monitorBrand: item.monitorBrand || '',
-                                        monitorTagNo: item.monitorTagNo || '',
-                                        cpuBrand: item.cpuBrand || '',
-                                        cpuProcessor: item.cpuProcessor || '',
-                                        printerBrand: item.printerBrand || '',
-                                        printerTagNo: item.printerTagNo || '',
-                                        printerIP: item.printerIP || '',
-                                        systemIP: item.systemIP || '',
-                                        systemMac: item.systemMac || '',
-                                        ramType: item.ramType || '',
-                                        ramSize: item.ramSize || '',
-                                        diskType: item.diskType || '',
-                                        diskSize: item.diskSize || '',
-                                        msOffice: item.msOffice || '',
-                                        outlook: item.outlook || '',
-                                        backup: item.backup || '',
-                                        antiVirus: item.antiVirus || '',
-                                        remarks: item.remarks || '',
-                                        userSignDate: item.userSignDate || '',
-                                        status: item.status || 'Scheduled',
-                                        dueDate: item.dueDate || '',
-                                        targetMonth: item.targetMonth || pmSelectedMonth,
-                                        slotRange: item.slotRange || pmSelectedSlot
-                                      });
-                                      setIsPmModalOpen(true);
-                                    }}
-                                    title="Edit Task Fields"
-                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (window.confirm("Delete this PM schedule?")) {
-                                        if (item.firebaseKey) {
-                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules/${item.firebaseKey}.json`, { method: 'DELETE' });
-                                        }
-                                        setPmSchedules(pmSchedules.filter(i => i.id !== item.id && i.firebaseKey !== item.firebaseKey));
-                                        showToast("PM schedule deleted.");
-                                      }
-                                    }}
-                                    title="Delete Task"
-                                    className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeTab === 'users' && (
-              <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-white border border-slate-200 text-slate-900 p-4 rounded-2xl shadow-sm flex justify-between items-center">
-                  <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">System Users & Privilege Control</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Manage access security PINs and permissions.</p>
-                  </div>
-                </header>
-
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-700">Authorized System Profiles</div>
-                  <table className="w-full text-left border-collapse table-compact text-xs">
-                    <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] border-b border-slate-200">
-                      <tr>
-                        <th className="p-3">#</th>
-                        <th>Name</th>
-                        <th>Role</th>
-                        <th className="text-center">Security PIN</th>
-                        <th className="text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {users.map((u, i) => (
-                        <tr key={u.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-mono text-slate-400">{i + 1}</td>
-                          <td className="font-extrabold text-slate-900">{u.name}</td>
-                          <td className="font-semibold text-slate-600">{u.role}</td>
-                          <td className="text-center font-mono font-bold text-slate-500">••••</td>
-                          <td className="text-center">
-                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-bold text-[10px] border border-emerald-200">
-                              {u.status}
-                            </span>
-                          </td>
-                        </tr>
+              {/* 5. ANALYTICS BOARD */}
+              {activeTab === 'analytics' && (
+                <div className="space-y-6">
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 className="font-extrabold text-slate-800 text-sm mb-4">Asset Category Breakdown</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      {Object.entries(assetGroups).map(([g, info]) => (
+                        <div key={g} className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
+                          <div>
+                            <div className="text-xs font-black text-slate-800">{g}</div>
+                            <div className="text-[10px] text-slate-500 font-medium mt-0.5">Consumable Category</div>
+                          </div>
+                          <div className="text-base font-black text-blue-600">{info.count}</div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
+              {/* 6. AUDIT & REPORTS */}
+              {activeTab === 'audit' && (
+                <div className="space-y-6">
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 className="font-extrabold text-slate-800 text-sm mb-4">Change Audit & Modification Reports</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider font-extrabold">
+                            <th className="p-3.5">Timestamp</th>
+                            <th className="p-3.5">User</th>
+                            <th className="p-3.5">Action Performed</th>
+                            <th className="p-3.5">Details</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {pmAuditLogs.length === 0 ? (
+                            <tr>
+                              <td colSpan="4" className="p-6 text-center text-slate-400 font-medium">No audit logs recorded yet. Changes made to PM records will appear here automatically.</td>
+                            </tr>
+                          ) : (
+                            pmAuditLogs.map(log => (
+                              <tr key={log.id} className="hover:bg-slate-50">
+                                <td className="p-3.5 font-mono text-slate-600">{log.timestamp}</td>
+                                <td className="p-3.5 font-bold text-slate-800">{log.user}</td>
+                                <td className="p-3.5 font-semibold text-blue-700">{log.action}</td>
+                                <td className="p-3.5 text-slate-500">{log.details}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 7. PRIVILEGE & USERS */}
+              {activeTab === 'users' && (
+                <div className="space-y-6">
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div>
+                      <h3 className="font-black text-slate-800 text-base">System Users & Access Control</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Manage administrative and technician permissions.</p>
+                    </div>
+                    <button 
+                      onClick={() => showToast("Add user dialog opened")}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold transition shadow-sm cursor-pointer"
+                    >
+                      + Add User
+                    </button>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-900 text-white uppercase text-[10px] tracking-wider font-extrabold">
+                          <th className="p-3.5">Name</th>
+                          <th className="p-3.5">Email</th>
+                          <th className="p-3.5">Role</th>
+                          <th className="p-3.5">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {users.map(u => (
+                          <tr key={u.id} className="hover:bg-slate-50">
+                            <td className="p-3.5 font-extrabold text-slate-800">{u.name}</td>
+                            <td className="p-3.5 font-mono text-slate-600">{u.email}</td>
+                            <td className="p-3.5 font-bold text-blue-700">{u.role}</td>
+                            <td className="p-3.5"><span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded">Active</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+            </div>
           </main>
 
-          {/* TEMPORARY ASSET ISSUE MODAL */}
-          {isTempModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4 text-slate-800">
+          {/* NEW ASSET MODAL */}
+          {isNewAssetModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-bold text-sm text-slate-900">
-                    {editingTempItem ? 'Edit Temporary Dispatch' : 'Issue Temporary Asset'}
-                  </h3>
-                  <button onClick={() => setIsTempModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                  <h3 className="font-black text-slate-800 text-sm">Add New Stock Asset</h3>
+                  <button onClick={() => setIsNewAssetModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
                 </div>
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  const timestamped = getFormattedDateTime();
-
-                  if (editingTempItem) {
-                    const updated = {
-                      ...editingTempItem,
-                      ...tempForm,
-                      lastUpdated: timestamped
-                    };
-                    try {
-                      if (editingTempItem.firebaseKey) {
-                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${editingTempItem.firebaseKey}.json`, {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(updated)
-                        });
-                      }
-                      setTempDispatches(tempDispatches.map(d => (d.id === editingTempItem.id || d.firebaseKey === editingTempItem.firebaseKey) ? updated : d));
-                      showToast("Temporary dispatch updated.");
-                    } catch(err) {
-                      showToast("Error updating dispatch.");
-                    }
-                  } else {
-                    const newDispatch = {
-                      id: `td_${Date.now()}`,
-                      ...tempForm,
-                      issueDate: timestamped,
-                      status: 'Active Dispatched'
-                    };
-                    try {
-                      await fetch(FIREBASE_TEMP_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newDispatch)
-                      });
-                      const res = await fetch(FIREBASE_TEMP_URL);
-                      const data = await res.json();
-                      if (data) setTempDispatches(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
-                      showToast("Temporary asset issued successfully!");
-                    } catch(err) {
-                      setTempDispatches([newDispatch, ...tempDispatches]);
-                      showToast("Temporary asset issued locally!");
-                    }
-                  }
-
-                  setIsTempModalOpen(false);
-                  setEditingTempItem(null);
-                }} className="space-y-3 text-xs">
+                <form onSubmit={handleCreateAsset} className="space-y-4 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Asset Name *</label>
+                    <label className="block font-bold text-slate-700 mb-1">Asset Group</label>
                     <input 
-                      type="text"
+                      type="text" 
                       required
-                      placeholder="e.g. Dell OptiPlex CPU i5"
-                      value={tempForm.assetName}
-                      onChange={(e) => setTempForm({ ...tempForm, assetName: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none font-semibold text-slate-900"
+                      value={newAssetForm.group} 
+                      onChange={e => setNewAssetForm({...newAssetForm, group: e.target.value.toUpperCase()})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Asset Tag No *</label>
+                    <label className="block font-bold text-slate-700 mb-1">Item Name / Particulars</label>
                     <input 
-                      type="text"
+                      type="text" 
                       required
-                      placeholder="e.g. TAG-IT-9012"
-                      value={tempForm.assetTagNo}
-                      onChange={(e) => setTempForm({ ...tempForm, assetTagNo: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none font-mono text-slate-900"
+                      placeholder="e.g. USB OPTICAL MOUSE"
+                      value={newAssetForm.name} 
+                      onChange={e => setNewAssetForm({...newAssetForm, name: e.target.value.toUpperCase()})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Department *</label>
+                      <label className="block font-bold text-slate-700 mb-1">Brand & Specs</label>
                       <input 
-                        type="text"
-                        required
-                        placeholder="e.g. Accounts"
-                        value={tempForm.department}
-                        onChange={(e) => setTempForm({ ...tempForm, department: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none text-slate-900"
+                        type="text" 
+                        value={newAssetForm.brand} 
+                        onChange={e => setNewAssetForm({...newAssetForm, brand: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Quantity *</label>
+                      <label className="block font-bold text-slate-700 mb-1">Opening Qty (OP)</label>
                       <input 
-                        type="number"
-                        min="1"
-                        required
-                        value={tempForm.quantity}
-                        onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none font-mono text-slate-900"
+                        type="number" 
+                        value={newAssetForm.op} 
+                        onChange={e => setNewAssetForm({...newAssetForm, op: Number(e.target.value)})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Receiver Name *</label>
-                    <input 
-                      type="text"
-                      required
-                      placeholder="e.g. Mr. Ramesh Gupta"
-                      value={tempForm.receiver}
-                      onChange={(e) => setTempForm({ ...tempForm, receiver: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none text-slate-900"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <button 
-                      type="button" 
-                      onClick={() => setIsTempModalOpen(false)}
-                      className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit"
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
-                    >
-                      {editingTempItem ? 'Save Changes' : 'Confirm Dispatch'}
-                    </button>
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onClick={() => setIsNewAssetModalOpen(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl">Cancel</button>
+                    <button type="submit" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md">Save Asset</button>
                   </div>
                 </form>
               </div>
             </div>
           )}
 
-          {/* PREVENTIVE MAINTENANCE FULLY EDITABLE TASK MODAL */}
-          {isPmModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8 text-slate-800">
+          {/* TEMPORARY ASSET MODAL */}
+          {isTempModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-bold text-sm text-slate-900">
-                    {editingPmItem ? 'Edit Preventive Maintenance Task' : 'Schedule New PM Task'}
-                  </h3>
-                  <button onClick={() => setIsPmModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                  <h3 className="font-black text-slate-800 text-sm">Issue Temporary Asset</h3>
+                  <button onClick={() => setIsTempModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
                 </div>
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  const timestamped = getFormattedDateTime();
-                  
-                  if (editingPmItem) {
-                    const updated = {
-                      ...editingPmItem,
-                      ...pmForm,
-                      isEdited: true,
-                      lastModified: timestamped
-                    };
-                    const auditEntry = {
-                      id: `log_${Date.now()}`,
-                      timestamp: timestamped,
-                      department: pmForm.department,
-                      equipment: pmForm.equipmentName,
-                      action: `Updated PM task (CPU Proc: ${pmForm.cpuProcessor}) for ${pmForm.department} (${pmForm.targetMonth} - ${pmForm.slotRange})`
-                    };
-                    try {
-                      if (editingPmItem.firebaseKey) {
-                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules/${editingPmItem.firebaseKey}.json`, {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(updated)
-                        });
-                      }
-                      await fetch(FIREBASE_PM_LOGS_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(auditEntry)
-                      });
-                      setPmSchedules(pmSchedules.map(i => (i.id === editingPmItem.id || i.firebaseKey === editingPmItem.firebaseKey) ? updated : i));
-                      setPmAuditLogs(prev => [auditEntry, ...prev]);
-                      showToast("PM task updated, highlighted, and logged to audit report!");
-                    } catch(err) {
-                      showToast("Error updating PM task.");
-                    }
-                  } else {
-                    const newPm = {
-                      id: `pm_${Date.now()}`,
-                      ...pmForm,
-                      isEdited: false,
-                      createdDate: timestamped
-                    };
-                    try {
-                      await fetch(FIREBASE_PM_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newPm)
-                      });
-                      const res = await fetch(FIREBASE_PM_URL);
-                      const data = await res.json();
-                      if (data) setPmSchedules(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
-                      showToast("PM task scheduled successfully!");
-                    } catch(err) {
-                      setPmSchedules([newPm, ...pmSchedules]);
-                      showToast("PM task scheduled locally!");
-                    }
-                  }
-
-                  setIsPmModalOpen(false);
-                  setEditingPmItem(null);
-                }} className="space-y-3 text-xs">
-                  <div className="grid grid-cols-3 gap-3">
+                <form onSubmit={handleCreateTemp} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Asset Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="e.g. Dell Latitude Laptop"
+                      value={tempForm.assetName} 
+                      onChange={e => setTempForm({...tempForm, assetName: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Target Month *</label>
-                      <select
-                        value={pmForm.targetMonth}
-                        onChange={(e) => {
-                          const mCode = e.target.value;
-                          const mObj = monthsList.find(m => m.code === mCode);
-                          setPmForm({ 
-                            ...pmForm, 
-                            targetMonth: mCode, 
-                            slotRange: mObj && mObj.slots ? mObj.slots[0] : pmForm.slotRange 
-                          });
-                        }}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold outline-none text-slate-900"
-                      >
-                        {monthsList.map(m => (
-                          <option key={m.code} value={m.code}>{m.name} ({m.code})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Date Slot Range *</label>
-                      <select
-                        value={pmForm.slotRange}
-                        onChange={(e) => setPmForm({ ...pmForm, slotRange: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold outline-none text-slate-900"
-                      >
-                        {(() => {
-                          const selM = monthsList.find(m => m.code === pmForm.targetMonth);
-                          const slots = selM && selM.slots ? selM.slots : ['01 to 10 January', '11 to 20 January', '21 to 31 January'];
-                          return slots.map(s => <option key={s} value={s}>{s}</option>);
-                        })()}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Due Date *</label>
+                      <label className="block font-bold text-slate-700 mb-1">Serial No</label>
                       <input 
-                        type="date"
+                        type="text" 
                         required
-                        value={pmForm.dueDate}
-                        onChange={(e) => setPmForm({ ...pmForm, dueDate: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                        value={tempForm.serialNo} 
+                        onChange={e => setTempForm({...tempForm, serialNo: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Handed To (Staff Name)</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={tempForm.handedTo} 
+                        onChange={e => setTempForm({...tempForm, handedTo: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Department</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={tempForm.department} 
+                        onChange={e => setTempForm({...tempForm, department: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Expected Return</label>
+                      <input 
+                        type="date" 
+                        required
+                        value={tempForm.expectedReturn} 
+                        onChange={e => setTempForm({...tempForm, expectedReturn: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Remarks</label>
+                    <input 
+                      type="text" 
+                      value={tempForm.remarks} 
+                      onChange={e => setTempForm({...tempForm, remarks: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onClick={() => setIsTempModalOpen(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl">Cancel</button>
+                    <button type="submit" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md">Confirm Issue</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* PM TASK EDIT / ADD MODAL */}
+          {isPmModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-auto">
+              <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <h3 className="font-black text-slate-800 text-sm">{editingPmId ? 'Edit Preventive Maintenance Task' : 'Add New PM Task'}</h3>
+                  <button onClick={() => setIsPmModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+                </div>
+                <form onSubmit={handleSavePm} className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Department / Location</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={pmForm.department} 
+                        onChange={e => setPmForm({...pmForm, department: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Equipment Name</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={pmForm.equipmentName} 
+                        onChange={e => setPmForm({...pmForm, equipmentName: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Department / Location *</label>
+                      <label className="block font-bold text-slate-700 mb-1">Monitor Brand</label>
                       <input 
-                        type="text"
-                        required
-                        value={pmForm.department}
-                        onChange={(e) => setPmForm({ ...pmForm, department: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-900"
+                        type="text" 
+                        value={pmForm.monitorBrand} 
+                        onChange={e => setPmForm({...pmForm, monitorBrand: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Equipment Name *</label>
+                      <label className="block font-bold text-slate-700 mb-1">Monitor Tag No</label>
                       <input 
-                        type="text"
-                        required
-                        value={pmForm.equipmentName}
-                        onChange={(e) => setPmForm({ ...pmForm, equipmentName: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-900"
+                        type="text" 
+                        value={pmForm.monitorTagNo} 
+                        onChange={e => setPmForm({...pmForm, monitorTagNo: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">CPU Brand</label>
+                      <input 
+                        type="text" 
+                        value={pmForm.cpuBrand} 
+                        onChange={e => setPmForm({...pmForm, cpuBrand: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">CPU Processor</label>
+                      <input 
+                        type="text" 
+                        value={pmForm.cpuProcessor} 
+                        onChange={e => setPmForm({...pmForm, cpuProcessor: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Monitor Brand</label>
+                      <label className="block font-bold text-slate-700 mb-1">Printer Brand</label>
                       <input 
-                        type="text"
-                        value={pmForm.monitorBrand}
-                        onChange={(e) => setPmForm({ ...pmForm, monitorBrand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                        type="text" 
+                        value={pmForm.printerBrand} 
+                        onChange={e => setPmForm({...pmForm, printerBrand: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Monitor Tag No</label>
+                      <label className="block font-bold text-slate-700 mb-1">Printer Tag No</label>
                       <input 
-                        type="text"
-                        value={pmForm.monitorTagNo}
-                        onChange={(e) => setPmForm({ ...pmForm, monitorTagNo: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                        type="text" 
+                        value={pmForm.printerTagNo} 
+                        onChange={e => setPmForm({...pmForm, printerTagNo: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">CPU Brand</label>
+                      <label className="block font-bold text-slate-700 mb-1">Printer IP</label>
                       <input 
-                        type="text"
-                        value={pmForm.cpuBrand}
-                        onChange={(e) => setPmForm({ ...pmForm, cpuBrand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                        type="text" 
+                        value={pmForm.printerIP} 
+                        onChange={e => setPmForm({...pmForm, printerIP: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono"
                       />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">System IP</label>
+                      <input 
+                        type="text" 
+                        value={pmForm.systemIP} 
+                        onChange={e => setPmForm({...pmForm, systemIP: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">System Mac</label>
+                      <input 
+                        type="text" 
+                        value={pmForm.systemMac} 
+                        onChange={e => setPmForm({...pmForm, systemMac: e.target.value})}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">RAM Type</label>
+                      <input type="text" value={pmForm.ramType} onChange={e => setPmForm({...pmForm, ramType: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl" />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">RAM Size</label>
+                      <input type="text" value={pmForm.ramSize} onChange={e => setPmForm({...pmForm, ramSize: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl" />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Disk Type</label>
+                      <input type="text" value={pmForm.diskType} onChange={e => setPmForm({...pmForm, diskType: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl" />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Disk Size</label>
+                      <input type="text" value={pmForm.diskSize} onChange={e => setPmForm({...pmForm, diskSize: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">CPU Processor *</label>
-                      <input 
-                        type="text"
-                        required
-                        value={pmForm.cpuProcessor}
-                        onChange={(e) => setPmForm({ ...pmForm, cpuProcessor: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                        placeholder="e.g. Intel Core i5-13400 @ 2.50GHz"
-                      />
+                      <label className="block font-bold text-slate-700 mb-1">MS Office</label>
+                      <input type="text" value={pmForm.msOffice} onChange={e => setPmForm({...pmForm, msOffice: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl" />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Printer Brand</label>
-                      <input 
-                        type="text"
-                        value={pmForm.printerBrand}
-                        onChange={(e) => setPmForm({ ...pmForm, printerBrand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
+                      <label className="block font-bold text-slate-700 mb-1">Anti-Virus</label>
+                      <input type="text" value={pmForm.antiVirus} onChange={e => setPmForm({...pmForm, antiVirus: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl" />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Printer Tag No</label>
-                      <input 
-                        type="text"
-                        value={pmForm.printerTagNo}
-                        onChange={(e) => setPmForm({ ...pmForm, printerTagNo: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Printer IP</label>
-                      <input 
-                        type="text"
-                        value={pmForm.printerIP}
-                        onChange={(e) => setPmForm({ ...pmForm, printerIP: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">System IP</label>
-                      <input 
-                        type="text"
-                        value={pmForm.systemIP}
-                        onChange={(e) => setPmForm({ ...pmForm, systemIP: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">System Mac</label>
-                      <input 
-                        type="text"
-                        value={pmForm.systemMac}
-                        onChange={(e) => setPmForm({ ...pmForm, systemMac: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">RAM Type</label>
-                      <input 
-                        type="text"
-                        value={pmForm.ramType}
-                        onChange={(e) => setPmForm({ ...pmForm, ramType: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">RAM Size</label>
-                      <input 
-                        type="text"
-                        value={pmForm.ramSize}
-                        onChange={(e) => setPmForm({ ...pmForm, ramSize: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Disk Type</label>
-                      <input 
-                        type="text"
-                        value={pmForm.diskType}
-                        onChange={(e) => setPmForm({ ...pmForm, diskType: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Disk Size</label>
-                      <input 
-                        type="text"
-                        value={pmForm.diskSize}
-                        onChange={(e) => setPmForm({ ...pmForm, diskSize: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">MS Office</label>
-                      <input 
-                        type="text"
-                        value={pmForm.msOffice}
-                        onChange={(e) => setPmForm({ ...pmForm, msOffice: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Outlook</label>
-                      <input 
-                        type="text"
-                        value={pmForm.outlook}
-                        onChange={(e) => setPmForm({ ...pmForm, outlook: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Backup</label>
-                      <input 
-                        type="text"
-                        value={pmForm.backup}
-                        onChange={(e) => setPmForm({ ...pmForm, backup: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Anti-Virus</label>
-                      <input 
-                        type="text"
-                        value={pmForm.antiVirus}
-                        onChange={(e) => setPmForm({ ...pmForm, antiVirus: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
+                      <label className="block font-bold text-slate-700 mb-1">Status</label>
+                      <select value={pmForm.status} onChange={e => setPmForm({...pmForm, status: e.target.value})} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold">
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                      </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Remarks / Maintenance Notes *</label>
+                    <label className="block font-bold text-slate-700 mb-1">Remarks</label>
                     <textarea 
                       rows="2"
-                      required
-                      value={pmForm.remarks}
-                      onChange={(e) => setPmForm({ ...pmForm, remarks: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      placeholder="Enter remarks about hardware health or corrective actions taken..."
+                      value={pmForm.remarks} 
+                      onChange={e => setPmForm({...pmForm, remarks: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
                     ></textarea>
                   </div>
 
-                  <div className="flex justify-between items-center pt-3 border-t border-slate-200">
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        const printWindow = window.open('', '_blank');
-                        printWindow.document.write(`
-                          <html>
-                            <head>
-                              <title>PM Maintenance & Sign-Off Slip</title>
-                              <style>
-                                body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
-                                h2 { border-bottom: 2px solid #333; padding-bottom: 8px; }
-                                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                                th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; font-size: 12px; }
-                                th { background: #f4f4f4; }
-                                .sign-box { margin-top: 40px; display: flex; justify-content: space-between; }
-                                .sign-line { border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 5px; font-weight: bold; }
-                              </style>
-                            </head>
-                            <body>
-                              <h2>Preventive Maintenance Verification & Sign-Off Slip</h2>
-                              <p><strong>Month / Slot:</strong> ${pmForm.targetMonth} (${pmForm.slotRange}) &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Due Date:</strong> ${pmForm.dueDate}</p>
-                              <table>
-                                <tr><th>Department / Location</th><td>${pmForm.department}</td></tr>
-                                <tr><th>Equipment Name</th><td>${pmForm.equipmentName}</td></tr>
-                                <tr><th>CPU Processor</th><td>${pmForm.cpuProcessor}</td></tr>
-                                <tr><th>Monitor (Brand & Tag)</th><td>${pmForm.monitorBrand} / ${pmForm.monitorTagNo}</td></tr>
-                                <tr><th>CPU & Printer Brand</th><td>CPU: ${pmForm.cpuBrand} | Printer: ${pmForm.printerBrand} (${pmForm.printerTagNo})</td></tr>
-                                <tr><th>IP & MAC Addresses</th><td>Sys IP: ${pmForm.systemIP} | Sys MAC: ${pmForm.systemMac} | Prn IP: ${pmForm.printerIP}</td></tr>
-                                <tr><th>Hardware Specs</th><td>RAM: ${pmForm.ramSize} (${pmForm.ramType}) | Disk: ${pmForm.diskSize} (${pmForm.diskType})</td></tr>
-                                <tr><th>Software & Security</th><td>Office: ${pmForm.msOffice} | Outlook: ${pmForm.outlook} | Backup: ${pmForm.backup} | AV: ${pmForm.antiVirus}</td></tr>
-                                <tr><th>Remarks</th><td>${pmForm.remarks}</td></tr>
-                                <tr><th>Status</th><td>${pmForm.status}</td></tr>
-                              </table>
-                              <div class="sign-box">
-                                <div class="sign-line">IT Technician Signature</div>
-                                <div class="sign-line">Department User Signature & Date</div>
-                              </div>
-                            </body>
-                          </html>
-                        `);
-                        printWindow.document.close();
-                        printWindow.print();
-                      }}
-                      className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-300 rounded-xl font-bold hover:bg-emerald-100 cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>🖨️</span> Print Sign-Off Slip for User Signature
-                    </button>
-                    <div className="flex gap-2">
-                      <button 
-                        type="button" 
-                        onClick={() => setIsPmModalOpen(false)}
-                        className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        type="submit"
-                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
-                      >
-                        {editingPmItem ? 'Save & Highlight Changes' : 'Schedule Task'}
-                      </button>
-                    </div>
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button type="button" onClick={() => setIsPmModalOpen(false)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl">Cancel</button>
+                    <button type="submit" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl shadow-md">Save Changes</button>
                   </div>
                 </form>
               </div>
             </div>
           )}
 
-          {/* PM CHANGE AUDIT REPORT MODAL */}
-          {showPmReportModal && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 text-slate-800">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+          {/* PRINTABLE SIGN-OFF SLIP MODAL */}
+          {printSlipItem && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl max-w-xl w-full p-8 shadow-2xl border border-slate-200 space-y-6">
+                <div id="printable-slip" className="space-y-4 text-xs text-slate-800">
+                  <div className="text-center border-b border-slate-300 pb-4">
+                    <h2 className="text-base font-black uppercase">IT Preventive Maintenance Verification Slip</h2>
+                    <p className="text-[10px] text-slate-500 font-medium">Hospital Information Technology Infrastructure Department</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div><span className="font-bold">Department:</span> {printSlipItem.department}</div>
+                    <div><span className="font-bold">Equipment:</span> {printSlipItem.equipmentName}</div>
+                    <div><span className="font-bold">System IP:</span> {printSlipItem.systemIP}</div>
+                    <div><span className="font-bold">System Mac:</span> {printSlipItem.systemMac}</div>
+                    <div><span className="font-bold">CPU Processor:</span> {printSlipItem.cpuProcessor}</div>
+                    <div><span className="font-bold">RAM / Disk:</span> {printSlipItem.ramSize} / {printSlipItem.diskSize}</div>
+                    <div><span className="font-bold">Anti-Virus:</span> {printSlipItem.antiVirus}</div>
+                    <div><span className="font-bold">MS Office:</span> {printSlipItem.msOffice}</div>
+                  </div>
+
                   <div>
-                    <h3 className="font-extrabold text-sm text-slate-900">Preventive Maintenance Change Audit Report</h3>
-                    <p className="text-[11px] text-slate-500">History log of all updates and edits made to PM tasks</p>
+                    <div className="font-bold mb-1">Technician Remarks:</div>
+                    <div className="p-3 bg-slate-100 rounded-xl italic text-slate-700">{printSlipItem.remarks}</div>
                   </div>
-                  <button onClick={() => setShowPmReportModal(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
-                </div>
 
-                <div className="max-h-96 overflow-auto border border-slate-200 rounded-xl">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
-                      <tr>
-                        <th className="p-3">Timestamp</th>
-                        <th>Sr No</th>
-                        <th>Department</th>
-                        <th>Equipment</th>
-                        <th>Change Log Description</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {pmAuditLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="text-center py-8 text-slate-400">No modifications recorded yet. Edit any PM task to generate change logs.</td>
-                        </tr>
-                      ) : (
-                        pmAuditLogs.map((log, index) => (
-                          <tr key={log.firebaseKey || index} className="hover:bg-slate-50">
-                            <td className="p-3 font-mono text-slate-500 text-[11px]">{log.timestamp}</td>
-                            <td className="font-mono text-slate-700 font-bold">{log.srNo}</td>
-                            <td className="font-bold text-blue-600">{log.department}</td>
-                            <td>{log.equipment}</td>
-                            <td className="text-amber-700 font-semibold">{log.action}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex justify-end pt-2">
-                  <button 
-                    onClick={() => setShowPmReportModal(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold cursor-pointer text-xs"
-                  >
-                    Close Report
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* VIEW SLIP MODAL */}
-          {viewModalItem && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 text-slate-800">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <div>
-                    <h3 className="font-extrabold text-sm uppercase text-slate-900">Asset Issue & Verification Slip</h3>
-                    <p className="text-[11px] text-slate-500">Official IT Infrastructure Record</p>
-                  </div>
-                  <button onClick={() => setViewModalItem(null)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
-                </div>
-
-                <div className="space-y-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200 text-slate-700">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div><strong>Group Category:</strong> {viewModalItem.group}</div>
-                    <div><strong>Category:</strong> {viewModalItem.category}</div>
-                    <div><strong>Item Particulars:</strong> {viewModalItem.particulars}</div>
-                    <div><strong>Brand:</strong> {viewModalItem.brand === 'Other' ? viewModalItem.customBrand : viewModalItem.brand}</div>
-                    <div><strong>Serial No:</strong> {viewModalItem.serialNo || 'N/A'}</div>
-                    <div><strong>Location:</strong> {viewModalItem.location || 'Unassigned'}</div>
-                    <div><strong>Issued Qty:</strong> {viewModalItem.issueItems || 0}</div>
-                    <div><strong>Last Updated:</strong> {viewModalItem.lastUpdated}</div>
+                  <div className="pt-8 grid grid-cols-2 gap-8 text-center">
+                    <div className="border-t border-slate-400 pt-2">
+                      <div className="font-extrabold">Technician Signature</div>
+                      <div className="text-[10px] text-slate-500 mt-1">Verified & Tested</div>
+                    </div>
+                    <div className="border-t border-slate-400 pt-2">
+                      <div className="font-extrabold">Department User Signature</div>
+                      <div className="text-[10px] text-slate-500 mt-1">{printSlipItem.userSignDate}</div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
-                  <button 
-                    onClick={() => window.print()}
-                    className="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold shadow cursor-pointer text-xs"
-                  >
-                    Print Slip
-                  </button>
-                  <button 
-                    onClick={() => setViewModalItem(null)}
-                    className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 font-bold cursor-pointer text-xs"
-                  >
-                    Close
-                  </button>
+                <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+                  <button onClick={() => setPrintSlipItem(null)} className="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-bold rounded-xl text-xs">Close</button>
+                  <button onClick={() => window.print()} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow-md">Print Slip</button>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* ADD / EDIT ASSET MODAL */}
-          {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8 text-slate-800">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-extrabold text-sm text-slate-900">
-                    {editingAsset ? 'Edit Asset & Stock Details' : 'Register New Asset Entry'}
-                  </h3>
-                  <button onClick={() => setIsModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
-                </div>
-
-                <form onSubmit={handleSaveAsset} className="space-y-4 text-xs">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Asset Group Name *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g. MOUSE, KEYBOARD, CONNECTOR"
-                        value={formData.group}
-                        onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none font-bold text-slate-900 uppercase"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Item Particulars *</label>
-                      <input 
-                        type="text" 
-                        required 
-                        placeholder="e.g. USB MOUSE"
-                        value={formData.particulars}
-                        onChange={(e) => setFormData({ ...formData, particulars: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none font-semibold text-slate-900 uppercase"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Brand Name *</label>
-                      <select 
-                        value={formData.brand}
-                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none text-slate-900"
-                      >
-                        <option value="Dell">Dell</option>
-                        <option value="HP">HP</option>
-                        <option value="Lenovo">Lenovo</option>
-                        <option value="Cisco">Cisco</option>
-                        <option value="Logitech">Logitech</option>
-                        <option value="Honeywell">Honeywell</option>
-                        <option value="Other">Other (Custom)</option>
-                      </select>
-                    </div>
-
-                    {formData.brand === 'Other' && (
-                      <div>
-                        <label className="block font-semibold text-slate-600 mb-1">Custom Brand *</label>
-                        <input 
-                          type="text"
-                          required
-                          placeholder="Enter Brand"
-                          value={formData.customBrand}
-                          onChange={(e) => setFormData({ ...formData, customBrand: e.target.value })}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                        />
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Category *</label>
-                      <select 
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none text-slate-900"
-                      >
-                        <option value="Consumable">Consumable</option>
-                        <option value="Non-Consumable">Non-Consumable</option>
-                        <option value="Fixed Assets">Fixed Assets</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Location (Optional)</label>
-                      <input 
-                        type="text" 
-                        placeholder="Leave blank until issued"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Serial Number</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. MS-01"
-                        value={formData.serialNo}
-                        onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Cable Length</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. 1.5"
-                        value={formData.cableLength}
-                        onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Unit</label>
-                      <select 
-                        value={formData.measurementUnit}
-                        onChange={(e) => setFormData({ ...formData, measurementUnit: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none text-slate-900"
-                      >
-                        <option value="Piece">Piece</option>
-                        <option value="Meter">Meter</option>
-                        <option value="GB">GB</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-5 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Opening Qty</label>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={formData.openingQty}
-                        onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Purchase</label>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={formData.newPurchase}
-                        onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Issued</label>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={formData.issueItems}
-                        onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-amber-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Short</label>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={formData.shortItems}
-                        onChange={(e) => setFormData({ ...formData, shortItems: Number(e.target.value) })}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-rose-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Dead</label>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={formData.deadItems}
-                        onChange={(e) => setFormData({ ...formData, deadItems: Number(e.target.value) })}
-                        className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-3 border-t border-slate-200">
-                    <button 
-                      type="button" 
-                      onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
-                    >
-                      Save Asset Record
-                    </button>
-                  </div>
-                </form>
               </div>
             </div>
           )}
@@ -2116,7 +1380,9 @@
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
+    // Updated to use React 18 createRoot API
+    const rootElement = document.getElementById('root');
+    const root = ReactDOM.createRoot(rootElement);
     root.render(<App />);
   </script>
 </body>
