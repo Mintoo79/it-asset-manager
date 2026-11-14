@@ -92,7 +92,7 @@
         status: 'Temporary Given' 
       });
 
-      // Preventive Maintenance (PM) 12-Month Chart Plan state in Calendar Order (Jan to Dec) with ALL fields
+      // Preventive Maintenance (PM) 12-Month Chart Plan state in Calendar Order (Jan to Dec) with requested fields
       const [pmSchedules, setPmSchedules] = useState([]);
       const [pmAuditLogs, setPmAuditLogs] = useState([]);
       const [isPmModalOpen, setIsPmModalOpen] = useState(false);
@@ -104,25 +104,27 @@
       const [pmForm, setPmForm] = useState({
         department: 'General Registration',
         equipmentName: 'Desktop PC Workstation',
-        monitorBrand: 'Dell',
-        monitorTagNo: 'MON-TAG-101',
-        cpuBrand: 'Intel i5 / Dell',
+        cpuBrand: 'Dell',
         cpuProcessor: 'Intel Core i5-12400 (2.50GHz)',
+        cpuTag: 'CPU-TAG-101',
+        monitorBrand: 'Dell',
+        monitorTag: 'MON-TAG-101',
         printerBrand: 'HP',
         printerModel: 'HP LaserJet Pro M126nw',
-        printerTagNo: 'PRN-TAG-202',
+        printerTag: 'PRN-TAG-202',
         printerIP: '192.168.1.150',
         systemIP: '192.168.1.50',
         systemMac: '00:1A:2B:3C:4D:5E',
         ramType: 'DDR4',
-        ramSize: '16GB',
-        diskType: 'NVMe SSD',
-        diskSize: '512GB',
+        ramCapacityValue: '16',
+        ramCapacityUnit: 'GB',
+        hddType: 'SSD',
+        hddCapacityValue: '512',
+        hddCapacityUnit: 'GB',
         msOffice: 'Office 2021 Pro Plus',
         outlook: 'Configured & Synced',
         backup: 'Active Daily',
         antiVirus: 'Quick Heal Total Security (Updated)',
-        userSignDate: 'Pending Sign',
         status: 'Scheduled',
         dueDate: '2026-01-05',
         targetMonth: 'Jan',
@@ -954,25 +956,27 @@
                         setPmForm({
                           department: 'General Registration',
                           equipmentName: 'Desktop PC Workstation',
-                          monitorBrand: 'Dell',
-                          monitorTagNo: 'MON-TAG-999',
-                          cpuBrand: 'Intel i5',
+                          cpuBrand: 'Dell',
                           cpuProcessor: 'Intel Core i5-12400 (2.50GHz)',
+                          cpuTag: 'CPU-TAG-999',
+                          monitorBrand: 'Dell',
+                          monitorTag: 'MON-TAG-999',
                           printerBrand: 'HP',
                           printerModel: 'HP LaserJet Pro M126nw',
-                          printerTagNo: 'PRN-TAG-999',
+                          printerTag: 'PRN-TAG-999',
                           printerIP: '192.168.1.200',
                           systemIP: '192.168.1.100',
                           systemMac: 'AA:BB:CC:DD:EE:FF',
                           ramType: 'DDR4',
-                          ramSize: '16GB',
-                          diskType: 'SSD',
-                          diskSize: '512GB',
+                          ramCapacityValue: '16',
+                          ramCapacityUnit: 'GB',
+                          hddType: 'SSD',
+                          hddCapacityValue: '512',
+                          hddCapacityUnit: 'GB',
                           msOffice: 'Office 365 ProPlus',
                           outlook: 'Configured & Synced',
                           backup: 'Active Daily',
                           antiVirus: 'Quick Heal Total Security',
-                          userSignDate: 'Signed',
                           status: 'Scheduled',
                           dueDate: '2026-01-08',
                           targetMonth: pmSelectedMonth,
@@ -998,20 +1002,21 @@
                             "Equipment Name": item.equipmentName,
                             "Target Month": item.targetMonth,
                             "Date Slot": item.slotRange,
-                            "Monitor Brand": item.monitorBrand,
-                            "Monitor Tag No": item.monitorTagNo,
                             "CPU Brand": item.cpuBrand,
                             "CPU Processor": item.cpuProcessor,
+                            "CPU Tag": item.cpuTag,
+                            "Monitor Brand": item.monitorBrand,
+                            "Monitor Tag": item.monitorTag,
                             "Printer Brand": item.printerBrand,
                             "Printer Model": item.printerModel,
-                            "Printer Tag No": item.printerTagNo,
+                            "Printer Tag": item.printerTag,
                             "Printer IP": item.printerIP,
                             "System IP": item.systemIP,
                             "System MAC": item.systemMac,
                             "RAM Type": item.ramType,
-                            "RAM Size": item.ramSize,
-                            "Disk Type": item.diskType,
-                            "Disk Size": item.diskSize,
+                            "RAM Capacity": `${item.ramCapacityValue} ${item.ramCapacityUnit}`,
+                            "HDD/SSD Type": item.hddType,
+                            "HDD/SSD Capacity": `${item.hddCapacityValue} ${item.hddCapacityUnit}`,
                             "MS Office": item.msOffice,
                             "Outlook": item.outlook,
                             "Backup": item.backup,
@@ -1136,7 +1141,8 @@
                         <th>Equipment</th>
                         <th>CPU Processor</th>
                         <th>Printer Model</th>
-                        <th>Monitor Tag No</th>
+                        <th>Monitor Tag</th>
+                        <th>RAM / HDD</th>
                         <th>Printer IP</th>
                         <th>System IP</th>
                         <th>MS Office</th>
@@ -1151,7 +1157,7 @@
                     <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                       {filteredPmSchedules.length === 0 ? (
                         <tr>
-                          <td colSpan="15" className="text-center py-8 text-slate-400 font-medium">
+                          <td colSpan="16" className="text-center py-8 text-slate-400 font-medium">
                             No preventive tasks scheduled for {monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name} ({pmSelectedSlot}). Click "+ Add PM Task" above to add.
                           </td>
                         </tr>
@@ -1166,7 +1172,8 @@
                               <td className="font-extrabold text-slate-900">{item.equipmentName || 'Desktop PC'}</td>
                               <td>{item.cpuProcessor || 'Intel i5'}</td>
                               <td>{item.printerModel || 'HP LaserJet'}</td>
-                              <td className="font-mono text-slate-700">{item.monitorTagNo || 'MON-TAG-01'}</td>
+                              <td className="font-mono text-slate-700">{item.monitorTag || 'MON-TAG-01'}</td>
+                              <td className="font-mono text-[11px] text-slate-600">{item.ramType} ({item.ramCapacityValue}{item.ramCapacityUnit}) / {item.hddType} ({item.hddCapacityValue}{item.hddCapacityUnit})</td>
                               <td className="font-mono text-slate-700">{item.printerIP || 'N/A'}</td>
                               <td className="font-mono text-xs text-slate-700">{item.systemIP || '192.168.1.10'}</td>
                               <td>{item.msOffice || 'Office 2021'}</td>
@@ -1191,25 +1198,27 @@
                                       setPmForm({
                                         department: item.department || '',
                                         equipmentName: item.equipmentName || '',
-                                        monitorBrand: item.monitorBrand || '',
-                                        monitorTagNo: item.monitorTagNo || '',
                                         cpuBrand: item.cpuBrand || '',
                                         cpuProcessor: item.cpuProcessor || '',
+                                        cpuTag: item.cpuTag || '',
+                                        monitorBrand: item.monitorBrand || '',
+                                        monitorTag: item.monitorTag || '',
                                         printerBrand: item.printerBrand || '',
                                         printerModel: item.printerModel || '',
-                                        printerTagNo: item.printerTagNo || '',
+                                        printerTag: item.printerTag || '',
                                         printerIP: item.printerIP || '',
                                         systemIP: item.systemIP || '',
                                         systemMac: item.systemMac || '',
-                                        ramType: item.ramType || '',
-                                        ramSize: item.ramSize || '',
-                                        diskType: item.diskType || '',
-                                        diskSize: item.diskSize || '',
+                                        ramType: item.ramType || 'DDR4',
+                                        ramCapacityValue: item.ramCapacityValue || '16',
+                                        ramCapacityUnit: item.ramCapacityUnit || 'GB',
+                                        hddType: item.hddType || 'SSD',
+                                        hddCapacityValue: item.hddCapacityValue || '512',
+                                        hddCapacityUnit: item.hddCapacityUnit || 'GB',
                                         msOffice: item.msOffice || '',
                                         outlook: item.outlook || '',
                                         backup: item.backup || '',
                                         antiVirus: item.antiVirus || '',
-                                        userSignDate: item.userSignDate || '',
                                         status: item.status || 'Scheduled',
                                         dueDate: item.dueDate || '',
                                         targetMonth: item.targetMonth || pmSelectedMonth,
@@ -1716,7 +1725,7 @@
             </div>
           )}
 
-          {/* PREVENTIVE MAINTENANCE CATEGORY-WISE SEQUENTIAL TASK MODAL */}
+          {/* PREVENTIVE MAINTENANCE RE-ARRANGED HARDWARE & CAPACITY MODAL */}
           {isPmModalOpen && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-5 my-8 text-slate-800">
@@ -1871,41 +1880,19 @@
                     </div>
                   </div>
 
-                  {/* CATEGORY 2: HARDWARE SPECIFICATIONS */}
+                  {/* CATEGORY 2: HARDWARE SPECIFICATIONS & TAGS (EXACT ORDER REQUESTED) */}
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                     <div className="font-extrabold text-blue-600 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                       <span>💻</span> 2. Hardware Specifications & Tags
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block font-semibold text-slate-600 mb-1">Monitor Brand</label>
-                        <input 
-                          type="text"
-                          placeholder="e.g. Dell"
-                          value={pmForm.monitorBrand}
-                          onChange={(e) => setPmForm({ ...pmForm, monitorBrand: e.target.value })}
-                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-semibold text-slate-600 mb-1">Monitor Tag No</label>
-                        <input 
-                          type="text"
-                          placeholder="e.g. MON-TAG-101"
-                          value={pmForm.monitorTagNo}
-                          onChange={(e) => setPmForm({ ...pmForm, monitorTagNo: e.target.value })}
-                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* CPU Brand, CPU Processer, CPU Tag */}
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">CPU Brand</label>
                         <input 
                           type="text"
-                          placeholder="e.g. Dell / Intel"
+                          placeholder="e.g. Dell / HP"
                           value={pmForm.cpuBrand}
                           onChange={(e) => setPmForm({ ...pmForm, cpuBrand: e.target.value })}
                           className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
@@ -1922,8 +1909,43 @@
                           className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-mono text-[11px]"
                         />
                       </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">CPU Tag</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. CPU-TAG-101"
+                          value={pmForm.cpuTag}
+                          onChange={(e) => setPmForm({ ...pmForm, cpuTag: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
+                        />
+                      </div>
                     </div>
 
+                    {/* Monitor Brand, Monitor Tag */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Monitor Brand</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. Dell"
+                          value={pmForm.monitorBrand}
+                          onChange={(e) => setPmForm({ ...pmForm, monitorBrand: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Monitor Tag</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. MON-TAG-101"
+                          value={pmForm.monitorTag}
+                          onChange={(e) => setPmForm({ ...pmForm, monitorTag: e.target.value })}
+                          className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Printer Brand, Printer Model, Printer Tag */}
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Printer Brand</label>
@@ -1947,17 +1969,18 @@
                         />
                       </div>
                       <div>
-                        <label className="block font-semibold text-slate-600 mb-1">Printer Tag No</label>
+                        <label className="block font-semibold text-slate-600 mb-1">Printer Tag</label>
                         <input 
                           type="text"
                           placeholder="e.g. PRN-TAG-202"
-                          value={pmForm.printerTagNo}
-                          onChange={(e) => setPmForm({ ...pmForm, printerTagNo: e.target.value })}
+                          value={pmForm.printerTag}
+                          onChange={(e) => setPmForm({ ...pmForm, printerTag: e.target.value })}
                           className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
                         />
                       </div>
                     </div>
 
+                    {/* Printer IP, System IP, System Mac */}
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Printer IP</label>
@@ -1980,7 +2003,7 @@
                         />
                       </div>
                       <div>
-                        <label className="block font-semibold text-slate-600 mb-1">System MAC</label>
+                        <label className="block font-semibold text-slate-600 mb-1">System Mac</label>
                         <input 
                           type="text"
                           placeholder="e.g. 00:1A:2B..."
@@ -1988,6 +2011,71 @@
                           onChange={(e) => setPmForm({ ...pmForm, systemMac: e.target.value })}
                           className="w-full p-2.5 bg-white border border-slate-300 rounded-lg font-mono text-slate-900"
                         />
+                      </div>
+                    </div>
+
+                    {/* RAM & HDD CAPACITY WITH GB/TB LIST DROPDOWN */}
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">RAM (Type & Capacity) *</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <select
+                            value={pmForm.ramType}
+                            onChange={(e) => setPmForm({ ...pmForm, ramType: e.target.value })}
+                            className="p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900"
+                          >
+                            <option value="DDR3">DDR3</option>
+                            <option value="DDR4">DDR4</option>
+                            <option value="DDR5">DDR5</option>
+                          </select>
+                          <input 
+                            type="number"
+                            min="1"
+                            placeholder="Qty"
+                            value={pmForm.ramCapacityValue}
+                            onChange={(e) => setPmForm({ ...pmForm, ramCapacityValue: e.target.value })}
+                            className="p-2.5 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-900"
+                          />
+                          <select
+                            value={pmForm.ramCapacityUnit}
+                            onChange={(e) => setPmForm({ ...pmForm, ramCapacityUnit: e.target.value })}
+                            className="p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900"
+                          >
+                            <option value="GB">GB</option>
+                            <option value="TB">TB</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">HDD / SSD (Type & Capacity) *</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <select
+                            value={pmForm.hddType}
+                            onChange={(e) => setPmForm({ ...pmForm, hddType: e.target.value })}
+                            className="p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900"
+                          >
+                            <option value="SSD">SSD</option>
+                            <option value="HDD">HDD</option>
+                            <option value="NVMe">NVMe</option>
+                          </select>
+                          <input 
+                            type="number"
+                            min="1"
+                            placeholder="Qty"
+                            value={pmForm.hddCapacityValue}
+                            onChange={(e) => setPmForm({ ...pmForm, hddCapacityValue: e.target.value })}
+                            className="p-2.5 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-900"
+                          />
+                          <select
+                            value={pmForm.hddCapacityUnit}
+                            onChange={(e) => setPmForm({ ...pmForm, hddCapacityUnit: e.target.value })}
+                            className="p-2.5 bg-white border border-slate-300 rounded-lg font-bold text-slate-900"
+                          >
+                            <option value="GB">GB</option>
+                            <option value="TB">TB</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
