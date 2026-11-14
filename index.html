@@ -95,26 +95,28 @@
         department: 'General Registration',
         equipmentName: 'Desktop PC Workstation',
         monitorBrand: 'Dell',
-        monitorTagNo: 'MON-TAG-101',
-        cpuBrand: 'Intel i5 / Dell',
+        monitorTagNo: 'MON-TAG-999',
+        cpuBrand: 'Intel i5',
+        cpuProcessor: 'Intel Core i5-13400 @ 2.50GHz',
         printerBrand: 'HP',
-        printerTagNo: 'PRN-TAG-202',
-        printerIP: '192.168.1.150',
-        systemIP: '192.168.1.50',
-        systemMac: '00:1A:2B:3C:4D:5E',
+        printerTagNo: 'PRN-TAG-999',
+        printerIP: '192.168.1.200',
+        systemIP: '192.168.1.100',
+        systemMac: 'AA:BB:CC:DD:EE:FF',
         ramType: 'DDR4',
         ramSize: '16GB',
-        diskType: 'NVMe SSD',
+        diskType: 'SSD',
         diskSize: '512GB',
-        msOffice: 'Office 2021 Pro Plus',
-        outlook: 'Configured & Synced',
-        backup: 'Active Daily',
-        antiVirus: 'Quick Heal (Updated)',
+        msOffice: 'Office 365',
+        outlook: 'Configured',
+        backup: 'Active',
+        antiVirus: 'Updated',
+        remarks: 'All preventive checks completed successfully in pristine condition.',
         userSignDate: 'Pending Sign',
         status: 'Scheduled',
-        dueDate: '2026-01-05',
-        targetMonth: 'Jan',
-        slotRange: '01 to 10 January'
+        dueDate: '2026-01-08',
+        targetMonth: pmSelectedMonth,
+        slotRange: pmSelectedSlot || '01 to 10 January'
       });
 
       const monthsList = [
@@ -903,7 +905,89 @@
                 </header>
 
                 <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">1. Select Month (All 12 Months Available)</h3>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">1. Select Month (All 12 Months Available)</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const csvHeader = "Department,Equipment,Monitor Brand,Monitor Tag,CPU Brand,CPU Processor,Printer Brand,Printer Tag,Printer IP,System IP,System Mac,RAM Type,RAM Size,Disk Type,Disk Size,MS Office,Outlook,Backup,Anti-Virus,Remarks,Due Date,Status\n";
+                          const csvRows = filteredPmSchedules.map(i => 
+                            `"${i.department || ''}","${i.equipmentName || ''}","${i.monitorBrand || ''}","${i.monitorTagNo || ''}","${i.cpuBrand || ''}","${i.cpuProcessor || ''}","${i.printerBrand || ''}","${i.printerTagNo || ''}","${i.printerIP || ''}","${i.systemIP || ''}","${i.systemMac || ''}","${i.ramType || ''}","${i.ramSize || ''}","${i.diskType || ''}","${i.diskSize || ''}","${i.msOffice || ''}","${i.outlook || ''}","${i.backup || ''}","${i.antiVirus || ''}","${i.remarks || ''}","${i.dueDate || ''}","${i.status || ''}"`
+                          ).join("\n");
+                          const blob = new Blob([csvHeader + csvRows], { type: 'text/csv;charset=utf-8;' });
+                          const url = URL.createObjectURL(blob);
+                          const dl = document.createElement('a');
+                          dl.setAttribute("href", url);
+                          dl.setAttribute("download", `PM_Schedule_${pmSelectedMonth}_${pmSelectedSlot}.csv`);
+                          dl.click();
+                          showToast("PM schedule exported as Excel/CSV successfully!");
+                        }}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span>📥</span> Export Excel/CSV
+                      </button>
+                      <label className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1.5 shadow-sm">
+                        <span>📤</span> Import Excel/CSV
+                        <input 
+                          type="file" 
+                          accept=".csv,.xlsx,.xls" 
+                          className="hidden" 
+                          onChange={(e) => {
+                            const fileReader = new FileReader();
+                            if (e.target.files[0]) {
+                              fileReader.readAsText(e.target.files[0], "UTF-8");
+                              fileReader.onload = event => {
+                                try {
+                                  const text = event.target.result;
+                                  const lines = text.split("\n");
+                                  const newItems = [];
+                                  for(let i=1; i<lines.length; i++) {
+                                    if(!lines[i].trim()) continue;
+                                    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                                    if(cols.length >= 2) {
+                                      newItems.push({
+                                        id: `pm_imp_${Date.now()}_${i}`,
+                                        department: cols[0]?.replace(/"/g,'') || 'General Reg',
+                                        equipmentName: cols[1]?.replace(/"/g,'') || 'Desktop',
+                                        monitorBrand: cols[2]?.replace(/"/g,'') || 'Dell',
+                                        monitorTagNo: cols[3]?.replace(/"/g,'') || '',
+                                        cpuBrand: cols[4]?.replace(/"/g,'') || 'Intel',
+                                        cpuProcessor: cols[5]?.replace(/"/g,'') || 'Intel i5',
+                                        printerBrand: cols[6]?.replace(/"/g,'') || 'HP',
+                                        printerTagNo: cols[7]?.replace(/"/g,'') || '',
+                                        printerIP: cols[8]?.replace(/"/g,'') || '',
+                                        systemIP: cols[9]?.replace(/"/g,'') || '',
+                                        systemMac: cols[10]?.replace(/"/g,'') || '',
+                                        ramType: cols[11]?.replace(/"/g,'') || 'DDR4',
+                                        ramSize: cols[12]?.replace(/"/g,'') || '16GB',
+                                        diskType: cols[13]?.replace(/"/g,'') || 'SSD',
+                                        diskSize: cols[14]?.replace(/"/g,'') || '512GB',
+                                        msOffice: cols[15]?.replace(/"/g,'') || 'Office 365',
+                                        outlook: cols[16]?.replace(/"/g,'') || 'Configured',
+                                        backup: cols[17]?.replace(/"/g,'') || 'Active',
+                                        antiVirus: cols[18]?.replace(/"/g,'') || 'Updated',
+                                        remarks: cols[19]?.replace(/"/g,'') || '',
+                                        dueDate: cols[20]?.replace(/"/g,'') || '2026-01-10',
+                                        status: cols[21]?.replace(/"/g,'') || 'Scheduled',
+                                        targetMonth: pmSelectedMonth,
+                                        slotRange: pmSelectedSlot
+                                      });
+                                    }
+                                  }
+                                  if(newItems.length > 0) {
+                                    setPmSchedules(prev => [...newItems, ...prev]);
+                                    showToast(`Successfully imported ${newItems.length} PM records from Excel/CSV!`);
+                                  }
+                                } catch (err) {
+                                  showToast("Error parsing CSV/Excel format.");
+                                }
+                              };
+                            }
+                          }} 
+                        />
+                      </label>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-6 gap-2">
                     {monthsList.map(m => {
                       const count = pmSchedules.filter(i => (i.targetMonth || '').toLowerCase() === m.code.toLowerCase()).length;
@@ -1023,6 +1107,7 @@
                         <th>Monitor Brand</th>
                         <th>Monitor Tag No</th>
                         <th>CPU Brand</th>
+                        <th>CPU Processor</th>
                         <th>Printer Brand</th>
                         <th>Printer Tag No</th>
                         <th>Printer IP</th>
@@ -1036,6 +1121,7 @@
                         <th>Outlook</th>
                         <th>Backup</th>
                         <th>Anti-Virus</th>
+                        <th>Remarks</th>
                         <th>Due Date</th>
                         <th className="text-center">Status</th>
                         <th className="text-center">Actions</th>
@@ -1044,13 +1130,12 @@
                     <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                       {filteredPmSchedules.length === 0 ? (
                         <tr>
-                          <td colSpan="22" className="text-center py-8 text-slate-400 font-medium">
+                          <td colSpan="24" className="text-center py-8 text-slate-400 font-medium">
                             No preventive tasks scheduled for {monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name} ({pmSelectedSlot}). Click "+ Add PM Task" above to add.
                           </td>
                         </tr>
                       ) : (
                         filteredPmSchedules.map((item, idx) => {
-                          // Check if PM is delayed (due date is in the past and status is not Completed)
                           const isDelayed = item.dueDate && new Date(item.dueDate) < new Date() && item.status !== 'Completed';
                           
                           return (
@@ -1061,6 +1146,7 @@
                               <td>{item.monitorBrand || 'Dell'}</td>
                               <td className="font-mono text-slate-700">{item.monitorTagNo || 'MON-TAG-01'}</td>
                               <td>{item.cpuBrand || 'Intel i5'}</td>
+                              <td className="font-mono text-slate-700">{item.cpuProcessor || 'Intel i5-13400'}</td>
                               <td>{item.printerBrand || 'HP'}</td>
                               <td className="font-mono text-slate-700">{item.printerTagNo || 'PRN-TAG-01'}</td>
                               <td className="font-mono text-slate-700">{item.printerIP || 'N/A'}</td>
@@ -1074,6 +1160,7 @@
                               <td>{item.outlook || 'Configured'}</td>
                               <td>{item.backup || 'Active'}</td>
                               <td>{item.antiVirus || 'Updated'}</td>
+                              <td className="italic text-slate-500 max-w-[150px] truncate" title={item.remarks}>{item.remarks || '-'}</td>
                               <td className={`font-mono text-[11px] ${isDelayed ? 'text-rose-600 font-bold' : 'text-slate-600'}`}>
                                 {item.dueDate || '2026-01-10'} {isDelayed && '⚠️ (Delayed)'}
                               </td>
@@ -1095,6 +1182,7 @@
                                         monitorBrand: item.monitorBrand || '',
                                         monitorTagNo: item.monitorTagNo || '',
                                         cpuBrand: item.cpuBrand || '',
+                                        cpuProcessor: item.cpuProcessor || '',
                                         printerBrand: item.printerBrand || '',
                                         printerTagNo: item.printerTagNo || '',
                                         printerIP: item.printerIP || '',
@@ -1108,6 +1196,7 @@
                                         outlook: item.outlook || '',
                                         backup: item.backup || '',
                                         antiVirus: item.antiVirus || '',
+                                        remarks: item.remarks || '',
                                         userSignDate: item.userSignDate || '',
                                         status: item.status || 'Scheduled',
                                         dueDate: item.dueDate || '',
@@ -1353,7 +1442,7 @@
                       timestamp: timestamped,
                       department: pmForm.department,
                       equipment: pmForm.equipmentName,
-                      action: `Updated PM task for ${pmForm.department} (${pmForm.targetMonth} - ${pmForm.slotRange})`
+                      action: `Updated PM task (CPU Proc: ${pmForm.cpuProcessor}) for ${pmForm.department} (${pmForm.targetMonth} - ${pmForm.slotRange})`
                     };
                     try {
                       if (editingPmItem.firebaseKey) {
@@ -1504,6 +1593,17 @@
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
+                      <label className="block font-semibold text-slate-600 mb-1">CPU Processor *</label>
+                      <input 
+                        type="text"
+                        required
+                        value={pmForm.cpuProcessor}
+                        onChange={(e) => setPmForm({ ...pmForm, cpuProcessor: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                        placeholder="e.g. Intel Core i5-13400 @ 2.50GHz"
+                      />
+                    </div>
+                    <div>
                       <label className="block font-semibold text-slate-600 mb-1">Printer Brand</label>
                       <input 
                         type="text"
@@ -1521,6 +1621,9 @@
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Printer IP</label>
                       <input 
@@ -1530,9 +1633,6 @@
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">System IP</label>
                       <input 
@@ -1550,18 +1650,6 @@
                         onChange={(e) => setPmForm({ ...pmForm, systemMac: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
                       />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Status</label>
-                      <select
-                        value={pmForm.status}
-                        onChange={(e) => setPmForm({ ...pmForm, status: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900"
-                      >
-                        <option value="Scheduled">Scheduled</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                      </select>
                     </div>
                   </div>
 
@@ -1643,20 +1731,81 @@
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Remarks / Maintenance Notes *</label>
+                    <textarea 
+                      rows="2"
+                      required
+                      value={pmForm.remarks}
+                      onChange={(e) => setPmForm({ ...pmForm, remarks: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      placeholder="Enter remarks about hardware health or corrective actions taken..."
+                    ></textarea>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-3 border-t border-slate-200">
                     <button 
-                      type="button" 
-                      onClick={() => setIsPmModalOpen(false)}
-                      className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                      type="button"
+                      onClick={() => {
+                        const printWindow = window.open('', '_blank');
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>PM Maintenance & Sign-Off Slip</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
+                                h2 { border-bottom: 2px solid #333; padding-bottom: 8px; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                                th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; font-size: 12px; }
+                                th { background: #f4f4f4; }
+                                .sign-box { margin-top: 40px; display: flex; justify-content: space-between; }
+                                .sign-line { border-top: 1px solid #333; width: 200px; text-align: center; padding-top: 5px; font-weight: bold; }
+                              </style>
+                            </head>
+                            <body>
+                              <h2>Preventive Maintenance Verification & Sign-Off Slip</h2>
+                              <p><strong>Month / Slot:</strong> ${pmForm.targetMonth} (${pmForm.slotRange}) &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Due Date:</strong> ${pmForm.dueDate}</p>
+                              <table>
+                                <tr><th>Department / Location</th><td>${pmForm.department}</td></tr>
+                                <tr><th>Equipment Name</th><td>${pmForm.equipmentName}</td></tr>
+                                <tr><th>CPU Processor</th><td>${pmForm.cpuProcessor}</td></tr>
+                                <tr><th>Monitor (Brand & Tag)</th><td>${pmForm.monitorBrand} / ${pmForm.monitorTagNo}</td></tr>
+                                <tr><th>CPU & Printer Brand</th><td>CPU: ${pmForm.cpuBrand} | Printer: ${pmForm.printerBrand} (${pmForm.printerTagNo})</td></tr>
+                                <tr><th>IP & MAC Addresses</th><td>Sys IP: ${pmForm.systemIP} | Sys MAC: ${pmForm.systemMac} | Prn IP: ${pmForm.printerIP}</td></tr>
+                                <tr><th>Hardware Specs</th><td>RAM: ${pmForm.ramSize} (${pmForm.ramType}) | Disk: ${pmForm.diskSize} (${pmForm.diskType})</td></tr>
+                                <tr><th>Software & Security</th><td>Office: ${pmForm.msOffice} | Outlook: ${pmForm.outlook} | Backup: ${pmForm.backup} | AV: ${pmForm.antiVirus}</td></tr>
+                                <tr><th>Remarks</th><td>${pmForm.remarks}</td></tr>
+                                <tr><th>Status</th><td>${pmForm.status}</td></tr>
+                              </table>
+                              <div class="sign-box">
+                                <div class="sign-line">IT Technician Signature</div>
+                                <div class="sign-line">Department User Signature & Date</div>
+                              </div>
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                        printWindow.print();
+                      }}
+                      className="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-300 rounded-xl font-bold hover:bg-emerald-100 cursor-pointer flex items-center gap-1.5"
                     >
-                      Cancel
+                      <span>🖨️</span> Print Sign-Off Slip for User Signature
                     </button>
-                    <button 
-                      type="submit"
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
-                    >
-                      {editingPmItem ? 'Save & Highlight Changes' : 'Schedule Task'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => setIsPmModalOpen(false)}
+                        className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
+                      >
+                        {editingPmItem ? 'Save & Highlight Changes' : 'Schedule Task'}
+                      </button>
+                    </div>
                   </div>
                 </form>
               </div>
