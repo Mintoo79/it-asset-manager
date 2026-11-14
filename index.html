@@ -92,22 +92,27 @@
       const [showPmReportModal, setShowPmReportModal] = useState(false);
 
       const [pmForm, setPmForm] = useState({
-        srNo: 'PM-01',
         department: 'General Registration',
         equipmentName: 'Desktop PC Workstation',
-        cpuAssetTag: 'CPU-TAG-101',
-        monitorAsset: 'MON-TAG-101',
-        printer: 'HP LaserJet 1020',
-        ipAdd: '192.168.1.50',
-        macAdd: '00:1A:2B:3C:4D:5E',
-        os: 'Windows 11 Pro',
-        ram: '16GB DDR4',
-        disc: '512GB NVMe SSD',
+        monitorBrand: 'Dell',
+        monitorTagNo: 'MON-TAG-101',
+        cpuBrand: 'Intel i5 / Dell',
+        printerBrand: 'HP',
+        printerTagNo: 'PRN-TAG-202',
+        printerIP: '192.168.1.150',
+        systemIP: '192.168.1.50',
+        systemMac: '00:1A:2B:3C:4D:5E',
+        ramType: 'DDR4',
+        ramSize: '16GB',
+        diskType: 'NVMe SSD',
+        diskSize: '512GB',
+        msOffice: 'Office 2021 Pro Plus',
         outlook: 'Configured & Synced',
         backup: 'Active Daily',
-        antiVirus: 'Quick Heal Total Security (Updated)',
+        antiVirus: 'Quick Heal (Updated)',
         userSignDate: 'Pending Sign',
         status: 'Scheduled',
+        dueDate: '2026-01-05',
         targetMonth: 'Jan',
         slotRange: '01 to 10 January'
       });
@@ -864,22 +869,27 @@
                       onClick={() => {
                         setEditingPmItem(null);
                         setPmForm({
-                          srNo: `PM-${filteredPmSchedules.length + 1}`,
                           department: 'General Registration',
                           equipmentName: 'Desktop PC Workstation',
-                          cpuAssetTag: 'CPU-TAG-999',
-                          monitorAsset: 'MON-TAG-999',
-                          printer: 'HP Printer',
-                          ipAdd: '192.168.1.100',
-                          macAdd: 'AA:BB:CC:DD:EE:FF',
-                          os: 'Windows 11',
-                          ram: '16GB',
-                          disc: '512GB SSD',
+                          monitorBrand: 'Dell',
+                          monitorTagNo: 'MON-TAG-999',
+                          cpuBrand: 'Intel i5',
+                          printerBrand: 'HP',
+                          printerTagNo: 'PRN-TAG-999',
+                          printerIP: '192.168.1.200',
+                          systemIP: '192.168.1.100',
+                          systemMac: 'AA:BB:CC:DD:EE:FF',
+                          ramType: 'DDR4',
+                          ramSize: '16GB',
+                          diskType: 'SSD',
+                          diskSize: '512GB',
+                          msOffice: 'Office 365',
                           outlook: 'Configured',
                           backup: 'Active',
                           antiVirus: 'Updated',
                           userSignDate: 'Signed',
                           status: 'Scheduled',
+                          dueDate: '2026-01-08',
                           targetMonth: pmSelectedMonth,
                           slotRange: pmSelectedSlot || '01 to 10 January'
                         });
@@ -1008,21 +1018,25 @@
                     <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] border-b border-slate-200">
                       <tr>
                         <th className="p-3">#</th>
-                        <th>Sr No</th>
                         <th>Department</th>
-                        <th>CPU / Asset</th>
-                        <th>CPU Asset Tag</th>
-                        <th>Monitor Asset</th>
-                        <th>Printer</th>
-                        <th>IP-Add</th>
-                        <th>Mac-Add</th>
-                        <th>Os</th>
+                        <th>Equipment</th>
+                        <th>Monitor Brand</th>
+                        <th>Monitor Tag No</th>
+                        <th>CPU Brand</th>
+                        <th>Printer Brand</th>
+                        <th>Printer Tag No</th>
+                        <th>Printer IP</th>
+                        <th>System IP</th>
+                        <th>System Mac</th>
                         <th>RAM</th>
-                        <th>Disc</th>
+                        <th>RAM Size</th>
+                        <th>Disk</th>
+                        <th>Disk Size</th>
+                        <th>MS Office</th>
                         <th>Outlook</th>
                         <th>Backup</th>
                         <th>Anti-Virus</th>
-                        <th>User Sign/Date</th>
+                        <th>Due Date</th>
                         <th className="text-center">Status</th>
                         <th className="text-center">Actions</th>
                       </tr>
@@ -1030,87 +1044,103 @@
                     <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                       {filteredPmSchedules.length === 0 ? (
                         <tr>
-                          <td colSpan="18" className="text-center py-8 text-slate-400 font-medium">
+                          <td colSpan="22" className="text-center py-8 text-slate-400 font-medium">
                             No preventive tasks scheduled for {monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name} ({pmSelectedSlot}). Click "+ Add PM Task" above to add.
                           </td>
                         </tr>
                       ) : (
-                        filteredPmSchedules.map((item, idx) => (
-                          <tr key={item.firebaseKey || item.id} className={`transition ${item.isEdited ? 'bg-amber-50/80 border-l-4 border-l-amber-500' : 'hover:bg-slate-50'}`}>
-                            <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
-                            <td className="font-mono text-slate-600">{item.srNo || `PM-${idx + 1}`}</td>
-                            <td className="font-bold text-blue-600">{item.department || item.location || 'General Reg'}</td>
-                            <td className="font-bold text-slate-900">{item.equipmentName || 'Desktop PC'}</td>
-                            <td className="font-mono text-slate-700">{item.cpuAssetTag || 'TAG-01'}</td>
-                            <td className="font-mono text-slate-700">{item.monitorAsset || 'MON-01'}</td>
-                            <td className="text-slate-700">{item.printer || 'N/A'}</td>
-                            <td className="font-mono text-xs text-slate-700">{item.ipAdd || '192.168.1.10'}</td>
-                            <td className="font-mono text-xs text-slate-500">{item.macAdd || '00:11:22:33'}</td>
-                            <td>{item.os || 'Win 11'}</td>
-                            <td>{item.ram || '16GB'}</td>
-                            <td>{item.disc || '512GB SSD'}</td>
-                            <td>{item.outlook || 'Configured'}</td>
-                            <td>{item.backup || 'Active'}</td>
-                            <td>{item.antiVirus || 'Updated'}</td>
-                            <td className="font-mono text-[11px] text-slate-500">{item.userSignDate || 'Pending'}</td>
-                            <td className="text-center">
-                              <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[10px] ${
-                                item.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                              }`}>
-                                {item.status || 'Scheduled'}
-                              </span>
-                            </td>
-                            <td className="text-center whitespace-nowrap">
-                              <div className="inline-flex items-center gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setEditingPmItem(item);
-                                    setPmForm({
-                                      srNo: item.srNo || '',
-                                      department: item.department || '',
-                                      equipmentName: item.equipmentName || '',
-                                      cpuAssetTag: item.cpuAssetTag || '',
-                                      monitorAsset: item.monitorAsset || '',
-                                      printer: item.printer || '',
-                                      ipAdd: item.ipAdd || '',
-                                      macAdd: item.macAdd || '',
-                                      os: item.os || '',
-                                      ram: item.ram || '',
-                                      disc: item.disc || '',
-                                      outlook: item.outlook || '',
-                                      backup: item.backup || '',
-                                      antiVirus: item.antiVirus || '',
-                                      userSignDate: item.userSignDate || '',
-                                      status: item.status || 'Scheduled',
-                                      targetMonth: item.targetMonth || pmSelectedMonth,
-                                      slotRange: item.slotRange || pmSelectedSlot
-                                    });
-                                    setIsPmModalOpen(true);
-                                  }}
-                                  title="Edit Task Fields"
-                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm("Delete this PM schedule?")) {
-                                      if (item.firebaseKey) {
-                                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules/${item.firebaseKey}.json`, { method: 'DELETE' });
+                        filteredPmSchedules.map((item, idx) => {
+                          // Check if PM is delayed (due date is in the past and status is not Completed)
+                          const isDelayed = item.dueDate && new Date(item.dueDate) < new Date() && item.status !== 'Completed';
+                          
+                          return (
+                            <tr key={item.firebaseKey || item.id} className={`transition ${isDelayed ? 'bg-rose-50 border-l-4 border-l-rose-500 font-semibold' : item.isEdited ? 'bg-amber-50/80 border-l-4 border-l-amber-500' : 'hover:bg-slate-50'}`}>
+                              <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                              <td className="font-bold text-blue-600">{item.department || 'General Reg'}</td>
+                              <td className="font-extrabold text-slate-900">{item.equipmentName || 'Desktop PC'}</td>
+                              <td>{item.monitorBrand || 'Dell'}</td>
+                              <td className="font-mono text-slate-700">{item.monitorTagNo || 'MON-TAG-01'}</td>
+                              <td>{item.cpuBrand || 'Intel i5'}</td>
+                              <td>{item.printerBrand || 'HP'}</td>
+                              <td className="font-mono text-slate-700">{item.printerTagNo || 'PRN-TAG-01'}</td>
+                              <td className="font-mono text-slate-700">{item.printerIP || 'N/A'}</td>
+                              <td className="font-mono text-xs text-slate-700">{item.systemIP || '192.168.1.10'}</td>
+                              <td className="font-mono text-xs text-slate-500">{item.systemMac || '00:11:22:33'}</td>
+                              <td>{item.ramType || 'DDR4'}</td>
+                              <td>{item.ramSize || '16GB'}</td>
+                              <td>{item.diskType || 'SSD'}</td>
+                              <td>{item.diskSize || '512GB'}</td>
+                              <td>{item.msOffice || 'Office 2021'}</td>
+                              <td>{item.outlook || 'Configured'}</td>
+                              <td>{item.backup || 'Active'}</td>
+                              <td>{item.antiVirus || 'Updated'}</td>
+                              <td className={`font-mono text-[11px] ${isDelayed ? 'text-rose-600 font-bold' : 'text-slate-600'}`}>
+                                {item.dueDate || '2026-01-10'} {isDelayed && '⚠️ (Delayed)'}
+                              </td>
+                              <td className="text-center">
+                                <span className={`px-2.5 py-0.5 rounded-full font-extrabold text-[10px] ${
+                                  isDelayed ? 'bg-rose-100 text-rose-800 border border-rose-300' : item.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                }`}>
+                                  {isDelayed ? 'Delayed' : (item.status || 'Scheduled')}
+                                </span>
+                              </td>
+                              <td className="text-center whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setEditingPmItem(item);
+                                      setPmForm({
+                                        department: item.department || '',
+                                        equipmentName: item.equipmentName || '',
+                                        monitorBrand: item.monitorBrand || '',
+                                        monitorTagNo: item.monitorTagNo || '',
+                                        cpuBrand: item.cpuBrand || '',
+                                        printerBrand: item.printerBrand || '',
+                                        printerTagNo: item.printerTagNo || '',
+                                        printerIP: item.printerIP || '',
+                                        systemIP: item.systemIP || '',
+                                        systemMac: item.systemMac || '',
+                                        ramType: item.ramType || '',
+                                        ramSize: item.ramSize || '',
+                                        diskType: item.diskType || '',
+                                        diskSize: item.diskSize || '',
+                                        msOffice: item.msOffice || '',
+                                        outlook: item.outlook || '',
+                                        backup: item.backup || '',
+                                        antiVirus: item.antiVirus || '',
+                                        userSignDate: item.userSignDate || '',
+                                        status: item.status || 'Scheduled',
+                                        dueDate: item.dueDate || '',
+                                        targetMonth: item.targetMonth || pmSelectedMonth,
+                                        slotRange: item.slotRange || pmSelectedSlot
+                                      });
+                                      setIsPmModalOpen(true);
+                                    }}
+                                    title="Edit Task Fields"
+                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm("Delete this PM schedule?")) {
+                                        if (item.firebaseKey) {
+                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules/${item.firebaseKey}.json`, { method: 'DELETE' });
+                                        }
+                                        setPmSchedules(pmSchedules.filter(i => i.id !== item.id && i.firebaseKey !== item.firebaseKey));
+                                        showToast("PM schedule deleted.");
                                       }
-                                      setPmSchedules(pmSchedules.filter(i => i.id !== item.id && i.firebaseKey !== item.firebaseKey));
-                                      showToast("PM schedule deleted.");
-                                    }
-                                  }}
-                                  title="Delete Task"
-                                  className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                                    }}
+                                    title="Delete Task"
+                                    className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1300,10 +1330,10 @@
           {/* PREVENTIVE MAINTENANCE FULLY EDITABLE TASK MODAL */}
           {isPmModalOpen && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-4 my-8 text-slate-800">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                   <h3 className="font-bold text-sm text-slate-900">
-                    {editingPmItem ? 'Edit Preventive Maintenance Task (Changes will be Highlighted & Audited)' : 'Schedule New PM Task'}
+                    {editingPmItem ? 'Edit Preventive Maintenance Task' : 'Schedule New PM Task'}
                   </h3>
                   <button onClick={() => setIsPmModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
@@ -1321,7 +1351,6 @@
                     const auditEntry = {
                       id: `log_${Date.now()}`,
                       timestamp: timestamped,
-                      srNo: pmForm.srNo,
                       department: pmForm.department,
                       equipment: pmForm.equipmentName,
                       action: `Updated PM task for ${pmForm.department} (${pmForm.targetMonth} - ${pmForm.slotRange})`
@@ -1371,7 +1400,7 @@
                   setIsPmModalOpen(false);
                   setEditingPmItem(null);
                 }} className="space-y-3 text-xs">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Target Month *</label>
                       <select
@@ -1407,19 +1436,20 @@
                         })()}
                       </select>
                     </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Sr No *</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Due Date *</label>
                       <input 
-                        type="text"
+                        type="date"
                         required
-                        value={pmForm.srNo}
-                        onChange={(e) => setPmForm({ ...pmForm, srNo: e.target.value })}
+                        value={pmForm.dueDate}
+                        onChange={(e) => setPmForm({ ...pmForm, dueDate: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Department / Location *</label>
                       <input 
@@ -1430,11 +1460,8 @@
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-900"
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">CPU / Equipment Name *</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Equipment Name *</label>
                       <input 
                         type="text"
                         required
@@ -1443,73 +1470,33 @@
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-900"
                       />
                     </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">CPU Asset Tag *</label>
-                      <input 
-                        type="text"
-                        required
-                        value={pmForm.cpuAssetTag}
-                        onChange={(e) => setPmForm({ ...pmForm, cpuAssetTag: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Monitor Asset</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Monitor Brand</label>
                       <input 
                         type="text"
-                        value={pmForm.monitorAsset}
-                        onChange={(e) => setPmForm({ ...pmForm, monitorAsset: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Printer</label>
-                      <input 
-                        type="text"
-                        value={pmForm.printer}
-                        onChange={(e) => setPmForm({ ...pmForm, printer: e.target.value })}
+                        value={pmForm.monitorBrand}
+                        onChange={(e) => setPmForm({ ...pmForm, monitorBrand: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">IP Address</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Monitor Tag No</label>
                       <input 
                         type="text"
-                        value={pmForm.ipAdd}
-                        onChange={(e) => setPmForm({ ...pmForm, ipAdd: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Mac Address</label>
-                      <input 
-                        type="text"
-                        value={pmForm.macAdd}
-                        onChange={(e) => setPmForm({ ...pmForm, macAdd: e.target.value })}
+                        value={pmForm.monitorTagNo}
+                        onChange={(e) => setPmForm({ ...pmForm, monitorTagNo: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">OS</label>
+                      <label className="block font-semibold text-slate-600 mb-1">CPU Brand</label>
                       <input 
                         type="text"
-                        value={pmForm.os}
-                        onChange={(e) => setPmForm({ ...pmForm, os: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">RAM & Disc</label>
-                      <input 
-                        type="text"
-                        value={pmForm.ram}
-                        onChange={(e) => setPmForm({ ...pmForm, ram: e.target.value })}
+                        value={pmForm.cpuBrand}
+                        onChange={(e) => setPmForm({ ...pmForm, cpuBrand: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
                       />
                     </div>
@@ -1517,7 +1504,118 @@
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Outlook Status</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Printer Brand</label>
+                      <input 
+                        type="text"
+                        value={pmForm.printerBrand}
+                        onChange={(e) => setPmForm({ ...pmForm, printerBrand: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Printer Tag No</label>
+                      <input 
+                        type="text"
+                        value={pmForm.printerTagNo}
+                        onChange={(e) => setPmForm({ ...pmForm, printerTagNo: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Printer IP</label>
+                      <input 
+                        type="text"
+                        value={pmForm.printerIP}
+                        onChange={(e) => setPmForm({ ...pmForm, printerIP: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">System IP</label>
+                      <input 
+                        type="text"
+                        value={pmForm.systemIP}
+                        onChange={(e) => setPmForm({ ...pmForm, systemIP: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">System Mac</label>
+                      <input 
+                        type="text"
+                        value={pmForm.systemMac}
+                        onChange={(e) => setPmForm({ ...pmForm, systemMac: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Status</label>
+                      <select
+                        value={pmForm.status}
+                        onChange={(e) => setPmForm({ ...pmForm, status: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900"
+                      >
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">RAM Type</label>
+                      <input 
+                        type="text"
+                        value={pmForm.ramType}
+                        onChange={(e) => setPmForm({ ...pmForm, ramType: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">RAM Size</label>
+                      <input 
+                        type="text"
+                        value={pmForm.ramSize}
+                        onChange={(e) => setPmForm({ ...pmForm, ramSize: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Disk Type</label>
+                      <input 
+                        type="text"
+                        value={pmForm.diskType}
+                        onChange={(e) => setPmForm({ ...pmForm, diskType: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Disk Size</label>
+                      <input 
+                        type="text"
+                        value={pmForm.diskSize}
+                        onChange={(e) => setPmForm({ ...pmForm, diskSize: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">MS Office</label>
+                      <input 
+                        type="text"
+                        value={pmForm.msOffice}
+                        onChange={(e) => setPmForm({ ...pmForm, msOffice: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Outlook</label>
                       <input 
                         type="text"
                         value={pmForm.outlook}
@@ -1526,7 +1624,7 @@
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Backup Status</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Backup</label>
                       <input 
                         type="text"
                         value={pmForm.backup}
