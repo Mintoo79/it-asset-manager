@@ -57,6 +57,8 @@
 
     function App() {
       const [isLoggedIn, setIsLoggedIn] = useState(false);
+      const [loggedInUser, setLoggedInUser] = useState(null);
+      const [usernameInput, setUsernameInput] = useState('');
       const [pinInput, setPinInput] = useState('');
       const [loginError, setLoginError] = useState('');
 
@@ -131,6 +133,25 @@
         slotRange: '01 to 10 January'
       });
 
+      // System Users State Management
+      const sampleFallbackUsers = [
+        { id: 1, name: 'Super Admin', username: 'admin', pin: '1234', role: 'Super Administrator', department: 'IT Management', status: 'Active' },
+        { id: 2, name: 'IT Inventory Desk', username: 'store', pin: '5678', role: 'Store Keeper', department: 'IT Stores', status: 'Active' },
+        { id: 3, name: 'Dr. Alok Sharma', username: 'alok', pin: '1122', role: 'Department Head', department: 'General Registration', status: 'Active' }
+      ];
+
+      const [users, setUsers] = useState(sampleFallbackUsers);
+      const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+      const [editingUser, setEditingUser] = useState(null);
+      const [userForm, setUserForm] = useState({
+        name: '',
+        username: '',
+        pin: '',
+        role: 'Store Keeper',
+        department: 'IT Operations',
+        status: 'Active'
+      });
+
       const monthsList = [
         { code: 'Jan', name: 'January', slots: ['01 to 10 January', '11 to 20 January', '21 to 31 January'] },
         { code: 'Feb', name: 'February', slots: ['01 to 10 February', '11 to 20 February', '21 to 28 February'] },
@@ -145,13 +166,6 @@
         { code: 'Nov', name: 'November', slots: ['01 to 10 November', '11 to 20 November', '21 to 30 November'] },
         { code: 'Dec', name: 'December', slots: ['01 to 10 December', '11 to 20 December', '21 to 31 December'] }
       ];
-
-      const sampleFallbackUsers = [
-        { id: 1, name: 'Super Admin', pin: '1234', role: 'Super Administrator', status: 'Active' },
-        { id: 2, name: 'IT Inventory Desk', pin: '5678', role: 'Store Keeper', status: 'Active' }
-      ];
-
-      const [users, setUsers] = useState(sampleFallbackUsers);
 
       const showToast = (msg) => {
         setToastMsg(msg);
@@ -232,6 +246,19 @@
               setPmAuditLogs(Object.keys(dataLogs).map(k => ({ ...dataLogs[k], firebaseKey: k })));
             }
           } catch(e) {}
+
+          try {
+            const resUsers = await fetch(FIREBASE_USERS_URL);
+            const dataUsers = await resUsers.json();
+            if (isMounted) {
+              if (dataUsers && typeof dataUsers === 'object') {
+                const loadedUsers = Object.keys(dataUsers).map(k => ({ ...dataUsers[k], firebaseKey: k }));
+                setUsers(loadedUsers.length > 0 ? loadedUsers : sampleFallbackUsers);
+              } else {
+                setUsers(sampleFallbackUsers);
+              }
+            }
+          } catch(e) {}
         };
 
         fetchAllData();
@@ -251,13 +278,83 @@
 
       const handleLogin = (e) => {
         e.preventDefault();
-        const matched = users.find(u => String(u.pin) === String(pinInput) && u.status === 'Active');
+        const matched = users.find(u => 
+          (String(u.username).toLowerCase() === String(usernameInput).toLowerCase() || String(u.name).toLowerCase() === String(usernameInput).toLowerCase()) && 
+          String(u.pin) === String(pinInput) && 
+          u.status === 'Active'
+        );
+
         if (matched) {
           setIsLoggedIn(true);
+          setLoggedInUser(matched);
           setLoginError('');
-          showToast(`Welcome back, ${matched.name}!`);
+          showToast(`Welcome back, ${matched.name} (${matched.role})!`);
         } else {
-          setLoginError('Invalid Security PIN or Inactive User.');
+          setLoginError('Invalid Username / Security PIN or Inactive Account.');
+        }
+      };
+
+      const handleSaveUser = async (e) => {
+        e.preventDefault();
+        if (editingUser) {
+          const updatedUser = {
+            ...editingUser,
+            ...userForm
+          };
+          try {
+            if (editingUser.firebaseKey) {
+              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users/${editingUser.firebaseKey}.json`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedUser)
+              });
+            }
+            setUsers(users.map(u => (u.id === editingUser.id || u.firebaseKey === editingUser.firebaseKey) ? updatedUser : u));
+            showToast("User profile successfully updated!");
+          } catch(err) {
+            showToast("Error updating user in database.");
+          }
+        } else {
+          const newUser = {
+            id: Date.now(),
+            ...userForm
+          };
+          try {
+            await fetch(FIREBASE_USERS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newUser)
+            });
+            const res = await fetch(FIREBASE_USERS_URL);
+            const data = await res.json();
+            if (data) setUsers(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
+            showToast("New user successfully created!");
+          } catch(err) {
+            setUsers([...users, newUser]);
+            showToast("User added locally!");
+          }
+        }
+        setIsUserModalOpen(false);
+        setEditingUser(null);
+      };
+
+      const handleDeleteUser = async (userItem) => {
+        if (users.length <= 1) {
+          alert("Cannot delete the last remaining system user.");
+          return;
+        }
+        if (window.confirm(`Are you sure you want to delete user "${userItem.name}"?`)) {
+          try {
+            if (userItem.firebaseKey) {
+              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users/${userItem.firebaseKey}.json`, {
+                method: 'DELETE'
+              });
+            }
+            setUsers(users.filter(u => u.id !== userItem.id && u.firebaseKey !== userItem.firebaseKey));
+            showToast("User deleted successfully.");
+          } catch(err) {
+            showToast("Error deleting user.");
+          }
         }
       };
 
@@ -373,52 +470,82 @@
 
       if (!isLoggedIn) {
         return (
-          <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 border border-slate-200 space-y-6 text-slate-800">
+          <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#2563eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl max-w-md w-full p-8 border border-slate-200/80 space-y-6 relative z-10 text-slate-800">
               <div className="text-center space-y-2">
-                <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-blue-500/20">IT</div>
+                <div className="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-blue-500/30">IT</div>
                 <h1 className="text-xl font-extrabold tracking-tight text-slate-900">IT Asset & Inventory Portal</h1>
-                <p className="text-xs text-slate-500 font-medium">Select your professional profile and enter your 4-digit Security PIN</p>
+                <p className="text-xs text-slate-500 font-medium">Enterprise Authentication & Role Management</p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Select User Profile</label>
-                  <select 
-                    onChange={(e) => {
-                      const sel = users.find(u => String(u.pin) === String(e.target.value));
-                      if (sel) setPinInput(sel.pin);
-                    }}
-                    className="w-full p-3 border border-slate-300 rounded-xl text-xs font-bold outline-none bg-slate-50 text-slate-800"
-                  >
-                    <option value="">-- Choose Profile --</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.pin}>{u.name} ({u.role}) - PIN: {u.pin}</option>
-                    ))}
-                  </select>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Username / Profile ID</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">👤</span>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. admin or store"
+                      value={usernameInput}
+                      onChange={(e) => setUsernameInput(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Security PIN</label>
-                  <input 
-                    type="password"
-                    maxLength="4"
-                    placeholder="••••"
-                    value={pinInput}
-                    onChange={(e) => setPinInput(e.target.value)}
-                    className="w-full p-3 border border-slate-300 bg-slate-50 text-slate-800 rounded-xl text-center text-xl font-mono tracking-widest outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">Security PIN / Password</label>
+                    <span className="text-[10px] text-slate-400 font-mono">4-Digit Access Code</span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">🔒</span>
+                    <input 
+                      type="password"
+                      maxLength="6"
+                      required
+                      placeholder="••••"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-center text-xl font-mono tracking-widest outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                    />
+                  </div>
                 </div>
 
-                {loginError && <div className="p-3 bg-rose-50 text-rose-600 text-xs rounded-xl font-bold border border-rose-200">{loginError}</div>}
+                {loginError && (
+                  <div className="p-3 bg-rose-50 text-rose-600 text-xs rounded-xl font-bold border border-rose-200 flex items-center gap-2">
+                    <span>⚠️</span> {loginError}
+                  </div>
+                )}
 
                 <button 
                   type="submit"
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-blue-600/20 cursor-pointer transition"
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow-lg shadow-blue-600/25 cursor-pointer transition flex items-center justify-center gap-2"
                 >
-                  Authenticate & Login
+                  <span>🔐</span> Authenticate & Launch System
                 </button>
               </form>
+
+              <div className="pt-3 border-t border-slate-100 text-center">
+                <div className="text-[11px] text-slate-400 font-medium">Default Demo Accounts:</div>
+                <div className="flex justify-center gap-2 mt-1.5 flex-wrap">
+                  {users.slice(0, 3).map(u => (
+                    <button
+                      key={u.id || u.username}
+                      type="button"
+                      onClick={() => {
+                        setUsernameInput(u.username);
+                        setPinInput(u.pin);
+                      }}
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-mono font-bold cursor-pointer transition border border-slate-200"
+                    >
+                      {u.username} (PIN: {u.pin})
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -517,14 +644,21 @@
 
             <div className="pt-3 border-t border-slate-700/60 space-y-2.5 shrink-0">
               <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700 flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white text-xs">A</div>
-                <div>
-                  <div className="font-bold text-xs text-white">Super Admin</div>
-                  <div className="text-[10px] text-slate-400 font-medium">Master Access</div>
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white text-xs">
+                  {loggedInUser ? loggedInUser.name.charAt(0) : 'A'}
+                </div>
+                <div className="overflow-hidden">
+                  <div className="font-bold text-xs text-white truncate">{loggedInUser ? loggedInUser.name : 'Super Admin'}</div>
+                  <div className="text-[10px] text-blue-400 font-medium truncate">{loggedInUser ? loggedInUser.role : 'Master Access'}</div>
                 </div>
               </div>
               <button
-                onClick={() => setIsLoggedIn(false)}
+                onClick={() => {
+                  setIsLoggedIn(false);
+                  setLoggedInUser(null);
+                  setPinInput('');
+                  setUsernameInput('');
+                }}
                 className="w-full py-2 bg-rose-950/80 hover:bg-rose-900 text-rose-200 rounded-xl text-xs font-bold transition cursor-pointer border border-rose-800/50 flex items-center justify-center gap-2"
               >
                 <span>🚪</span> Sign Out
@@ -1391,41 +1525,105 @@
               </div>
             )}
 
+            {/* 7. PRIVILEGE & USERS MODULE */}
             {activeTab === 'users' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-white border border-slate-200 text-slate-900 p-4 rounded-2xl shadow-sm flex justify-between items-center">
                   <div>
                     <h1 className="text-sm font-extrabold tracking-wide uppercase">7. System Users & Privilege Control</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Manage access security PINs and permissions.</p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Manage user credentials, department mapping, roles, and active/inactive status.</p>
                   </div>
+                  <button
+                    onClick={() => {
+                      setEditingUser(null);
+                      setUserForm({
+                        name: '',
+                        username: '',
+                        pin: '',
+                        role: 'Store Keeper',
+                        department: 'IT Operations',
+                        status: 'Active'
+                      });
+                      setIsUserModalOpen(true);
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow cursor-pointer flex items-center gap-2"
+                  >
+                    + Add New User
+                  </button>
                 </header>
 
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-700">Authorized System Profiles</div>
+                  <div className="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-700 flex justify-between items-center">
+                    <span>Authorized System Profiles ({users.length})</span>
+                    <span className="text-[11px] text-slate-500 font-mono">Synced with Firebase Database</span>
+                  </div>
                   <table className="w-full text-left border-collapse table-compact text-xs">
                     <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] border-b border-slate-200">
                       <tr>
                         <th className="p-3">#</th>
-                        <th>Name</th>
-                        <th>Role</th>
+                        <th>User Name</th>
+                        <th>Username (ID)</th>
+                        <th>Role / Privilege</th>
+                        <th>Department</th>
                         <th className="text-center">Security PIN</th>
                         <th className="text-center">Status</th>
+                        <th className="text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {users.map((u, i) => (
-                        <tr key={u.id} className="hover:bg-slate-50">
-                          <td className="p-3 font-mono text-slate-400">{i + 1}</td>
-                          <td className="font-extrabold text-slate-900">{u.name}</td>
-                          <td className="font-semibold text-slate-600">{u.role}</td>
-                          <td className="text-center font-mono font-bold text-slate-500">••••</td>
-                          <td className="text-center">
-                            <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full font-bold text-[10px] border border-emerald-200">
-                              {u.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                      {users.map((u, i) => {
+                        const isActive = u.status === 'Active';
+                        return (
+                          <tr key={u.firebaseKey || u.id} className="hover:bg-slate-50 transition">
+                            <td className="p-3 font-mono text-slate-400">{i + 1}</td>
+                            <td className="font-extrabold text-slate-900">{u.name}</td>
+                            <td className="font-mono text-blue-600 font-bold">@{u.username}</td>
+                            <td>
+                              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-[10px] border border-indigo-200">
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="font-semibold text-slate-600">{u.department || 'IT Operations'}</td>
+                            <td className="text-center font-mono font-bold text-slate-500">••••</td>
+                            <td className="text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] border ${
+                                isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
+                                {u.status || 'Active'}
+                              </span>
+                            </td>
+                            <td className="text-center whitespace-nowrap">
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setEditingUser(u);
+                                    setUserForm({
+                                      name: u.name || '',
+                                      username: u.username || '',
+                                      pin: u.pin || '',
+                                      role: u.role || 'Store Keeper',
+                                      department: u.department || 'IT Operations',
+                                      status: u.status || 'Active'
+                                    });
+                                    setIsUserModalOpen(true);
+                                  }}
+                                  title="Edit User Profile"
+                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(u)}
+                                  title="Delete User"
+                                  className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1433,6 +1631,111 @@
             )}
 
           </main>
+
+          {/* ADD / EDIT USER MODAL (MODULE 7) */}
+          {isUserModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <h3 className="font-extrabold text-sm text-slate-900">
+                    {editingUser ? 'Edit System User Profile' : 'Create New System User'}
+                  </h3>
+                  <button onClick={() => setIsUserModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+
+                <form onSubmit={handleSaveUser} className="space-y-3 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Full Name *</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. Mr. Rajesh Kumar"
+                      value={userForm.name}
+                      onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Username (Login ID) *</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. rajesh.it"
+                      value={userForm.username}
+                      onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-slate-900 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Security PIN / Password (4-6 Digits) *</label>
+                    <input 
+                      type="text"
+                      required
+                      maxLength="6"
+                      placeholder="e.g. 4321"
+                      value={userForm.pin}
+                      onChange={(e) => setUserForm({ ...userForm, pin: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-slate-900 outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Role / Privilege *</label>
+                      <select
+                        value={userForm.role}
+                        onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none"
+                      >
+                        <option value="Super Administrator">Super Administrator</option>
+                        <option value="Store Keeper">Store Keeper</option>
+                        <option value="IT Technician">IT Technician</option>
+                        <option value="Department Head">Department Head</option>
+                        <option value="Auditor">Auditor</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Department *</label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g. IT Operations"
+                        value={userForm.department}
+                        onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-semibold text-slate-900 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Account Status *</label>
+                    <select
+                      value={userForm.status}
+                      onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-900 outline-none"
+                    >
+                      <option value="Active">Active (Allowed to Login)</option>
+                      <option value="Inactive">Inactive (Access Suspended)</option>
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsUserModalOpen(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow cursor-pointer"
+                    >
+                      {editingUser ? 'Save User Profile' : 'Create User'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
 
           {/* ASSET MOVEMENT HISTORY REPORT MODAL (MODULE 2) */}
           {showMovementReportModal && (
@@ -1880,13 +2183,12 @@
                     </div>
                   </div>
 
-                  {/* CATEGORY 2: HARDWARE SPECIFICATIONS & TAGS (EXACT ORDER REQUESTED) */}
+                  {/* CATEGORY 2: HARDWARE SPECIFICATIONS & TAGS */}
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                     <div className="font-extrabold text-blue-600 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                       <span>💻</span> 2. Hardware Specifications & Tags
                     </div>
                     
-                    {/* CPU Brand, CPU Processer, CPU Tag */}
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">CPU Brand</label>
@@ -1921,7 +2223,6 @@
                       </div>
                     </div>
 
-                    {/* Monitor Brand, Monitor Tag */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Monitor Brand</label>
@@ -1945,7 +2246,6 @@
                       </div>
                     </div>
 
-                    {/* Printer Brand, Printer Model, Printer Tag */}
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Printer Brand</label>
@@ -1980,7 +2280,6 @@
                       </div>
                     </div>
 
-                    {/* Printer IP, System IP, System Mac */}
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Printer IP</label>
@@ -2014,7 +2313,6 @@
                       </div>
                     </div>
 
-                    {/* RAM & HDD CAPACITY WITH GB/TB LIST DROPDOWN */}
                     <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">RAM (Type & Capacity) *</label>
@@ -2426,7 +2724,7 @@
                       />
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Short</label>
+                      <label className="block font-semibold text-slate-600 mb-15">Short</label>
                       <input 
                         type="number" 
                         min="0"
