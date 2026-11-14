@@ -80,7 +80,17 @@
       const [tempDispatches, setTempDispatches] = useState([]);
       const [isTempModalOpen, setIsTempModalOpen] = useState(false);
       const [editingTempItem, setEditingTempItem] = useState(null);
-      const [tempForm, setTempForm] = useState({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
+      const [showMovementReportModal, setShowMovementReportModal] = useState(false);
+      const [showStockReportModal, setShowStockReportModal] = useState(false);
+      
+      const [tempForm, setTempForm] = useState({ 
+        assetName: '', 
+        assetTagNo: '', 
+        department: '', 
+        receiver: '', 
+        quantity: 1, 
+        status: 'Temporary Given' 
+      });
 
       // Preventive Maintenance (PM) 12-Month Chart Plan state with date slots for ALL months
       const [pmSchedules, setPmSchedules] = useState([]);
@@ -526,8 +536,16 @@
                 
                 {/* ASSET GROUPS FILTER CARDS BAR */}
                 <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm space-y-2">
-                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    <span>🗂️</span> ASSET GROUPS (CLICK TO FILTER)
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                      <span>🗂️</span> ASSET GROUPS (CLICK TO FILTER)
+                    </div>
+                    <button
+                      onClick={() => setShowStockReportModal(true)}
+                      className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm"
+                    >
+                      <span>📊</span> Stock Inventory Movement Report
+                    </button>
                   </div>
                   <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
                     <button
@@ -802,18 +820,26 @@
                 <header className="bg-white border border-slate-200 text-slate-900 p-4 rounded-2xl shadow-sm flex justify-between items-center">
                   <div>
                     <h1 className="text-sm font-extrabold tracking-wider uppercase">Temporary Asset Deployment Module</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Track temporary dispatches with asset tags and receiver details.</p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Track temporary dispatches with asset tags and movement status.</p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setEditingTempItem(null);
-                      setTempForm({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1 });
-                      setIsTempModalOpen(true);
-                    }}
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow cursor-pointer flex items-center gap-2 transition"
-                  >
-                    + Issue Temporary Asset
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowMovementReportModal(true)}
+                      className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-sm"
+                    >
+                      <span>📈</span> Asset Movement History Report
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingTempItem(null);
+                        setTempForm({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1, status: 'Temporary Given' });
+                        setIsTempModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold shadow cursor-pointer flex items-center gap-2 transition"
+                    >
+                      + Issue Temporary Asset
+                    </button>
+                  </div>
                 </header>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 overflow-auto">
@@ -839,58 +865,66 @@
                           </td>
                         </tr>
                       ) : (
-                        tempDispatches.map((item, idx) => (
-                          <tr key={item.firebaseKey || item.id} className="hover:bg-slate-50 transition">
-                            <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
-                            <td className="font-extrabold text-slate-900">{item.assetName}</td>
-                            <td className="font-mono text-blue-600 font-bold">{item.assetTagNo}</td>
-                            <td className="font-semibold text-slate-700">{item.department}</td>
-                            <td>{item.receiver}</td>
-                            <td className="text-center font-mono font-bold">{item.quantity}</td>
-                            <td className="font-mono text-slate-500">{item.issueDate}</td>
-                            <td className="text-center">
-                              <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 rounded-full font-bold text-[10px] border border-amber-200">
-                                {item.status || 'Active Dispatched'}
-                              </span>
-                            </td>
-                            <td className="text-center whitespace-nowrap">
-                              <div className="inline-flex items-center gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setEditingTempItem(item);
-                                    setTempForm({
-                                      assetName: item.assetName || '',
-                                      assetTagNo: item.assetTagNo || '',
-                                      department: item.department || '',
-                                      receiver: item.receiver || '',
-                                      quantity: item.quantity || 1
-                                    });
-                                    setIsTempModalOpen(true);
-                                  }}
-                                  title="Edit Entry"
-                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm("Delete this temporary dispatch record?")) {
-                                      if (item.firebaseKey) {
-                                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
+                        tempDispatches.map((item, idx) => {
+                          const isReturn = (item.status || '').toLowerCase() === 'return back';
+                          return (
+                            <tr key={item.firebaseKey || item.id} className="hover:bg-slate-50 transition">
+                              <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                              <td className="font-extrabold text-slate-900">{item.assetName}</td>
+                              <td className="font-mono text-blue-600 font-bold">{item.assetTagNo}</td>
+                              <td className="font-semibold text-slate-700">{item.department}</td>
+                              <td>{item.receiver}</td>
+                              <td className="text-center font-mono font-bold">{item.quantity}</td>
+                              <td className="font-mono text-slate-500">{item.issueDate}</td>
+                              <td className="text-center">
+                                <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] border ${
+                                  isReturn 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}>
+                                  {item.status || 'Temporary Given'}
+                                </span>
+                              </td>
+                              <td className="text-center whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      setEditingTempItem(item);
+                                      setTempForm({
+                                        assetName: item.assetName || '',
+                                        assetTagNo: item.assetTagNo || '',
+                                        department: item.department || '',
+                                        receiver: item.receiver || '',
+                                        quantity: item.quantity || 1,
+                                        status: item.status || 'Temporary Given'
+                                      });
+                                      setIsTempModalOpen(true);
+                                    }}
+                                    title="Edit Entry"
+                                    className="p-1.5 bg-slate-100 hover:bg-slate-200 text-blue-600 rounded-lg border border-slate-200 cursor-pointer"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm("Delete this temporary dispatch record?")) {
+                                        if (item.firebaseKey) {
+                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
+                                        }
+                                        setTempDispatches(tempDispatches.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
+                                        showToast("Temporary dispatch record deleted.");
                                       }
-                                      setTempDispatches(tempDispatches.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
-                                      showToast("Temporary dispatch record deleted.");
-                                    }
-                                  }}
-                                  title="Delete Entry"
-                                  className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
-                                >
-                                  🗑️
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                                    }}
+                                    title="Delete Entry"
+                                    className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg border border-slate-200 cursor-pointer"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1370,6 +1404,151 @@
 
           </main>
 
+          {/* ASSET MOVEMENT HISTORY REPORT MODAL (MODULE 2) */}
+          {showMovementReportModal && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Asset Movement & Multi-Dispatch History Report</h3>
+                    <p className="text-[11px] text-slate-500">Tracking assets dispatched multiple times across locations</p>
+                  </div>
+                  <button onClick={() => setShowMovementReportModal(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+
+                <div className="max-h-96 overflow-auto border border-slate-200 rounded-xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">Asset Tag No</th>
+                        <th>Asset Name</th>
+                        <th className="text-center">Total Movements</th>
+                        <th>Movement Trail (Departments & Status)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {(() => {
+                        const tagMap = {};
+                        tempDispatches.forEach(d => {
+                          const tag = d.assetTagNo || 'UNKNOWN';
+                          if (!tagMap[tag]) {
+                            tagMap[tag] = { name: d.assetName, records: [] };
+                          }
+                          tagMap[tag].records.push(d);
+                        });
+
+                        const multiMoved = Object.keys(tagMap).map(tag => ({
+                          tag,
+                          name: tagMap[tag].name,
+                          count: tagMap[tag].records.length,
+                          records: tagMap[tag].records
+                        }));
+
+                        if (multiMoved.length === 0) {
+                          return (
+                            <tr><td colSpan="4" className="text-center py-8 text-slate-400">No temporary dispatch records found.</td></tr>
+                          );
+                        }
+
+                        return multiMoved.map(item => (
+                          <tr key={item.tag} className={`hover:bg-slate-50 ${item.count > 1 ? 'bg-amber-50/50 font-semibold' : ''}`}>
+                            <td className="p-3 font-mono text-blue-600 font-bold">{item.tag}</td>
+                            <td>{item.name}</td>
+                            <td className="text-center font-mono font-black">
+                              <span className={`px-2 py-0.5 rounded text-[11px] ${item.count > 1 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-800'}`}>
+                                {item.count} {item.count > 1 ? '⚠️ (Multiple Moves)' : 'Move'}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="space-y-1 py-1">
+                                {item.records.map((r, i) => (
+                                  <div key={i} className="text-[11px] bg-white p-1.5 rounded border border-slate-200 flex justify-between items-center">
+                                    <span>📍 <strong>{r.department}</strong> ({r.receiver})</span>
+                                    <span className="font-mono text-slate-500">{r.issueDate} — <span className="text-blue-600 font-bold">{r.status || 'Temporary Given'}</span></span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button 
+                    onClick={() => setShowMovementReportModal(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold cursor-pointer text-xs"
+                  >
+                    Close Report
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STOCK INVENTORY MOVEMENT REPORT MODAL (MODULE 1) */}
+          {showStockReportModal && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Stock Inventory Movement & Audit Report</h3>
+                    <p className="text-[11px] text-slate-500">Summary of stock quantities, balances, and operational locations</p>
+                  </div>
+                  <button onClick={() => setShowStockReportModal(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+
+                <div className="max-h-96 overflow-auto border border-slate-200 rounded-xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">Particulars</th>
+                        <th>Group</th>
+                        <th className="text-center">Opening</th>
+                        <th className="text-center">Purchase</th>
+                        <th className="text-center">Issued</th>
+                        <th className="text-center">Balance</th>
+                        <th>Assigned Location</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {assets.map((item, index) => {
+                        const opening = Number(item.openingQty || 0);
+                        const purch = Number(item.newPurchase || 0);
+                        const issue = Number(item.issueItems || 0);
+                        const short = Number(item.shortItems || 0);
+                        const dead = Number(item.deadItems || 0);
+                        const bal = (opening + purch) - (issue + short + dead);
+                        return (
+                          <tr key={item.firebaseKey || index} className="hover:bg-slate-50">
+                            <td className="p-3 font-bold text-blue-600">{item.particulars}</td>
+                            <td className="uppercase text-[10px] text-slate-500">{item.group}</td>
+                            <td className="text-center font-mono">{opening}</td>
+                            <td className="text-center font-mono text-blue-600 font-bold">+{purch}</td>
+                            <td className="text-center font-mono text-amber-600 font-bold">-{issue}</td>
+                            <td className="text-center font-mono font-black text-emerald-600">{bal}</td>
+                            <td>{item.location || 'Unassigned'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button 
+                    onClick={() => setShowStockReportModal(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold cursor-pointer text-xs"
+                  >
+                    Close Report
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TEMPORARY ASSET ISSUE MODAL */}
           {isTempModalOpen && (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1407,8 +1586,7 @@
                     const newDispatch = {
                       id: `td_${Date.now()}`,
                       ...tempForm,
-                      issueDate: timestamped,
-                      status: 'Active Dispatched'
+                      issueDate: timestamped
                     };
                     try {
                       await fetch(FIREBASE_TEMP_URL, {
@@ -1485,6 +1663,17 @@
                       onChange={(e) => setTempForm({ ...tempForm, receiver: e.target.value })}
                       className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg outline-none text-slate-900"
                     />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Movement Status *</label>
+                    <select
+                      value={tempForm.status}
+                      onChange={(e) => setTempForm({ ...tempForm, status: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg font-bold outline-none text-slate-900"
+                    >
+                      <option value="Temporary Given">Temporary Given</option>
+                      <option value="Return Back">Return Back</option>
+                    </select>
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
                     <button 
