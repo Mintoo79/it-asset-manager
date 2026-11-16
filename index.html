@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Enterprise IT Asset & Inventory Management Suite v3.1</title>
+  <title>Enterprise IT Asset & Inventory Management Suite v3.2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -56,7 +56,7 @@
     <div class="flex h-screen items-center justify-center bg-slate-900 text-white">
       <div class="text-center space-y-3">
         <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <div class="text-sm font-semibold tracking-wider text-slate-300">INITIALIZING ENTERPRISE ASSET ENGINE v3.1...</div>
+        <div class="text-sm font-semibold tracking-wider text-slate-300">INITIALIZING ENTERPRISE ASSET ENGINE v3.2...</div>
       </div>
     </div>
   </div>
@@ -75,11 +75,11 @@
       auditLogs: `${BASE}/audit_logs.json`,
       loginLogs: `${BASE}/login_logs.json`,
       slaConfig: `${BASE}/sla_config.json`,
-      slaQueue: `${BASE}/sla_queue.json`,
-      pmMedia: `${BASE}/pm_media.json`
+      slaQueue: `${BASE}/sla_queue.json`
     };
-    const SESSION_KEY = 'it_asset_session_v3';
-    const THEME_KEY = 'it_asset_theme_v3';
+    // v3.2 — new session key so old corrupt v3 session is ignored
+    const SESSION_KEY = 'it_asset_session_v32';
+    const THEME_KEY = 'it_asset_theme_v32';
 
     // ============ ICONS ============
     const I = {
@@ -172,7 +172,6 @@
       }
     }
 
-    // Simulated upload (data-URL). Replace body with Firebase Storage SDK for production.
     async function uploadToStorage(file, path) {
       return new Promise((resolve, reject) => {
         if (!file) return reject('No file');
@@ -191,8 +190,9 @@
       'Department Head': { tabs:['dashboard','inventory','preventive_maint','stock_ledger','reports'], canEdit:false, canDelete:false, canExport:true, canManageUsers:false, canCompletePM:true, canIssueTemp:false },
       'Technician': { tabs:['dashboard','inventory','preventive_maint','reports'], canEdit:false, canDelete:false, canExport:false, canManageUsers:false, canCompletePM:true, canIssueTemp:false }
     };
+    const DEFAULT_PERMS = ROLE_PERMS['Store Keeper'];
 
-    // IMPORTANT: FALLBACK_USERS structure UNCHANGED — purana data safe
+    // ============ FALLBACK DATA ============
     const FALLBACK_USERS = [
       { id:'u1', name:'Super Admin', username:'admin', pin:'1234', role:'Super Administrator', department:'IT Management', status:'Active', mustChangePin:false },
       { id:'u2', name:'IT Inventory Desk', username:'store', pin:'5678', role:'Store Keeper', department:'IT Stores', status:'Active', mustChangePin:false },
@@ -235,17 +235,23 @@
       }
     };
 
-    // ============ SIGNATURE CAPTURE ============
+    // ============ SIGNATURE CAPTURE (OUTSIDE APP — hooks order safe) ============
     function SignatureCapture({ title, onSave, onClose }) {
       const canvasRef = useRef(null);
       const padRef = useRef(null);
 
       useEffect(() => {
         if (!canvasRef.current) return;
+        if (typeof window.SignaturePad !== 'function') {
+          console.warn('SignaturePad CDN not loaded');
+          return;
+        }
         const canvas = canvasRef.current;
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
-        padRef.current = new window.SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,0)', penColor: '#1e293b' });
+        try {
+          padRef.current = new window.SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,0)', penColor: '#1e293b' });
+        } catch(e) { console.warn('SignaturePad init failed', e); }
         return () => { padRef.current = null; };
       }, []);
 
@@ -273,6 +279,47 @@
       );
     }
 
+    // ============ ERROR BOUNDARY ============
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { error: null, info: null }; }
+      static getDerivedStateFromError(error) { return { error }; }
+      componentDidCatch(error, info) { console.error('Caught error:', error, info); this.setState({ info }); }
+      render() {
+        if (this.state.error) {
+          return (
+            <div className="min-h-screen bg-slate-900 text-white p-8 overflow-auto">
+              <div className="max-w-3xl mx-auto space-y-4">
+                <h1 className="text-2xl font-bold text-rose-400">⚠️ Application Error</h1>
+                <p className="text-sm text-slate-300">Something broke while rendering. Please share the details below.</p>
+                <div className="bg-slate-800 p-4 rounded-xl">
+                  <div className="text-xs font-mono text-rose-300 whitespace-pre-wrap">{String(this.state.error?.message || this.state.error)}</div>
+                  {this.state.error?.stack && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-slate-400 cursor-pointer">Stack trace</summary>
+                      <pre className="text-[10px] text-slate-500 mt-1 whitespace-pre-wrap">{this.state.error.stack}</pre>
+                    </details>
+                  )}
+                  {this.state.info?.componentStack && (
+                    <details className="mt-2">
+                      <summary className="text-xs text-slate-400 cursor-pointer">Component stack</summary>
+                      <pre className="text-[10px] text-slate-500 mt-1 whitespace-pre-wrap">{this.state.info.componentStack}</pre>
+                    </details>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => { localStorage.removeItem(SESSION_KEY); window.location.reload(); }}
+                    className="px-4 py-2 bg-brand-600 rounded-xl text-xs font-bold">Clear Session & Reload</button>
+                  <button onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-slate-700 rounded-xl text-xs font-bold">Just Reload</button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
     // ============ MAIN APP ============
     function App() {
       // Auth
@@ -286,6 +333,7 @@
       const [showPin, setShowPin] = useState(false);
       const [forcePinChange, setForcePinChange] = useState(false);
       const [newPinValue, setNewPinValue] = useState('');
+      const [bootstrapped, setBootstrapped] = useState(false);
 
       // Layout
       const [activeTab, setActiveTab] = useState('dashboard');
@@ -339,7 +387,7 @@
       const [toasts, setToasts] = useState([]);
       const [signatureModal, setSignatureModal] = useState({ open:false, title:'', onSave:null });
 
-      // Forms — NOTE: existing fields unchanged; new fields appended with safe defaults
+      // Forms
       const [formData, setFormData] = useState({
         group:'MOUSE', particulars:'', brand:'Dell', customBrand:'', serialNo:'', vendor:'', invoiceNo:'', warranty:'',
         cableLength:'', measurementUnit:'Piece', openingQty:0, newPurchase:0, issueItems:0, shortItems:0, deadItems:0,
@@ -373,38 +421,61 @@
         setAuditLogs(prev => [entry, ...prev].slice(0, 500));
       }, [loggedInUser]);
 
+      // PERMS — always returns valid object
       const perms = useMemo(() => {
-        if (!loggedInUser) return ROLE_PERMS['Store Keeper'];
-        return ROLE_PERMS[loggedInUser.role] || ROLE_PERMS['Store Keeper'];
+        if (!loggedInUser || !loggedInUser.role) return DEFAULT_PERMS;
+        // Normalize role name (case-insensitive)
+        const matchedRole = Object.keys(ROLE_PERMS).find(
+          r => r.toLowerCase() === String(loggedInUser.role).toLowerCase().trim()
+        );
+        return ROLE_PERMS[matchedRole] || DEFAULT_PERMS;
       }, [loggedInUser]);
 
       // Theme
       useEffect(() => {
-        const saved = localStorage.getItem(THEME_KEY);
-        if (saved === 'dark') { setDarkMode(true); document.documentElement.classList.add('dark'); }
+        try {
+          const saved = localStorage.getItem(THEME_KEY);
+          if (saved === 'dark') { setDarkMode(true); document.documentElement.classList.add('dark'); }
+        } catch(e) {}
       }, []);
       useEffect(() => {
-        if (darkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
-        localStorage.setItem(THEME_KEY, darkMode ? 'dark' : 'light');
+        try {
+          if (darkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+          localStorage.setItem(THEME_KEY, darkMode ? 'dark' : 'light');
+        } catch(e) {}
       }, [darkMode]);
 
-      // Session restore
+      // Session restore — SAFE with normalization
       useEffect(() => {
         try {
           const raw = localStorage.getItem(SESSION_KEY);
           if (raw) {
             const s = JSON.parse(raw);
-            if (s.expires > Date.now() && s.user) {
-              setLoggedInUser(s.user); setIsLoggedIn(true);
-              if (s.user.mustChangePin) setForcePinChange(true);
-            } else localStorage.removeItem(SESSION_KEY);
+            if (s && s.expires > Date.now() && s.user && s.user.username) {
+              // Role normalize on restore
+              const matchedRole = Object.keys(ROLE_PERMS).find(
+                r => r.toLowerCase() === String(s.user.role || '').toLowerCase().trim()
+              ) || 'Store Keeper';
+              const normalizedUser = { ...s.user, role: matchedRole };
+              setLoggedInUser(normalizedUser); setIsLoggedIn(true);
+              if (normalizedUser.mustChangePin) setForcePinChange(true);
+            } else if (s) {
+              localStorage.removeItem(SESSION_KEY);
+            }
           }
-        } catch(e) {}
+        } catch(e) {
+          console.warn('Session restore failed', e);
+          localStorage.removeItem(SESSION_KEY);
+        } finally {
+          setBootstrapped(true);
+        }
       }, []);
 
-      const saveSession = (user) => localStorage.setItem(SESSION_KEY, JSON.stringify({ user, expires: Date.now() + 8*3600*1000 }));
+      const saveSession = (user) => {
+        try { localStorage.setItem(SESSION_KEY, JSON.stringify({ user, expires: Date.now() + 8*3600*1000 })); } catch(e) {}
+      };
 
-      // Fetch — backward compatible; naye nodes optional hain
+      // Fetch
       const fetchAll = useCallback(async (silent = true) => {
         if (!silent) setIsSyncing(true);
         try {
@@ -416,7 +487,7 @@
           if (r[0].status === 'fulfilled' && r[0].value) {
             const arr = Object.keys(r[0].value).map(k => ({ ...r[0].value[k], firebaseKey:k }));
             setAssets(arr.length ? arr.filter(a => !a.isDeleted) : FALLBACK_ASSETS);
-          } else if (assets.length === 0) setAssets(FALLBACK_ASSETS);
+          } else { setAssets(prev => prev.length ? prev : FALLBACK_ASSETS); }
           if (r[1].status === 'fulfilled' && r[1].value) setTempDispatches(Object.keys(r[1].value).map(k => ({ ...r[1].value[k], firebaseKey:k })).filter(x => !x.isDeleted));
           if (r[2].status === 'fulfilled' && r[2].value) setPmSchedules(Object.keys(r[2].value).map(k => ({ ...r[2].value[k], firebaseKey:k })).filter(x => !x.isDeleted));
           if (r[3].status === 'fulfilled' && r[3].value) setPmAuditLogs(Object.keys(r[3].value).map(k => ({ ...r[3].value[k], firebaseKey:k })));
@@ -429,17 +500,17 @@
           if (r[7].status === 'fulfilled' && r[7].value) setSlaQueue(Object.keys(r[7].value).map(k => ({ ...r[7].value[k], firebaseKey:k })));
           const now = new Date();
           setLastSyncTime(`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`);
-        } catch(e) { console.error(e); }
+        } catch(e) { console.error('Fetch error', e); }
         finally { setLoading(false); if (!silent) { setIsSyncing(false); toast('Sync complete!', 'success'); } }
-      }, [assets.length, toast]);
+      }, [toast]);
 
       useEffect(() => {
         fetchAll(true);
         const id = setInterval(() => { if (!document.hidden) fetchAll(true); }, 8000);
         return () => clearInterval(id);
-      }, []);
+      }, [fetchAll]);
 
-      // Keyboard shortcuts
+      // Keyboard
       useEffect(() => {
         const handler = (e) => {
           if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchPaletteOpen(true); }
@@ -449,32 +520,33 @@
             setShowMovementReportModal(false); setShowStockReportModal(false); setShowPmReportModal(false);
             setConfirmDialog(d => ({ ...d, open:false })); setNotifOpen(false); setSignatureModal(s => ({ ...s, open:false }));
           }
-          if (!isLoggedIn || isModalOpen || isTempModalOpen || isPmModalOpen) return;
-          const tag = document.activeElement?.tagName;
-          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-          if (e.key.toLowerCase() === 'n' && activeTab === 'inventory') { e.preventDefault(); openNewAsset(); }
-          if (e.key === '/') { e.preventDefault(); document.querySelector('#stock-search')?.focus(); }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-      }, [isLoggedIn, isModalOpen, isTempModalOpen, isPmModalOpen, activeTab]);
+      }, []);
 
-      // Login — IDENTICAL logic (plain pin compare, unchanged)
+      // Login
       const handleLogin = async (e) => {
         e.preventDefault();
         if (Date.now() < lockoutUntil) { setLoginError(`Locked. Wait ${Math.ceil((lockoutUntil-Date.now())/1000)}s.`); return; }
-        const matched = users.find(u =>
-          (String(u.username).trim().toLowerCase() === String(usernameInput).trim().toLowerCase() ||
-           String(u.name).trim().toLowerCase() === String(usernameInput).trim().toLowerCase()) &&
-          String(u.pin).trim() === String(pinInput).trim() && u.status === 'Active'
+        // Ensure users is array
+        const userList = Array.isArray(users) && users.length ? users : FALLBACK_USERS;
+        const matched = userList.find(u =>
+          (String(u.username || '').trim().toLowerCase() === String(usernameInput).trim().toLowerCase() ||
+           String(u.name || '').trim().toLowerCase() === String(usernameInput).trim().toLowerCase()) &&
+          String(u.pin || '').trim() === String(pinInput).trim() && u.status === 'Active'
         );
         try { await apiCall(URLS.loginLogs, 'POST', { id:`l_${Date.now()}`, username: usernameInput, success: !!matched, timestamp: fmtDT() }); } catch(e) {}
         if (matched) {
-          setIsLoggedIn(true); setLoggedInUser(matched); setLoginError(''); setLoginAttempts(0);
-          saveSession(matched);
-          if (matched.mustChangePin) setForcePinChange(true);
-          toast(`Welcome ${matched.name}`, 'success');
-          writeAudit('LOGIN', 'user', matched.username, {});
+          const matchedRole = Object.keys(ROLE_PERMS).find(
+            r => r.toLowerCase() === String(matched.role || '').toLowerCase().trim()
+          ) || 'Store Keeper';
+          const normalizedUser = { ...matched, role: matchedRole };
+          setIsLoggedIn(true); setLoggedInUser(normalizedUser); setLoginError(''); setLoginAttempts(0);
+          saveSession(normalizedUser);
+          if (normalizedUser.mustChangePin) setForcePinChange(true);
+          toast(`Welcome ${normalizedUser.name}`, 'success');
+          writeAudit('LOGIN', 'user', normalizedUser.username, {});
         } else {
           const a = loginAttempts + 1; setLoginAttempts(a);
           if (a >= 5) { setLockoutUntil(Date.now()+30000); setLoginError('Too many attempts. Locked 30s.'); setLoginAttempts(0); }
@@ -488,7 +560,7 @@
         const updated = { ...loggedInUser, pin: newPinValue, mustChangePin: false };
         try {
           if (loggedInUser.firebaseKey) await apiCall(`${BASE}/system_users/${loggedInUser.firebaseKey}.json`, 'PUT', updated);
-          setUsers(users.map(u => u.username === loggedInUser.username ? updated : u));
+          setUsers(prev => prev.map(u => u.username === loggedInUser.username ? updated : u));
           setLoggedInUser(updated); saveSession(updated);
           setForcePinChange(false); setNewPinValue('');
           toast('PIN updated', 'success');
@@ -497,13 +569,13 @@
 
       const handleLogout = () => {
         setIsLoggedIn(false); setLoggedInUser(null); setPinInput(''); setUsernameInput('');
-        localStorage.removeItem(SESSION_KEY);
+        try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
       };
 
       // Derived
       const summary = useMemo(() => {
         let totalItems=0, totalIssued=0, totalShort=0, totalDead=0, lowStock=0, totalBalance=0;
-        assets.forEach(a => {
+        (Array.isArray(assets) ? assets : []).forEach(a => {
           const op=+a.openingQty||0, pur=+a.newPurchase||0, iss=+a.issueItems||0, sh=+a.shortItems||0, dd=+a.deadItems||0;
           const bal = (op+pur)-(iss+sh+dd);
           totalItems += (op+pur); totalIssued += iss; totalShort += sh; totalDead += dd; totalBalance += bal;
@@ -512,15 +584,15 @@
         return { totalItems, totalIssued, totalShort, totalDead, lowStock, totalBalance };
       }, [assets]);
 
-      const pendingLoans = useMemo(() => tempDispatches.filter(d => d.status !== 'Return Back'), [tempDispatches]);
+      const pendingLoans = useMemo(() => (Array.isArray(tempDispatches) ? tempDispatches : []).filter(d => d.status !== 'Return Back'), [tempDispatches]);
       const overdueLoans = useMemo(() => pendingLoans.filter(d => d.expectedReturnDate && new Date(d.expectedReturnDate) < new Date()), [pendingLoans]);
-      const overduePm = useMemo(() => pmSchedules.filter(p => p.status !== 'Completed' && p.dueDate && new Date(p.dueDate) < new Date()), [pmSchedules]);
+      const overduePm = useMemo(() => (Array.isArray(pmSchedules) ? pmSchedules : []).filter(p => p.status !== 'Completed' && p.dueDate && new Date(p.dueDate) < new Date()), [pmSchedules]);
       const pmCompletionPct = useMemo(() => !pmSchedules.length ? 100 : Math.round((pmSchedules.filter(p => p.status === 'Completed').length / pmSchedules.length) * 100), [pmSchedules]);
 
-      const groupCounts = useMemo(() => assets.reduce((acc,a) => { const g=a.group||'OTHER'; acc[g]=(acc[g]||0)+1; return acc; }, {}), [assets]);
+      const groupCounts = useMemo(() => (Array.isArray(assets) ? assets : []).reduce((acc,a) => { const g=a.group||'OTHER'; acc[g]=(acc[g]||0)+1; return acc; }, {}), [assets]);
 
       const filteredAssets = useMemo(() => {
-        let arr = assets.filter(item => {
+        let arr = (Array.isArray(assets) ? assets : []).filter(item => {
           const q = searchQuery.toLowerCase();
           const ms = !q || (item.particulars||'').toLowerCase().includes(q) || (item.group||'').toLowerCase().includes(q) ||
                      (item.serialNo||'').toLowerCase().includes(q) || (item.brand||'').toLowerCase().includes(q) || (item.location||'').toLowerCase().includes(q);
@@ -548,7 +620,7 @@
 
       const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
       const paginatedAssets = useMemo(() => filteredAssets.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage), [filteredAssets, currentPage, itemsPerPage]);
-      const filteredPm = useMemo(() => pmSchedules.filter(p => (p.targetMonth||'').toLowerCase() === pmSelectedMonth.toLowerCase() && (!pmSelectedSlot || (p.slotRange||'').toLowerCase() === pmSelectedSlot.toLowerCase())), [pmSchedules, pmSelectedMonth, pmSelectedSlot]);
+      const filteredPm = useMemo(() => (Array.isArray(pmSchedules) ? pmSchedules : []).filter(p => (p.targetMonth||'').toLowerCase() === pmSelectedMonth.toLowerCase() && (!pmSelectedSlot || (p.slotRange||'').toLowerCase() === pmSelectedSlot.toLowerCase())), [pmSchedules, pmSelectedMonth, pmSelectedSlot]);
 
       // Actions
       const openNewAsset = () => {
@@ -564,11 +636,10 @@
         const ts = fmtDT();
         const finalBrand = formData.brand === 'Other' ? formData.customBrand : formData.brand;
         if (editingAsset) {
-          // Preserve all existing fields, only override form fields
           const updated = { ...editingAsset, ...formData, brand: finalBrand, lastUpdated: ts };
           try {
             if (editingAsset.firebaseKey) await apiCall(`${BASE}/assets/${editingAsset.firebaseKey}.json`, 'PUT', updated);
-            setAssets(assets.map(a => (a.id === editingAsset.id || a.firebaseKey === editingAsset.firebaseKey) ? updated : a));
+            setAssets(prev => prev.map(a => (a.id === editingAsset.id || a.firebaseKey === editingAsset.firebaseKey) ? updated : a));
             toast('Asset updated', 'success'); writeAudit('UPDATE', 'asset', updated.id, { particulars: updated.particulars });
           } catch(e) { toast('Error updating', 'error'); }
         } else {
@@ -578,7 +649,7 @@
             const data = await apiCall(URLS.assets);
             if (data) setAssets(Object.keys(data).map(k => ({ ...data[k], firebaseKey:k })).filter(a => !a.isDeleted));
             toast('Asset registered', 'success'); writeAudit('CREATE', 'asset', newAsset.id, { particulars: newAsset.particulars });
-          } catch(e) { setAssets([newAsset, ...assets]); toast('Saved locally', 'info'); }
+          } catch(e) { setAssets(prev => [newAsset, ...prev]); toast('Saved locally', 'info'); }
         }
         setIsModalOpen(false); setEditingAsset(null);
       };
@@ -586,7 +657,7 @@
       const deleteAsset = (item) => askConfirm('Delete Asset?', `Remove "${item.particulars}"?`, async () => {
         try {
           if (item.firebaseKey) await apiCall(`${BASE}/assets/${item.firebaseKey}.json`, 'PUT', { ...item, isDeleted:true, deletedAt: fmtDT(), deletedBy: loggedInUser?.username });
-          setAssets(assets.filter(a => a.id !== item.id && a.firebaseKey !== item.firebaseKey));
+          setAssets(prev => prev.filter(a => a.id !== item.id && a.firebaseKey !== item.firebaseKey));
           toast('Asset deleted', 'info'); writeAudit('DELETE', 'asset', item.id, { particulars: item.particulars });
         } catch(e) { toast('Delete failed', 'error'); }
         setConfirmDialog(d => ({ ...d, open:false }));
@@ -599,7 +670,7 @@
             const item = assets.find(a => (a.firebaseKey === id || String(a.id) === String(id)));
             if (item?.firebaseKey) { try { await apiCall(`${BASE}/assets/${item.firebaseKey}.json`, 'PUT', { ...item, isDeleted:true, deletedAt: fmtDT() }); } catch(e) {} }
           }
-          setAssets(assets.filter(a => !selectedIds.includes(a.firebaseKey) && !selectedIds.includes(String(a.id))));
+          setAssets(prev => prev.filter(a => !selectedIds.includes(a.firebaseKey) && !selectedIds.includes(String(a.id))));
           setSelectedIds([]); toast(`${selectedIds.length} deleted`, 'info');
           setConfirmDialog(d => ({ ...d, open:false }));
         });
@@ -610,7 +681,7 @@
         const updated = { ...item, status:'Return Back', returnDate: ts };
         try {
           if (item.firebaseKey) await apiCall(`${BASE}/temp_dispatches/${item.firebaseKey}.json`, 'PUT', updated);
-          setTempDispatches(tempDispatches.map(d => (d.id === item.id || d.firebaseKey === item.firebaseKey) ? updated : d));
+          setTempDispatches(prev => prev.map(d => (d.id === item.id || d.firebaseKey === item.firebaseKey) ? updated : d));
           toast(`"${item.assetName}" returned`, 'success'); writeAudit('RETURN', 'dispatch', item.id, { assetName:item.assetName });
         } catch(e) { toast('Return failed', 'error'); }
       };
@@ -620,7 +691,7 @@
         const updated = { ...item, status:'Completed', completedAt: ts };
         try {
           if (item.firebaseKey) await apiCall(`${BASE}/pm_schedules/${item.firebaseKey}.json`, 'PUT', updated);
-          setPmSchedules(pmSchedules.map(p => (p.id === item.id || p.firebaseKey === item.firebaseKey) ? updated : p));
+          setPmSchedules(prev => prev.map(p => (p.id === item.id || p.firebaseKey === item.firebaseKey) ? updated : p));
           toast(`PM for ${item.department} completed`, 'success'); writeAudit('PM_COMPLETE', 'pm', item.id, { department:item.department });
         } catch(e) { toast('Failed', 'error'); }
       };
@@ -642,6 +713,18 @@
         toast('PDF generated', 'success');
       };
 
+      // ===== BOOTSTRAP GATE — prevent blank flash =====
+      if (!bootstrapped) {
+        return (
+          <div className="flex h-screen items-center justify-center bg-slate-900 text-white">
+            <div className="text-center space-y-3">
+              <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <div className="text-sm font-semibold text-slate-300">Restoring session...</div>
+            </div>
+          </div>
+        );
+      }
+
       // ===== LOGIN SCREEN =====
       if (!isLoggedIn) {
         return (
@@ -651,7 +734,7 @@
               <div className="text-center space-y-2.5">
                 <div className="w-14 h-14 bg-gradient-to-tr from-brand-600 to-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white shadow-lg"><I.Stock /></div>
                 <h1 className="text-xl font-extrabold text-slate-900">IT Infrastructure Portal</h1>
-                <p className="text-xs text-slate-500 font-medium">Enterprise Asset Suite v3.1</p>
+                <p className="text-xs text-slate-500 font-medium">Enterprise Asset Suite v3.2</p>
               </div>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
@@ -677,14 +760,29 @@
               <div className="pt-4 border-t border-slate-100 text-center space-y-2">
                 <div className="text-[11px] font-semibold text-slate-400">Demo Accounts:</div>
                 <div className="flex justify-center gap-2 flex-wrap">
-                  {users.slice(0,3).map(u => (
-                    <button key={u.id||u.username} type="button" onClick={()=>{setUsernameInput(u.username);setPinInput(u.pin);}}
+                  {FALLBACK_USERS.map(u => (
+                    <button key={u.username} type="button" onClick={()=>{setUsernameInput(u.username);setPinInput(u.pin);}}
                       className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-mono font-semibold border border-slate-200">
                       {u.username} <span className="text-slate-400">(PIN: {u.pin})</span>
                     </button>
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ===== SAFETY GUARDS =====
+      if (!loggedInUser || !loggedInUser.role) {
+        return (
+          <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white">
+            <div className="max-w-md text-center space-y-3">
+              <div className="text-3xl">⚠️</div>
+              <h2 className="text-lg font-bold">Session Error</h2>
+              <p className="text-xs text-slate-400">User data could not be loaded. Please reset and log in again.</p>
+              <button onClick={() => { try{localStorage.removeItem(SESSION_KEY);}catch(e){}; window.location.reload(); }}
+                className="px-4 py-2 bg-indigo-600 rounded-xl text-xs font-bold">Reset Session & Reload</button>
             </div>
           </div>
         );
@@ -744,7 +842,7 @@
             <div className="flex items-center gap-3 px-2 py-3 border-b border-slate-800 shrink-0">
               <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-md"><I.Stock /></div>
               <div>
-                <h2 className="text-xs font-black tracking-wider uppercase text-white">ASSET SUITE v3.1</h2>
+                <h2 className="text-xs font-black tracking-wider uppercase text-white">ASSET SUITE v3.2</h2>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   <span className="text-[10px] text-slate-400 font-mono">Sync: {lastSyncTime}</span>
@@ -776,7 +874,7 @@
           <div className="pt-3 border-t border-slate-800 space-y-2 shrink-0">
             <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 flex items-center justify-between">
               <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">{loggedInUser?.name?.charAt(0) || 'A'}</div>
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">{String(loggedInUser?.name || 'A').charAt(0)}</div>
                 <div className="truncate"><div className="text-xs font-bold text-white truncate">{loggedInUser?.name}</div><div className="text-[10px] text-indigo-400 font-medium truncate">{loggedInUser?.role}</div></div>
               </div>
               <button onClick={()=>fetchAll(false)} disabled={isSyncing} className={`p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 ${isSyncing?'animate-spin text-brand-400':''}`}><I.Refresh /></button>
@@ -839,11 +937,6 @@
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800"><div className="text-xs font-bold mb-3">Category</div><div className="h-48"><canvas id="chartCat"></canvas></div></div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800"><div className="text-xs font-bold mb-3">PM Trend</div><div className="h-48"><canvas id="chartPm"></canvas></div></div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800"><div className="text-xs font-bold mb-3">Top Groups</div><div className="h-48"><canvas id="chartGrp"></canvas></div></div>
-          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
               <div className="text-xs font-bold mb-3">Recent Activity</div>
@@ -851,7 +944,7 @@
                 {auditLogs.slice(0,10).map((l,i)=>(
                   <div key={i} className="text-[11px] p-2 bg-slate-50 dark:bg-slate-800 rounded-lg flex justify-between gap-2">
                     <span className="font-semibold text-slate-800 dark:text-slate-200 truncate"><span className="text-brand-600 font-mono">{l.action}</span> · {l.userName}</span>
-                    <span className="text-slate-400 font-mono whitespace-nowrap">{l.timestamp?.split(',')[1]}</span>
+                    <span className="text-slate-400 font-mono whitespace-nowrap">{String(l.timestamp||'').split(',')[1]||''}</span>
                   </div>
                 ))}
                 {!auditLogs.length && <div className="text-xs text-slate-400 text-center py-4">No activity</div>}
@@ -869,18 +962,6 @@
           </div>
         </div>
       );
-
-      useEffect(() => {
-        if (activeTab !== 'dashboard' || !document.getElementById('chartCat')) return;
-        const inst = [];
-        const catData = assets.reduce((acc,a) => { const c=a.category||'Other'; acc[c]=(acc[c]||0)+1; return acc; }, {});
-        inst.push(new Chart(document.getElementById('chartCat'), { type:'doughnut', data:{ labels:Object.keys(catData), datasets:[{ data:Object.values(catData), backgroundColor:['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6'] }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{ size:10 } } } } } }));
-        const pmData = MONTHS.map(m => ({ m:m.code, done:pmSchedules.filter(p=>p.targetMonth===m.code&&p.status==='Completed').length, pending:pmSchedules.filter(p=>p.targetMonth===m.code&&p.status!=='Completed').length }));
-        inst.push(new Chart(document.getElementById('chartPm'), { type:'bar', data:{ labels:pmData.map(x=>x.m), datasets:[{ label:'Done', data:pmData.map(x=>x.done), backgroundColor:'#10b981' }, { label:'Pending', data:pmData.map(x=>x.pending), backgroundColor:'#f59e0b' }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ stacked:true, ticks:{ font:{ size:9 } } }, y:{ stacked:true, beginAtZero:true, ticks:{ font:{ size:9 } } } }, plugins:{ legend:{ labels:{ font:{ size:10 } } } } } }));
-        const grpData = Object.entries(groupCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        inst.push(new Chart(document.getElementById('chartGrp'), { type:'bar', data:{ labels:grpData.map(g=>g[0]), datasets:[{ label:'Assets', data:grpData.map(g=>g[1]), backgroundColor:'#6366f1' }] }, options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y', plugins:{ legend:{ display:false } }, scales:{ x:{ ticks:{ font:{ size:9 } } }, y:{ ticks:{ font:{ size:9 } } } } } }));
-        return () => inst.forEach(c => c.destroy());
-      }, [activeTab, assets, pmSchedules]);
 
       // ===== INVENTORY =====
       const InventoryView = (
@@ -940,7 +1021,7 @@
                    !paginatedAssets.length ? (
                     <tr><td colSpan="13" className="text-center py-16">
                       <div className="space-y-2"><div className="text-4xl">📦</div><div className="text-sm font-bold text-slate-600">No assets found</div>
-                      <button onClick={openNewAsset} className="text-xs px-3 py-1.5 bg-brand-600 text-white rounded-lg font-bold">+ Register First Asset</button></div>
+                      {perms.canEdit && <button onClick={openNewAsset} className="text-xs px-3 py-1.5 bg-brand-600 text-white rounded-lg font-bold">+ Register First Asset</button>}</div>
                     </td></tr>
                   ) : paginatedAssets.map(item => {
                     const bal = (+item.openingQty||0)+(+item.newPurchase||0)-(+item.issueItems||0)-(+item.shortItems||0)-(+item.deadItems||0);
@@ -1205,7 +1286,7 @@
                       {perms.canManageUsers && (
                         <div className="inline-flex gap-1">
                           <button onClick={()=>{setEditingUser(u);setUserForm({name:u.name||'',username:u.username||'',pin:u.pin||'',role:u.role||'Store Keeper',department:u.department||'',status:u.status||'Active',mustChangePin:u.mustChangePin||false});setIsUserModalOpen(true);}} className="p-1 bg-slate-100 dark:bg-slate-800 rounded"><I.Edit /></button>
-                          <button onClick={()=>{askConfirm('Delete User?',`Remove ${u.name}?`,async()=>{if(u.firebaseKey)await apiCall(`${BASE}/system_users/${u.firebaseKey}.json`,'DELETE');setUsers(users.filter(x=>x.id!==u.id&&x.firebaseKey!==u.firebaseKey));toast('Deleted','info');setConfirmDialog(d=>({...d,open:false}));});}} className="p-1 bg-slate-100 dark:bg-slate-800 text-rose-600 rounded"><I.Trash /></button>
+                          <button onClick={()=>{askConfirm('Delete User?',`Remove ${u.name}?`,async()=>{if(u.firebaseKey)await apiCall(`${BASE}/system_users/${u.firebaseKey}.json`,'DELETE');setUsers(prev=>prev.filter(x=>x.id!==u.id&&x.firebaseKey!==u.firebaseKey));toast('Deleted','info');setConfirmDialog(d=>({...d,open:false}));});}} className="p-1 bg-slate-100 dark:bg-slate-800 text-rose-600 rounded"><I.Trash /></button>
                         </div>
                       )}
                     </td>
@@ -1231,8 +1312,7 @@
                 exportToPDF('Low Stock', low.map(a => ({ Particulars:a.particulars, Balance:(+a.openingQty||0)+(+a.newPurchase||0)-(+a.issueItems||0)-(+a.shortItems||0)-(+a.deadItems||0), MinAlert:a.minAlert, Suggested:Math.max(0,(+a.minAlert||2)*2-((+a.openingQty||0)+(+a.newPurchase||0)-(+a.issueItems||0))) })), { 'Generated At': fmtDT() });
               } },
               { t:'Audit Trail', d:'All changes', fn:()=>exportToPDF('Audit Log', auditLogs.slice(0,200), { 'Generated At': fmtDT() }) },
-              { t:'Dept Distribution', d:'Assets per dept', fn:()=>exportToPDF('Dept Distribution', Object.entries(tempDispatches.reduce((acc,d)=>{acc[d.department]=(acc[d.department]||0)+(+d.quantity||0);return acc;},{})).map(([k,v])=>({Department:k,Assets:v})), { 'Generated At': fmtDT() }) },
-              { t:'SLA Queue', d:'Pending alerts', fn:()=>exportToPDF('SLA Queue', slaQueue, { 'Generated At': fmtDT() }) }
+              { t:'Dept Distribution', d:'Assets per dept', fn:()=>exportToPDF('Dept Distribution', Object.entries(tempDispatches.reduce((acc,d)=>{acc[d.department]=(acc[d.department]||0)+(+d.quantity||0);return acc;},{})).map(([k,v])=>({Department:k,Assets:v})), { 'Generated At': fmtDT() }) }
             ].map((r,i)=>(
               <button key={i} onClick={r.fn} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 text-left hover:border-brand-500 hover:shadow-md transition">
                 <div className="font-extrabold text-xs">{r.t}</div><div className="text-[11px] text-slate-500 mb-2">{r.d}</div>
@@ -1269,7 +1349,7 @@
       const enqueueSlaAlert = async (type) => {
         const preview = generateAlertPreview(type);
         const entry = { id:`q_${Date.now()}`, type, to: slaConfig.recipients, subject: preview.subject, body: preview.body, status:'Queued', createdAt: fmtDT() };
-        try { await apiCall(URLS.slaQueue, 'POST', entry); setSlaQueue(prev => [entry, ...prev]); toast('Alert queued (email hook placeholder)', 'success'); writeAudit('SLA_QUEUE','alert',entry.id,{type}); }
+        try { await apiCall(URLS.slaQueue, 'POST', entry); setSlaQueue(prev => [entry, ...prev]); toast('Alert queued', 'success'); writeAudit('SLA_QUEUE','alert',entry.id,{type}); }
         catch(e) { toast('Queue failed', 'error'); }
       };
 
@@ -1285,7 +1365,7 @@
               <input value={slaConfig.recipients} onChange={e=>setSlaConfig({...slaConfig,recipients:e.target.value})} className="w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-xl text-xs font-mono" />
             </div>
             <div className="text-[11px] p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-              <strong>Integration Note:</strong> UI + queue placeholder. Real emails ke liye <code>sla_queue</code> node ko Firebase Function (Nodemailer/SendGrid) se connect karein.
+              <strong>Integration Note:</strong> UI + queue placeholder. Real emails ke liye <code>sla_queue</code> node ko Firebase Function se connect karein.
             </div>
             <button onClick={()=>updateSlaConfig({})} className="px-4 py-2 bg-brand-600 text-white text-xs font-bold rounded-xl">Save Configuration</button>
           </div>
@@ -1328,7 +1408,7 @@
                       <span className="text-slate-400 font-mono text-[10px]">{q.createdAt}</span>
                       <button onClick={async()=>{
                         if(q.firebaseKey) await apiCall(`${BASE}/sla_queue/${q.firebaseKey}.json`,'DELETE');
-                        setSlaQueue(slaQueue.filter(x=>x.id!==q.id));
+                        setSlaQueue(prev=>prev.filter(x=>x.id!==q.id));
                       }} className="text-rose-600"><I.X /></button>
                     </div>
                   </div>
@@ -1518,13 +1598,6 @@
                       await apiCall(URLS.pmLogs, 'POST', { id:`log_${Date.now()}`, timestamp:ts, department:pmForm.department, action:'Updated' });
                     } else {
                       await apiCall(URLS.pm, 'POST', { id:`pm_${Date.now()}`, ...pmForm, createdDate:ts });
-                      if (pmForm.recurring) {
-                        for (let i=1;i<=3;i++) {
-                          const idx = MONTHS.findIndex(m => m.code === pmForm.targetMonth);
-                          const next = MONTHS[(idx + i*(pmForm.recurrenceMonths||1)) % 12];
-                          if (next) await apiCall(URLS.pm, 'POST', { id:`pm_${Date.now()}_${i}`, ...pmForm, targetMonth:next.code, slotRange:next.slots[0], status:'Scheduled', createdDate:ts, isRecurring:true });
-                        }
-                      }
                     }
                     await fetchAll(true);
                     toast('PM saved','success');
@@ -1589,7 +1662,7 @@
             </div>
           )}
 
-          {/* User Modal — SAME fields (pin plaintext retained) */}
+          {/* User Modal */}
           {isUserModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
               <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-3">
@@ -1692,7 +1765,12 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    // ============ RENDER ============
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
   </script>
 </body>
 </html>
