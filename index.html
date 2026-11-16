@@ -2577,4 +2577,225 @@
                           <tr key={idx} className="hover:bg-slate-50">
                             <td className="p-3 font-bold text-slate-900">{item.particulars}</td>
                             <td className="text-center font-mono">{opening}</td>
-                            <
+                            <td className="text-center font-mono text-brand-600 font-bold">+{purch}</td>
+                            <td className="text-center font-mono text-amber-600 font-bold">-{issue}</td>
+                            <td className="text-center font-mono font-black text-emerald-600">{bal}</td>
+                            <td>{item.location || 'Unassigned'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button onClick={() => setShowStockReportModal(false)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">
+                    Close Audit
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* MODAL: PM AUDIT LOG REPORT */}
+          {/* ======================================================== */}
+          {showPmReportModal && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Preventive Maintenance Change Audit Logs</h3>
+                    <p className="text-[11px] text-slate-500">Immutable trace of modifications made to scheduled maintenance plans</p>
+                  </div>
+                  <button onClick={() => setShowPmReportModal(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+
+                <div className="max-h-96 overflow-auto border border-slate-200 rounded-2xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">Timestamp</th>
+                        <th>Department</th>
+                        <th>Equipment</th>
+                        <th>Change Description</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {pmAuditLogs.length === 0 ? (
+                        <tr><td colSpan="4" className="text-center py-8 text-slate-400">No modification logs found.</td></tr>
+                      ) : (
+                        pmAuditLogs.map((log, index) => (
+                          <tr key={index} className="hover:bg-slate-50">
+                            <td className="p-3 font-mono text-slate-500 text-[11px]">{log.timestamp}</td>
+                            <td className="font-bold text-brand-600">{log.department}</td>
+                            <td>{log.equipment}</td>
+                            <td className="text-slate-700">{log.action}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button onClick={() => setShowPmReportModal(false)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* MODAL: ADD / EDIT USER PROFILE */}
+          {/* ======================================================== */}
+          {isUserModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <h3 className="font-extrabold text-sm text-slate-900">
+                    {editingUser ? 'Edit System User Profile' : 'Create New System User'}
+                  </h3>
+                  <button onClick={() => setIsUserModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (editingUser) {
+                    const updatedUser = { ...editingUser, ...userForm };
+                    try {
+                      if (editingUser.firebaseKey) {
+                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users/${editingUser.firebaseKey}.json`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(updatedUser)
+                        });
+                      }
+                      setUsers(users.map(u => (u.id === editingUser.id || u.firebaseKey === editingUser.firebaseKey) ? updatedUser : u));
+                      showToast("User profile updated!", "success");
+                    } catch(err) {
+                      showToast("Error updating user.", "error");
+                    }
+                  } else {
+                    const newUser = { id: Date.now(), ...userForm };
+                    try {
+                      await fetch(FIREBASE_USERS_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newUser)
+                      });
+                      const res = await fetch(FIREBASE_USERS_URL);
+                      const data = await res.json();
+                      if (data) setUsers(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
+                      showToast("New user successfully created!", "success");
+                    } catch(err) {
+                      setUsers([...users, newUser]);
+                      showToast("User added locally.", "info");
+                    }
+                  }
+                  setIsUserModalOpen(false);
+                  setEditingUser(null);
+                }} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Full Name *</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. Mr. Rajesh Kumar"
+                      value={userForm.name}
+                      onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Username (Login ID) *</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. rajesh.it"
+                      value={userForm.username}
+                      onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Security PIN / Password (4-6 Digits) *</label>
+                    <input 
+                      type="text"
+                      required
+                      maxLength="6"
+                      placeholder="e.g. 4321"
+                      value={userForm.pin}
+                      onChange={(e) => setUserForm({ ...userForm, pin: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Role / Privilege *</label>
+                      <select
+                        value={userForm.role}
+                        onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 outline-none"
+                      >
+                        <option value="Super Administrator">Super Administrator</option>
+                        <option value="Store Keeper">Store Keeper</option>
+                        <option value="IT Technician">IT Technician</option>
+                        <option value="Department Head">Department Head</option>
+                        <option value="Auditor">Auditor</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Department *</label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g. IT Operations"
+                        value={userForm.department}
+                        onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Account Status *</label>
+                    <select
+                      value={userForm.status}
+                      onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 outline-none"
+                    >
+                      <option value="Active">Active (Allowed to Login)</option>
+                      <option value="Inactive">Inactive (Suspended)</option>
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsUserModalOpen(false)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition"
+                    >
+                      {editingUser ? 'Save Profile' : 'Create User'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
