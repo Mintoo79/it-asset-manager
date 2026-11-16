@@ -35,7 +35,6 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
-    /* Custom Scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
@@ -46,14 +45,9 @@
       line-height: 1.3 !important;
     }
 
-    /* Print Slip Styles */
     @media print {
-      body * {
-        visibility: hidden;
-      }
-      #printable-slip, #printable-slip * {
-        visibility: visible;
-      }
+      body * { visibility: hidden; }
+      #printable-slip, #printable-slip * { visibility: visible; }
       #printable-slip {
         position: fixed;
         left: 0;
@@ -66,9 +60,7 @@
         box-shadow: none !important;
         border: none !important;
       }
-      .no-print {
-        display: none !important;
-      }
+      .no-print { display: none !important; }
     }
   </style>
 </head>
@@ -85,14 +77,12 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    // Firebase Endpoints
     const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
     const FIREBASE_TEMP_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches.json";
     const FIREBASE_PM_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules.json";
     const FIREBASE_USERS_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users.json";
     const FIREBASE_PM_LOGS_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_audit_logs.json";
 
-    // Reusable Professional SVG Icons
     const Icons = {
       Stock: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
       Exchange: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>,
@@ -112,7 +102,6 @@
       SignOut: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
     };
 
-    // Helper to download real CSV files
     function exportToCSV(filename, rows) {
       if (!rows || !rows.length) return;
       const separator = ',';
@@ -139,19 +128,16 @@
     }
 
     function App() {
-      // Auth State
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [loggedInUser, setLoggedInUser] = useState(null);
       const [usernameInput, setUsernameInput] = useState('');
       const [pinInput, setPinInput] = useState('');
       const [loginError, setLoginError] = useState('');
 
-      // Navigation & Layout
       const [activeTab, setActiveTab] = useState('inventory');
       const [isSyncing, setIsSyncing] = useState(false);
       const [lastSyncTime, setLastSyncTime] = useState('Just now');
 
-      // Stock Register State
       const [searchQuery, setSearchQuery] = useState('');
       const [locationFilter, setLocationFilter] = useState('All');
       const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
@@ -160,13 +146,11 @@
       const [assets, setAssets] = useState([]);
       const [loading, setLoading] = useState(true);
 
-      // Modals
       const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
       const [viewModalItem, setViewModalItem] = useState(null);
       const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
 
-      // Temporary Asset Dispatches
       const [tempDispatches, setTempDispatches] = useState([]);
       const [isTempModalOpen, setIsTempModalOpen] = useState(false);
       const [editingTempItem, setEditingTempItem] = useState(null);
@@ -182,7 +166,6 @@
         status: 'Temporary Given' 
       });
 
-      // Preventive Maintenance (PM)
       const [pmSchedules, setPmSchedules] = useState([]);
       const [pmAuditLogs, setPmAuditLogs] = useState([]);
       const [isPmModalOpen, setIsPmModalOpen] = useState(false);
@@ -221,7 +204,6 @@
         slotRange: '01 to 10 January'
       });
 
-      // Users State
       const sampleFallbackUsers = [
         { id: 1, name: 'Super Admin', username: 'admin', pin: '1234', role: 'Super Administrator', department: 'IT Management', status: 'Active' },
         { id: 2, name: 'IT Inventory Desk', username: 'store', pin: '5678', role: 'Store Keeper', department: 'IT Stores', status: 'Active' },
@@ -287,7 +269,6 @@
         { id: 105, group: 'NETWORK', particulars: 'CAT6 PATCH CABLE 3M', brand: 'Cisco', serialNo: 'NW-CS-09', cableLength: '3.0', measurementUnit: 'Piece', openingQty: 25, newPurchase: 10, issueItems: 12, shortItems: 1, deadItems: 0, category: 'Consumable', location: 'NOC Room', minAlert: 5, entryMonth: 'Nov 2026', lastUpdated: '12 Nov 2026, 09:40 AM' }
       ];
 
-      // Centralized Data Fetcher
       const fetchAllData = async (silent = true) => {
         if (!silent) setIsSyncing(true);
         try {
@@ -336,7 +317,6 @@
         }
       };
 
-      // Periodic Auto-Sync with Tab Visibility optimization
       useEffect(() => {
         fetchAllData(true);
         const intervalId = setInterval(() => {
@@ -345,7 +325,6 @@
           }
         }, 5000);
 
-        // Escape Key Modal Closer
         const handleKeyDown = (e) => {
           if (e.key === 'Escape') {
             setIsModalOpen(false);
@@ -366,7 +345,6 @@
         };
       }, []);
 
-      // Filtered PM Schedules
       const filteredPmSchedules = useMemo(() => {
         return pmSchedules.filter(item => {
           const matchesMonth = (item.targetMonth || '').toLowerCase() === pmSelectedMonth.toLowerCase();
@@ -375,7 +353,6 @@
         });
       }, [pmSchedules, pmSelectedMonth, pmSelectedSlot]);
 
-      // Authentication Handler
       const handleLogin = (e) => {
         e.preventDefault();
         const matched = users.find(u => 
@@ -395,7 +372,6 @@
         }
       };
 
-      // Asset Form State
       const [formData, setFormData] = useState({
         group: 'MOUSE',
         particulars: '',
@@ -487,7 +463,6 @@
         }
       };
 
-      // Summary KPIs
       const summaryMetrics = useMemo(() => {
         let totalItems = 0;
         let totalIssued = 0;
@@ -539,7 +514,6 @@
         return filteredAssets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
       }, [filteredAssets, currentPage, itemsPerPage]);
 
-      // Quick 1-click Return Handler for Temp Dispatches
       const handleQuickReturn = async (item) => {
         const timestamped = getFormattedDateTime();
         const updated = {
@@ -562,7 +536,6 @@
         }
       };
 
-      // 1-Click Complete PM Task
       const handleQuickCompletePm = async (item) => {
         const timestamped = getFormattedDateTime();
         const updated = {
@@ -585,9 +558,6 @@
         }
       };
 
-      // ==========================================
-      // VIEW: LOGIN SCREEN (ENTERPRISE GRADE)
-      // ==========================================
       if (!isLoggedIn) {
         return (
           <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center p-4 relative overflow-hidden font-sans">
@@ -679,13 +649,9 @@
         );
       }
 
-      // ==========================================
-      // MAIN DASHBOARD APPLICATION
-      // ==========================================
       return (
         <div className="flex h-screen bg-slate-100 text-slate-800 overflow-hidden font-sans">
           
-          {/* TOAST NOTIFICATION STACK */}
           {toast.show && (
             <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold flex items-center gap-2.5 transition-all transform animate-in slide-in-from-bottom-5 ${
               toast.type === 'success' ? 'bg-slate-900 text-white border-emerald-500/40' :
@@ -697,11 +663,9 @@
             </div>
           )}
 
-          {/* SIDEBAR NAVIGATION */}
           <aside className="w-72 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 border-r border-slate-800 shrink-0">
             <div className="space-y-4 flex flex-col h-full overflow-hidden">
               
-              {/* App Brand Header */}
               <div className="flex items-center gap-3 px-2 py-3 border-b border-slate-800 shrink-0">
                 <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-brand-600/30">
                   <Icons.Stock />
@@ -715,7 +679,6 @@
                 </div>
               </div>
 
-              {/* Navigation Items */}
               <nav className="space-y-1 text-xs font-semibold overflow-y-auto pr-1 flex-1">
                 {[
                   { id: 'inventory', label: '1. Stock Register', icon: Icons.Stock },
@@ -745,7 +708,6 @@
                 })}
               </nav>
 
-              {/* Live KPI mini card */}
               <div className="bg-slate-800/60 p-3 rounded-2xl border border-slate-700/60 space-y-2 shrink-0">
                 <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-400">
                   <span>Inventory Health</span>
@@ -766,7 +728,6 @@
               </div>
             </div>
 
-            {/* Profile Footer */}
             <div className="pt-3 border-t border-slate-800 space-y-2 shrink-0">
               <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 flex items-center justify-between">
                 <div className="flex items-center gap-2.5 overflow-hidden">
@@ -802,16 +763,11 @@
             </div>
           </aside>
 
-          {/* MAIN WORKSPACE */}
           <main className="flex-1 flex flex-col overflow-hidden bg-slate-100 p-6 space-y-4">
 
-            {/* ======================================================== */}
-            {/* MODULE 1: STOCK REGISTER & INVENTORY LEDGER */}
-            {/* ======================================================== */}
             {activeTab === 'inventory' && (
               <div className="flex-1 flex flex-col overflow-hidden space-y-4">
                 
-                {/* Asset Categories Filter Bar */}
                 <div className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs space-y-2.5">
                   <div className="flex justify-between items-center">
                     <div className="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
@@ -878,7 +834,6 @@
                   </div>
                 </div>
 
-                {/* Filter and Action Header */}
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-4">
                   <div className="flex items-center gap-3">
                     <h1 className="text-sm font-extrabold text-slate-900 tracking-wide uppercase">Stock Register & Ledger</h1>
@@ -947,7 +902,6 @@
                   </div>
                 </header>
 
-                {/* Stock Table */}
                 <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 flex-1 flex flex-col overflow-hidden">
                   <div className="overflow-auto flex-1">
                     <table className="w-full text-left border-collapse table-compact text-xs">
@@ -1075,7 +1029,6 @@
                     </table>
                   </div>
 
-                  {/* Pagination Footer */}
                   <div className="p-3 bg-white border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 text-xs text-slate-500">
                     <div className="flex items-center gap-3">
                       <span>Showing {paginatedAssets.length} of {filteredAssets.length} items</span>
@@ -1118,9 +1071,6 @@
               </div>
             )}
 
-            {/* ======================================================== */}
-            {/* MODULE 2: TEMPORARY ASSET DEPLOYMENT */}
-            {/* ======================================================== */}
             {activeTab === 'temp_deploy' && (
               <div className="flex-1 flex flex-col overflow-hidden space-y-4">
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
@@ -1246,9 +1196,6 @@
               </div>
             )}
 
-            {/* ======================================================== */}
-            {/* MODULE 3: PREVENTIVE MAINTENANCE (PM) 12-MONTH PLAN */}
-            {/* ======================================================== */}
             {activeTab === 'preventive_maint' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
@@ -1304,7 +1251,6 @@
                   </div>
                 </header>
 
-                {/* Calendar Month & Slot Navigator */}
                 <div className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">1. Select Target Calendar Month</h3>
@@ -1344,7 +1290,6 @@
                     })}
                   </div>
 
-                  {/* Slot selector */}
                   {(() => {
                     const currentMonthObj = monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase());
                     if (!currentMonthObj || !currentMonthObj.slots) return null;
@@ -1378,7 +1323,6 @@
                   })()}
                 </div>
 
-                {/* Maintenance Records Table */}
                 <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-auto">
                   <div className="p-3.5 bg-slate-50 border-b border-slate-200 font-bold text-xs flex justify-between items-center text-slate-700">
                     <span>Target Scope: <strong className="text-brand-600">{monthsList.find(m => m.code.toLowerCase() === pmSelectedMonth.toLowerCase())?.name} ({pmSelectedSlot || 'All'})</strong></span>
@@ -1514,9 +1458,6 @@
               </div>
             )}
 
-            {/* ======================================================== */}
-            {/* MODULE 4: STOCK LEDGER & SUMMARY REPORTS */}
-            {/* ======================================================== */}
             {activeTab === 'stock_ledger' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs">
@@ -1567,9 +1508,6 @@
               </div>
             )}
 
-            {/* ======================================================== */}
-            {/* MODULE 5: ASSET WARRANTY & LIFECYCLE */}
-            {/* ======================================================== */}
             {activeTab === 'asset_lifecycle' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs">
@@ -1610,9 +1548,6 @@
               </div>
             )}
 
-            {/* ======================================================== */}
-            {/* MODULE 6: VENDOR & PURCHASE MANAGEMENT */}
-            {/* ======================================================== */}
             {activeTab === 'vendors' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs">
@@ -1643,9 +1578,6 @@
               </div>
             )}
 
-            {/* ======================================================== */}
-            {/* MODULE 7: PRIVILEGES & USERS */}
-            {/* ======================================================== */}
             {activeTab === 'users' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs flex justify-between items-center">
@@ -1758,9 +1690,6 @@
 
           </main>
 
-          {/* ======================================================== */}
-          {/* DEDICATED PRINTABLE ASSET ISSUE SLIP (GATE PASS) */}
-          {/* ======================================================== */}
           {viewModalItem && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div id="printable-slip" className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-8 space-y-6 text-slate-800">
@@ -1805,9 +1734,6 @@
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* MODAL: ADD / EDIT ASSET REGISTER */}
-          {/* ======================================================== */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8 text-slate-800">
@@ -1936,7 +1862,6 @@
                     </div>
                   </div>
 
-                  {/* Stock Quantities */}
                   <div className="grid grid-cols-5 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Opening</label>
@@ -2010,9 +1935,6 @@
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* MODAL: ISSUE TEMPORARY ASSET */}
-          {/* ======================================================== */}
           {isTempModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
@@ -2158,9 +2080,6 @@
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* MODAL: PREVENTIVE MAINTENANCE SCHEDULE */}
-          {/* ======================================================== */}
           {isPmModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 my-8 text-slate-800">
@@ -2489,9 +2408,6 @@
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* MODAL: MOVEMENT & CHANGE AUDIT REPORT */}
-          {/* ======================================================== */}
           {showMovementReportModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 text-slate-800">
@@ -2539,9 +2455,6 @@
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* MODAL: STOCK AUDIT REPORT */}
-          {/* ======================================================== */}
           {showStockReportModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 text-slate-800">
@@ -2597,9 +2510,6 @@
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* MODAL: PM AUDIT LOG REPORT */}
-          {/* ======================================================== */}
           {showPmReportModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 text-slate-800">
@@ -2640,42 +2550,36 @@
 
                 <div className="flex justify-end pt-2">
                   <button onClick={() => setShowPmReportModal(false)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">
-                    Dismiss
+                    Close Logs
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ======================================================== */}
-          {/* MODAL: ADD / EDIT USER PROFILE */}
-          {/* ======================================================== */}
           {isUserModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-extrabold text-sm text-slate-900">
-                    {editingUser ? 'Edit System User Profile' : 'Create New System User'}
-                  </h3>
+                  <h3 className="font-extrabold text-sm text-slate-900">{editingUser ? 'Edit System User' : 'Register New System User'}</h3>
                   <button onClick={() => setIsUserModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
-
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   if (editingUser) {
-                    const updatedUser = { ...editingUser, ...userForm };
+                    const updated = { ...editingUser, ...userForm };
                     try {
                       if (editingUser.firebaseKey) {
                         await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users/${editingUser.firebaseKey}.json`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(updatedUser)
+                          body: JSON.stringify(updated)
                         });
                       }
-                      setUsers(users.map(u => (u.id === editingUser.id || u.firebaseKey === editingUser.firebaseKey) ? updatedUser : u));
-                      showToast("User profile updated!", "success");
+                      setUsers(users.map(u => (u.id === editingUser.id || u.firebaseKey === editingUser.firebaseKey) ? updated : u));
+                      showToast("User updated successfully", "success");
                     } catch(err) {
-                      showToast("Error updating user.", "error");
+                      showToast("Error updating user", "error");
                     }
                   } else {
                     const newUser = { id: Date.now(), ...userForm };
@@ -2688,114 +2592,83 @@
                       const res = await fetch(FIREBASE_USERS_URL);
                       const data = await res.json();
                       if (data) setUsers(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
-                      showToast("New user successfully created!", "success");
+                      showToast("User created successfully", "success");
                     } catch(err) {
                       setUsers([...users, newUser]);
-                      showToast("User added locally.", "info");
+                      showToast("User saved locally", "info");
                     }
                   }
                   setIsUserModalOpen(false);
-                  setEditingUser(null);
                 }} className="space-y-3.5 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-600 mb-1">Full Name *</label>
                     <input 
-                      type="text"
-                      required
-                      placeholder="e.g. Mr. Rajesh Kumar"
-                      value={userForm.name}
-                      onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 outline-none"
+                      type="text" 
+                      required 
+                      value={userForm.name} 
+                      onChange={e => setUserForm({...userForm, name: e.target.value})} 
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900" 
+                      placeholder="e.g. Ramesh Kumar"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Username (Login ID) *</label>
+                    <label className="block font-semibold text-slate-600 mb-1">Username / Login ID *</label>
                     <input 
-                      type="text"
-                      required
-                      placeholder="e.g. rajesh.it"
-                      value={userForm.username}
-                      onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 outline-none"
+                      type="text" 
+                      required 
+                      value={userForm.username} 
+                      onChange={e => setUserForm({...userForm, username: e.target.value})} 
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900" 
+                      placeholder="e.g. ramesh"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Security PIN / Password (4-6 Digits) *</label>
+                    <label className="block font-semibold text-slate-600 mb-1">Security PIN (4-6 digits) *</label>
                     <input 
-                      type="text"
-                      required
-                      maxLength="6"
-                      placeholder="e.g. 4321"
-                      value={userForm.pin}
-                      onChange={(e) => setUserForm({ ...userForm, pin: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 outline-none"
+                      type="text" 
+                      maxLength="6" 
+                      required 
+                      value={userForm.pin} 
+                      onChange={e => setUserForm({...userForm, pin: e.target.value})} 
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 font-bold" 
+                      placeholder="e.g. 1234"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Role / Privilege *</label>
-                      <select
-                        value={userForm.role}
-                        onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 outline-none"
-                      >
-                        <option value="Super Administrator">Super Administrator</option>
-                        <option value="Store Keeper">Store Keeper</option>
-                        <option value="IT Technician">IT Technician</option>
-                        <option value="Department Head">Department Head</option>
-                        <option value="Auditor">Auditor</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Department *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g. IT Operations"
-                        value={userForm.department}
-                        onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold text-slate-900 outline-none"
-                      />
-                    </div>
-                  </div>
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Account Status *</label>
-                    <select
-                      value={userForm.status}
-                      onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 outline-none"
+                    <label className="block font-semibold text-slate-600 mb-1">Role / Privilege *</label>
+                    <select 
+                      value={userForm.role} 
+                      onChange={e => setUserForm({...userForm, role: e.target.value})} 
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900"
                     >
-                      <option value="Active">Active (Allowed to Login)</option>
-                      <option value="Inactive">Inactive (Suspended)</option>
+                      <option value="Super Administrator">Super Administrator</option>
+                      <option value="Store Keeper">Store Keeper</option>
+                      <option value="Department Head">Department Head</option>
+                      <option value="Auditor">Auditor</option>
                     </select>
                   </div>
-
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Department</label>
+                    <input 
+                      type="text" 
+                      value={userForm.department} 
+                      onChange={e => setUserForm({...userForm, department: e.target.value})} 
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold"
+                    />
+                  </div>
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button 
-                      type="button" 
-                      onClick={() => setIsUserModalOpen(false)}
-                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition"
-                    >
-                      {editingUser ? 'Save Profile' : 'Create User'}
-                    </button>
+                    <button type="button" onClick={() => setIsUserModalOpen(false)} className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600">Cancel</button>
+                    <button type="submit" className="px-4 py-2 rounded-xl bg-brand-600 text-white font-bold shadow-md">Save User</button>
                   </div>
                 </form>
               </div>
             </div>
           )}
-
         </div>
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
 </html>
