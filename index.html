@@ -71,7 +71,7 @@
     <div class="flex h-screen items-center justify-center bg-slate-900 text-white font-sans">
       <div class="text-center space-y-3">
         <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-        <div class="text-sm font-semibold tracking-wider text-slate-300">INITIALIZING AUTO-CALCULATED INVENTORY ENGINE...</div>
+        <div class="text-sm font-semibold tracking-wider text-slate-300">INITIALIZING OPTIMIZED INVENTORY ENGINE...</div>
       </div>
     </div>
   </div>
@@ -277,8 +277,8 @@
       ];
 
       const sampleFallbackHistory = [
-        { id: 'h1', timestamp: '16 Nov 2026, 11:30 AM', itemName: 'HDMI CABLE 3M', actionType: 'NEW PURCHASE (+3)', details: 'Added 3 new units to stock. Total purchase: 3' },
-        { id: 'h2', timestamp: '16 Nov 2026, 01:15 PM', itemName: 'HDMI CABLE 3M', actionType: 'CONSUMED / ISSUED (-1)', details: 'Issued 1 unit to HR Department (Receiver: Mr. Sharma)' }
+        { id: 'h1', timestamp: '16 Nov 2026, 11:30 AM', itemName: 'HDMI CABLE 3M', actionType: 'NEW PURCHASE (+3)', details: 'Added 3 new units to stock.' },
+        { id: 'h2', timestamp: '16 Nov 2026, 01:15 PM', itemName: 'HDMI CABLE 3M', actionType: 'CONSUMED / ISSUED (-1)', details: 'Issued 1 unit to Board Room (Receiver: Mr. Sharma)' }
       ];
 
       const fetchAllData = async (silent = true) => {
@@ -332,7 +332,7 @@
           setLoading(false);
           if (!silent) {
             setIsSyncing(false);
-            showToast("Database synchronization complete!", "success");
+            showToast("Database synchronized complete!", "success");
           }
         }
       };
@@ -343,11 +343,10 @@
           if (!document.hidden) {
             fetchAllData(true);
           }
-        }, 5000);
+        }, 10000);
         return () => clearInterval(intervalId);
       }, []);
 
-      // Record History Log Helper
       const logStockHistory = async (itemName, actionType, details) => {
         const newHistoryItem = {
           id: `hist_${Date.now()}`,
@@ -368,7 +367,6 @@
         }
       };
 
-      // Handle Excel File Import
       const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -412,14 +410,14 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(item)
               });
-              await logStockHistory(item.particulars, 'EXCEL IMPORT', `Imported via Excel spreadsheet. Opening: ${item.openingQty}, Purchase: ${item.newPurchase}`);
+              await logStockHistory(item.particulars, 'EXCEL IMPORT', `Imported via Excel spreadsheet.`);
             }
 
             fetchAllData(false);
-            showToast(`Successfully imported ${importedAssets.length} items from Excel!`, "success");
+            showToast(`Successfully imported ${importedAssets.length} items!`, "success");
           } catch (err) {
             console.error(err);
-            showToast("Failed to parse Excel file. Ensure valid column names.", "error");
+            showToast("Failed to parse Excel file.", "error");
           }
           if (fileInputRef.current) fileInputRef.current.value = '';
         };
@@ -463,7 +461,7 @@
         deadItems: 0,
         minAlert: 2,
         category: 'Consumable',
-        location: '',
+        location: 'IT Stores',
         entryMonth: getCurrentMonthYear(),
         lastUpdated: getFormattedDateTime()
       });
@@ -474,7 +472,6 @@
         const finalBrand = formData.brand === 'Other' ? formData.customBrand : formData.brand;
 
         if (editingAsset) {
-          // Check if new purchase increased
           const diffPurchase = Number(formData.newPurchase || 0) - Number(editingAsset.newPurchase || 0);
           const diffIssue = Number(formData.issueItems || 0) - Number(editingAsset.issueItems || 0);
 
@@ -495,10 +492,10 @@
             setAssets(assets.map(a => (a.id === editingAsset.id || a.firebaseKey === editingAsset.firebaseKey) ? updated : a));
             
             if (diffPurchase > 0) {
-              await logStockHistory(formData.particulars, `NEW PURCHASE (+${diffPurchase})`, `Stock replenished with ${diffPurchase} new units. Total Purchase is now ${formData.newPurchase}.`);
+              await logStockHistory(formData.particulars, `NEW PURCHASE (+${diffPurchase})`, `Added ${diffPurchase} new units. Total Purchase: ${formData.newPurchase}.`);
             }
             if (diffIssue > 0) {
-              await logStockHistory(formData.particulars, `CONSUMED / ISSUED (-${diffIssue})`, `Stock consumed/issued increased by ${diffIssue} units. Total Issued is now ${formData.issueItems}.`);
+              await logStockHistory(formData.particulars, `ISSUED (-${diffIssue})`, `Issued/Consumed ${diffIssue} units.`);
             }
 
             showToast("Asset specification successfully updated!", "success");
@@ -542,7 +539,7 @@
                 method: 'DELETE'
               });
             }
-            await logStockHistory(item.particulars, 'DELETED ITEM', `Asset particulars "${item.particulars}" deleted from active stock register.`);
+            await logStockHistory(item.particulars, 'DELETED ITEM', `Asset particulars "${item.particulars}" deleted.`);
             setAssets(assets.filter(a => a.id !== item.id && a.firebaseKey !== item.firebaseKey));
             showToast("Asset record successfully deleted.", "info");
           } catch(err) {
@@ -643,7 +640,7 @@
               <nav className="space-y-1 text-xs font-semibold overflow-y-auto pr-1 flex-1">
                 {[
                   { id: 'inventory', label: '1. Stock Register', icon: Icons.Stock },
-                  { id: 'temp_deploy', label: '2. Temporary Deployment', icon: Icons.Exchange },
+                  { id: 'temp_deploy', label: '2. Temporary Deployment / Issue', icon: Icons.Exchange },
                   { id: 'preventive_maint', label: '3. Preventive Maintenance', icon: Icons.Settings },
                   { id: 'stock_ledger', label: '4. Stock Ledger & Analytics', icon: Icons.Report },
                   { id: 'asset_lifecycle', label: '5. Warranty & Lifecycle', icon: Icons.Shield },
@@ -828,6 +825,7 @@
                       <option value="Server Room">Server Room</option>
                       <option value="NOC Room">NOC Room</option>
                       <option value="Design Lab">Design Lab</option>
+                      <option value="Board Room">Board Room</option>
                     </select>
 
                     <button 
@@ -874,7 +872,7 @@
                           <th>Brand & Specification</th>
                           <th className="text-center">Opening</th>
                           <th className="text-center text-brand-600">New Purchase (+)</th>
-                          <th className="text-center text-amber-600">Issued / HR (-)</th>
+                          <th className="text-center text-amber-600">Issued / Dept (-)</th>
                           <th className="text-center bg-slate-100 font-black">Net Balance</th>
                           <th className="text-center">Min Alert</th>
                           <th className="text-center">Short</th>
@@ -896,7 +894,6 @@
                             const dead = Number(item.deadItems || 0);
                             const minAlertQty = Number(item.minAlert || 2);
                             
-                            // AUTO CALCULATED BALANCE = (Opening + Purchase) - (Issued + Short + Dead)
                             const bal = (opening + purch) - (issue + short + dead);
                             const isLow = bal <= minAlertQty;
 
@@ -1036,8 +1033,8 @@
               <div className="flex-1 flex flex-col overflow-hidden space-y-4">
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
                   <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Temporary Asset & Departmental Issue Registry (HR / Units)</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Issuing items (e.g., HDMI Cable to HR) automatically logs the consumption.</p>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Temporary Deployment & Location Issue Registry (e.g. Board Room)</h1>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Issuing items (like HDMI Cable to Board Room) automatically deducts from main stock.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -1049,12 +1046,12 @@
                     <button
                       onClick={() => {
                         setEditingTempItem(null);
-                        setTempForm({ assetName: '', assetTagNo: '', department: 'HR Department', receiver: '', quantity: 1, status: 'Temporary Given' });
+                        setTempForm({ assetName: '', assetTagNo: '', department: 'Board Room', receiver: '', quantity: 1, status: 'Temporary Given' });
                         setIsTempModalOpen(true);
                       }}
                       className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition"
                     >
-                      <Icons.Plus /> Issue Item to Department (HR / Other)
+                      <Icons.Plus /> Issue Item to Location (Board Room / HR)
                     </button>
                   </div>
                 </header>
@@ -1065,8 +1062,8 @@
                       <tr>
                         <th className="p-3">#</th>
                         <th>Asset Name</th>
-                        <th>Asset Tag No</th>
-                        <th>Department (e.g. HR)</th>
+                        <th>Tag No</th>
+                        <th>Assigned Location / Dept</th>
                         <th>Receiver Name</th>
                         <th className="text-center">Qty Issued</th>
                         <th>Issue Date</th>
@@ -1078,7 +1075,7 @@
                       {tempDispatches.length === 0 ? (
                         <tr>
                           <td colSpan="9" className="text-center py-14 text-slate-400 font-medium">
-                            No departmental dispatches registered.
+                            No dispatches registered. Click "+ Issue Item to Location" above.
                           </td>
                         </tr>
                       ) : (
@@ -1158,7 +1155,6 @@
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
                   <div>
                     <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Preventive Maintenance (PM) Schedule</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Hardware specifications, network config, and periodic audit logs.</p>
                   </div>
                   <button
                     onClick={() => setShowPmReportModal(true)}
@@ -1168,7 +1164,7 @@
                   </button>
                 </header>
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-xs text-slate-500 font-medium">
-                  Preventive Maintenance 12-Month Calendar Schedule active and synchronized.
+                  Preventive Maintenance 12-Month Calendar Schedule active.
                 </div>
               </div>
             )}
@@ -1177,7 +1173,6 @@
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs">
                   <h1 className="text-sm font-extrabold tracking-wide uppercase">4. Comprehensive Stock Ledger & Valuation Analytics</h1>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Automated accounting metrics, depreciation overview, and audit summary.</p>
                 </header>
 
                 <div className="grid grid-cols-4 gap-4">
@@ -1333,7 +1328,7 @@
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-900">Monthly Stock Activity & History Log</h3>
-                    <p className="text-[11px] text-slate-500">Trace of every new purchase addition and departmental consumption (e.g. HDMI cable purchase / HR issue)</p>
+                    <p className="text-[11px] text-slate-500">Trace of every new purchase addition and departmental/location consumption</p>
                   </div>
                   <button onClick={() => setShowHistoryModal(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
@@ -1359,7 +1354,7 @@
                             <td>
                               <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
                                 h.actionType.includes('NEW PURCHASE') ? 'bg-emerald-100 text-emerald-800' :
-                                h.actionType.includes('CONSUMED') ? 'bg-amber-100 text-amber-800' :
+                                h.actionType.includes('ISSUED') ? 'bg-amber-100 text-amber-800' :
                                 'bg-indigo-100 text-indigo-800'
                               }`}>
                                 {h.actionType}
@@ -1443,7 +1438,7 @@
                       <input 
                         type="text"
                         required
-                        placeholder="e.g. CABLE, MOUSE, KEYBOARD"
+                        placeholder="e.g. CABLE, MOUSE"
                         value={formData.group}
                         onChange={(e) => setFormData({ ...formData, group: e.target.value.toUpperCase() })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900"
@@ -1508,7 +1503,7 @@
                     </div>
 
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Assigned Location</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Store Location</label>
                       <input 
                         type="text" 
                         placeholder="e.g. IT Stores"
@@ -1553,7 +1548,7 @@
                       </select>
                     </div>
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Min Stock Alert Qty *</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Min Stock Alert *</label>
                       <input 
                         type="number" 
                         min="0"
@@ -1565,7 +1560,6 @@
                     </div>
                   </div>
 
-                  {/* AUTO CALCULATION QUANTITIES */}
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                     <div className="text-[11px] font-extrabold text-brand-600 uppercase">
                       Stock Calculation Formula: Net Balance = (Opening + New Purchase) - (Issued + Short + Dead)
@@ -1592,7 +1586,7 @@
                         />
                       </div>
                       <div>
-                        <label className="block font-semibold text-amber-600 mb-1">Issued / HR (-)</label>
+                        <label className="block font-semibold text-amber-600 mb-1">Issued (-)</label>
                         <input 
                           type="number" 
                           min="0"
@@ -1644,13 +1638,13 @@
             </div>
           )}
 
-          {/* ISSUE ITEM MODAL (e.g. to HR) */}
+          {/* ISSUE ITEM MODAL (e.g. to Board Room / HR) */}
           {isTempModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                   <h3 className="font-extrabold text-sm text-slate-900">
-                    Issue Item to Department (e.g. HR Department)
+                    Issue Item to Location (e.g. Board Room)
                   </h3>
                   <button onClick={() => setIsTempModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
@@ -1671,7 +1665,7 @@
                       body: JSON.stringify(newDispatch)
                     });
 
-                    // Automatically update stock if matching asset found
+                    // Automatically update stock in main register by increasing issued count
                     const foundAsset = assets.find(a => (a.particulars || '').toLowerCase().includes((tempForm.assetName || '').toLowerCase()));
                     if (foundAsset && foundAsset.firebaseKey) {
                       const updatedIssued = Number(foundAsset.issueItems || 0) + Number(tempForm.quantity || 1);
@@ -1680,13 +1674,13 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ issueItems: updatedIssued, lastUpdated: timestamped })
                       });
-                      await logStockHistory(foundAsset.particulars, `CONSUMED / ISSUED (-${tempForm.quantity})`, `Issued ${tempForm.quantity} unit(s) to ${tempForm.department} (Receiver: ${tempForm.receiver})`);
+                      await logStockHistory(foundAsset.particulars, `ISSUED (-${tempForm.quantity})`, `Assigned to location: ${tempForm.department} (Receiver: ${tempForm.receiver})`);
                     }
 
-                    fetchAllData(false);
-                    showToast("Item issued and stock automatically deducted!", "success");
+                    await fetchAllData(false);
+                    showToast("Item successfully issued to Board Room and stock deducted!", "success");
                   } catch(err) {
-                    showToast("Issued saved locally.", "info");
+                    showToast("Dispatch saved locally.", "info");
                   }
 
                   setIsTempModalOpen(false);
@@ -1715,11 +1709,11 @@
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Department (e.g. HR) *</label>
+                      <label className="block font-semibold text-slate-600 mb-1">Assign Location *</label>
                       <input 
                         type="text"
                         required
-                        placeholder="HR Department"
+                        placeholder="Board Room"
                         value={tempForm.department}
                         onChange={(e) => setTempForm({ ...tempForm, department: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-semibold"
@@ -1738,11 +1732,11 @@
                     </div>
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Receiver Name *</label>
+                    <label className="block font-semibold text-slate-600 mb-1">Receiver / Handler Name *</label>
                     <input 
                       type="text"
                       required
-                      placeholder="e.g. Mr. Sharma (HR)"
+                      placeholder="e.g. Mr. Sharma"
                       value={tempForm.receiver}
                       onChange={(e) => setTempForm({ ...tempForm, receiver: e.target.value })}
                       className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-semibold"
@@ -1752,7 +1746,7 @@
                     <button 
                       type="button" 
                       onClick={() => setIsTempModalOpen(false)}
-                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
+                      className="px-4 py-2.5 rounded-xl border border.slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
                     >
                       Cancel
                     </button>
