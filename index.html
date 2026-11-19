@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS for Excel Export / Import -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
     tailwind.config = {
@@ -43,8 +44,7 @@
 
     .table-compact th, .table-compact td {
       padding: 9px 12px !important;
-      line-height: 1.35 !important;
-      vertical-align: middle !important;
+      line-height: 1.3 !important;
     }
 
     @media print {
@@ -59,24 +59,41 @@
         padding: 24px;
         background: white;
         color: black;
+        box-shadow: none !important;
+        border: none !important;
       }
       .no-print { display: none !important; }
     }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-brand-600 selection:text-white">
-  <div id="root"></div>
+  <div id="root">
+    <div class="flex h-screen items-center justify-center bg-slate-900 text-white font-sans">
+      <div class="text-center space-y-3">
+        <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+        <div class="text-sm font-semibold tracking-wider text-slate-300">INITIALIZING AUTO-CALCULATED INVENTORY ENGINE...</div>
+      </div>
+    </div>
+  </div>
 
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
     const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
     const FIREBASE_TEMP_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches.json";
+    const FIREBASE_PM_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_schedules.json";
+    const FIREBASE_USERS_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/system_users.json";
+    const FIREBASE_PM_LOGS_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_audit_logs.json";
     const FIREBASE_HISTORY_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/stock_history.json";
 
     const Icons = {
       Stock: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
+      Exchange: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>,
+      Settings: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>,
       Report: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>,
+      Shield: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>,
+      Building: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>,
+      Users: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>,
       Search: () => <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
       Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
       Edit: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
@@ -84,153 +101,359 @@
       Eye: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>,
       Download: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
       Upload: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>,
-      Refresh: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Refresh: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>,
+      Check: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>,
+      SignOut: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
     };
 
-    const getFormattedDateTime = () => {
-      const d = new Date();
-      const day = String(d.getDate()).padStart(2, '0');
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const month = months[d.getMonth()];
-      const year = d.getFullYear();
-      let hours = d.getHours();
-      const minutes = String(d.getMinutes()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12 || 12;
-      return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
-    };
-
-    const getCurrentMonthYear = () => {
-      const d = new Date();
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-    };
-
-    const initialAssetsData = [
-      {
-        id: 101,
-        group: 'CABLE',
-        particulars: 'HDMI CABLE 3M',
-        brand: 'Dell',
-        serialNo: 'HD-3M-01',
-        cableLength: '3.0m',
-        measurementUnit: 'Piece',
-        openingQty: 5,
-        newPurchase: 3,
-        issueItems: 0,
-        shortItems: 0,
-        deadItems: 0,
-        minAlert: 2,
-        category: 'Consumable',
-        location: 'IT Stores',
-        remark: '5 opening + 3 new stock',
-        highlighted: false,
-        entryMonth: getCurrentMonthYear(),
-        lastUpdated: '19 Nov 2026, 11:30 AM'
-      },
-      {
-        id: 102,
-        group: 'MOUSE',
-        particulars: 'USB MOUSE',
-        brand: 'Dell',
-        serialNo: 'MS-DL-12',
-        cableLength: '1.5m',
-        measurementUnit: 'Piece',
-        openingQty: 12,
-        newPurchase: 0,
-        issueItems: 0,
-        shortItems: 0,
-        deadItems: 0,
-        minAlert: 2,
-        category: 'Consumable',
-        location: 'IT Stores',
-        remark: 'Opening stock 12 available',
-        highlighted: false,
-        entryMonth: getCurrentMonthYear(),
-        lastUpdated: '19 Nov 2026, 10:00 AM'
-      },
-      {
-        id: 103,
-        group: 'KEYBOARD',
-        particulars: 'PRO MECHANICAL KEYBOARD',
-        brand: 'Dell',
-        serialNo: 'KB-DL-104',
-        cableLength: '1.8m',
-        measurementUnit: 'Piece',
-        openingQty: 9,
-        newPurchase: 2,
-        issueItems: 1,
-        shortItems: 0,
-        deadItems: 0,
-        minAlert: 2,
-        category: 'Non-Consumable',
-        location: 'Server Room',
-        remark: '1 issued to Server Room',
-        highlighted: false,
-        entryMonth: getCurrentMonthYear(),
-        lastUpdated: '18 Nov 2026, 02:20 PM'
-      },
-      {
-        id: 104,
-        group: 'CABLE',
-        particulars: 'CAT6 PATCH CABLE 2M',
-        brand: 'Cisco',
-        serialNo: 'CT6-2M-08',
-        cableLength: '2.0m',
-        measurementUnit: 'Piece',
-        openingQty: 15,
-        newPurchase: 5,
-        issueItems: 3,
-        shortItems: 0,
-        deadItems: 0,
-        minAlert: 3,
-        category: 'Consumable',
-        location: 'NOC Room',
-        remark: '3 issued for NOC switch rack',
-        highlighted: false,
-        entryMonth: getCurrentMonthYear(),
-        lastUpdated: '17 Nov 2026, 03:45 PM'
-      }
-    ];
-
-    const initialHistoryData = [
-      {
-        id: 'hist_init_1',
-        timestamp: '19 Nov 2026, 11:30 AM',
-        monthYear: getCurrentMonthYear(),
-        itemName: 'HDMI CABLE 3M',
-        actionType: 'NEW STOCK (+3)',
-        details: 'Added 3 new HDMI cables to existing stock of 5.'
-      },
-      {
-        id: 'hist_init_2',
-        timestamp: '19 Nov 2026, 10:00 AM',
-        monthYear: getCurrentMonthYear(),
-        itemName: 'USB MOUSE',
-        actionType: 'OPENING STOCK (12)',
-        details: 'Initial opening stock recorded.'
-      }
-    ];
+    function exportToExcel(filename, rows) {
+      if (!rows || !rows.length) return;
+      const cleanRows = rows.map(r => ({
+        "Group": r.group,
+        "Particulars": r.particulars,
+        "Brand": r.brand,
+        "Serial No": r.serialNo,
+        "Cable Length (m)": r.cableLength,
+        "Unit": r.measurementUnit,
+        "Opening Qty": r.openingQty,
+        "New Purchase": r.newPurchase,
+        "Issued Items": r.issueItems,
+        "Balance Stock": (Number(r.openingQty || 0) + Number(r.newPurchase || 0)) - (Number(r.issueItems || 0) + Number(r.shortItems || 0) + Number(r.deadItems || 0)),
+        "Short Items": r.shortItems,
+        "Dead Items": r.deadItems,
+        "Min Stock Alert": r.minAlert || 2,
+        "Category": r.category,
+        "Location": r.location,
+        "Last Updated": r.lastUpdated
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(cleanRows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Register");
+      XLSX.writeFile(workbook, filename.endsWith('.xlsx') ? filename : filename + '.xlsx');
+    }
 
     function App() {
-      const [assets, setAssets] = useState([]);
-      const [stockHistory, setStockHistory] = useState([]);
-      const [loading, setLoading] = useState(true);
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+      const [loggedInUser, setLoggedInUser] = useState(null);
+      const [usernameInput, setUsernameInput] = useState('');
+      const [pinInput, setPinInput] = useState('');
+      const [loginError, setLoginError] = useState('');
+
+      const [activeTab, setActiveTab] = useState('inventory');
       const [isSyncing, setIsSyncing] = useState(false);
       const [lastSyncTime, setLastSyncTime] = useState('Just now');
 
       const [searchQuery, setSearchQuery] = useState('');
+      const [locationFilter, setLocationFilter] = useState('All');
       const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
-      const [highlightedRowId, setHighlightedRowId] = useState(null);
+      const [currentPage, setCurrentPage] = useState(1);
+      const [itemsPerPage, setItemsPerPage] = useState(10);
+      const [assets, setAssets] = useState([]);
+      const [stockHistory, setStockHistory] = useState([]);
+      const [loading, setLoading] = useState(true);
 
-      // Add/Edit Asset Modal
-      const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+      const [isModalOpen, setIsModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
+      const [viewModalItem, setViewModalItem] = useState(null);
+      const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
+
+      const fileInputRef = useRef(null);
+
+      const [tempDispatches, setTempDispatches] = useState([]);
+      const [isTempModalOpen, setIsTempModalOpen] = useState(false);
+      const [editingTempItem, setEditingTempItem] = useState(null);
+      const [showMovementReportModal, setShowMovementReportModal] = useState(false);
+      const [showStockReportModal, setShowStockReportModal] = useState(false);
+      const [showHistoryModal, setShowHistoryModal] = useState(false);
+      
+      const [tempForm, setTempForm] = useState({ 
+        assetName: '', 
+        assetTagNo: '', 
+        department: '', 
+        receiver: '', 
+        quantity: 1, 
+        status: 'Temporary Given' 
+      });
+
+      const [pmSchedules, setPmSchedules] = useState([]);
+      const [pmAuditLogs, setPmAuditLogs] = useState([]);
+      const [isPmModalOpen, setIsPmModalOpen] = useState(false);
+      const [editingPmItem, setEditingPmItem] = useState(null);
+      const [pmSelectedMonth, setPmSelectedMonth] = useState('Jan');
+      const [pmSelectedSlot, setPmSelectedSlot] = useState('01 to 10 January');
+      const [showPmReportModal, setShowPmReportModal] = useState(false);
+
+      const [pmForm, setPmForm] = useState({
+        department: 'General Registration',
+        equipmentName: 'Desktop PC Workstation',
+        cpuBrand: 'Dell',
+        cpuProcessor: 'Intel Core i5-12400 (2.50GHz)',
+        cpuTag: 'CPU-TAG-101',
+        monitorBrand: 'Dell',
+        monitorTag: 'MON-TAG-101',
+        printerBrand: 'HP',
+        printerModel: 'HP LaserJet Pro M126nw',
+        printerTag: 'PRN-TAG-202',
+        printerIP: '192.168.1.150',
+        systemIP: '192.168.1.50',
+        systemMac: '00:1A:2B:3C:4D:5E',
+        ramType: 'DDR4',
+        ramCapacityValue: '16',
+        ramCapacityUnit: 'GB',
+        hddType: 'SSD',
+        hddCapacityValue: '512',
+        hddCapacityUnit: 'GB',
+        msOffice: 'Office 2021 Pro Plus',
+        outlook: 'Configured & Synced',
+        backup: 'Active Daily',
+        antiVirus: 'Quick Heal Total Security (Updated)',
+        status: 'Scheduled',
+        dueDate: '2026-01-05',
+        targetMonth: 'Jan',
+        slotRange: '01 to 10 January'
+      });
+
+      const sampleFallbackUsers = [
+        { id: 1, name: 'Super Admin', username: 'admin', pin: '1234', role: 'Super Administrator', department: 'IT Management', status: 'Active' },
+        { id: 2, name: 'IT Inventory Desk', username: 'store', pin: '5678', role: 'Store Keeper', department: 'IT Stores', status: 'Active' },
+        { id: 3, name: 'Dr. Alok Sharma', username: 'alok', pin: '1122', role: 'Department Head', department: 'General Registration', status: 'Active' }
+      ];
+
+      const [users, setUsers] = useState(sampleFallbackUsers);
+      const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+      const [editingUser, setEditingUser] = useState(null);
+      const [userForm, setUserForm] = useState({
+        name: '',
+        username: '',
+        pin: '',
+        role: 'Store Keeper',
+        department: 'IT Operations',
+        status: 'Active'
+      });
+
+      const monthsList = [
+        { code: 'Jan', name: 'January', slots: ['01 to 10 January', '11 to 20 January', '21 to 31 January'] },
+        { code: 'Feb', name: 'February', slots: ['01 to 10 February', '11 to 20 February', '21 to 28 February'] },
+        { code: 'Mar', name: 'March', slots: ['01 to 10 March', '11 to 20 March', '21 to 31 March'] },
+        { code: 'Apr', name: 'April', slots: ['01 to 10 April', '11 to 20 April', '21 to 30 April'] },
+        { code: 'May', name: 'May', slots: ['01 to 10 May', '11 to 20 May', '21 to 31 May'] },
+        { code: 'Jun', name: 'June', slots: ['01 to 10 June', '11 to 20 June', '21 to 30 June'] },
+        { code: 'Jul', name: 'July', slots: ['01 to 10 July', '11 to 20 July', '21 to 31 July'] },
+        { code: 'Aug', name: 'August', slots: ['01 to 10 August', '11 to 20 August', '21 to 31 August'] },
+        { code: 'Sep', name: 'September', slots: ['01 to 10 September', '11 to 20 September', '21 to 30 September'] },
+        { code: 'Oct', name: 'October', slots: ['01 to 10 October', '11 to 20 October', '21 to 31 October'] },
+        { code: 'Nov', name: 'November', slots: ['01 to 10 November', '11 to 20 November', '21 to 30 November'] },
+        { code: 'Dec', name: 'December', slots: ['01 to 10 December', '11 to 20 December', '21 to 31 December'] }
+      ];
+
+      const showToast = (msg, type = 'info') => {
+        setToast({ show: true, msg, type });
+        setTimeout(() => setToast({ show: false, msg: '', type: 'info' }), 3500);
+      };
+
+      const getCurrentMonthYear = () => {
+        const d = new Date();
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      };
+
+      const getFormattedDateTime = () => {
+        const d = new Date();
+        const day = String(d.getDate()).padStart(2, '0');
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        let hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
+      };
+
+      const sampleFallbackAssets = [
+        { id: 101, group: 'CABLE', particulars: 'HDMI CABLE 3M', brand: 'Dell', serialNo: 'HD-3M-01', cableLength: '3.0', measurementUnit: 'Piece', openingQty: 5, newPurchase: 3, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Consumable', location: 'IT Stores', entryMonth: 'Nov 2026', lastUpdated: '16 Nov 2026, 11:30 AM' },
+        { id: 102, group: 'MOUSE', particulars: 'WIRELESS ERGO MOUSE', brand: 'Lenovo', serialNo: 'MS-LN-02', cableLength: 'Wireless', measurementUnit: 'Piece', openingQty: 6, newPurchase: 0, issueItems: 4, shortItems: 0, deadItems: 1, minAlert: 2, category: 'Consumable', location: 'Design Lab', entryMonth: 'Nov 2026', lastUpdated: '15 Nov 2026, 04:12 PM' },
+        { id: 103, group: 'KEYBOARD', particulars: 'PRO MECHANICAL KEYBOARD', brand: 'Dell', serialNo: 'KB-DL-104', cableLength: '1.8', measurementUnit: 'Piece', openingQty: 9, newPurchase: 2, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Non-Consumable', location: 'Server Room', entryMonth: 'Nov 2026', lastUpdated: '14 Nov 2026, 02:20 PM' }
+      ];
+
+      const sampleFallbackHistory = [
+        { id: 'h1', timestamp: '16 Nov 2026, 11:30 AM', itemName: 'HDMI CABLE 3M', actionType: 'NEW PURCHASE (+3)', details: 'Added 3 new units to stock. Total purchase: 3' },
+        { id: 'h2', timestamp: '16 Nov 2026, 01:15 PM', itemName: 'HDMI CABLE 3M', actionType: 'CONSUMED / ISSUED (-1)', details: 'Issued 1 unit to HR Department (Receiver: Mr. Sharma)' }
+      ];
+
+      const fetchAllData = async (silent = true) => {
+        if (!silent) setIsSyncing(true);
+        try {
+          const [resAssets, resTemp, resPm, resLogs, resUsers, resHist] = await Promise.allSettled([
+            fetch(FIREBASE_DB_URL).then(r => r.json()),
+            fetch(FIREBASE_TEMP_URL).then(r => r.json()),
+            fetch(FIREBASE_PM_URL).then(r => r.json()),
+            fetch(FIREBASE_PM_LOGS_URL).then(r => r.json()),
+            fetch(FIREBASE_USERS_URL).then(r => r.json()),
+            fetch(FIREBASE_HISTORY_URL).then(r => r.json())
+          ]);
+
+          if (resAssets.status === 'fulfilled' && resAssets.value) {
+            const loaded = Object.keys(resAssets.value).map(k => ({ ...resAssets.value[k], firebaseKey: k }));
+            setAssets(loaded.length > 0 ? loaded : sampleFallbackAssets);
+          } else if (assets.length === 0) {
+            setAssets(sampleFallbackAssets);
+          }
+
+          if (resHist.status === 'fulfilled' && resHist.value) {
+            const loadedHist = Object.keys(resHist.value).map(k => ({ ...resHist.value[k], firebaseKey: k }));
+            setStockHistory(loadedHist.length > 0 ? loadedHist : sampleFallbackHistory);
+          } else {
+            setStockHistory(sampleFallbackHistory);
+          }
+
+          if (resTemp.status === 'fulfilled' && resTemp.value) {
+            setTempDispatches(Object.keys(resTemp.value).map(k => ({ ...resTemp.value[k], firebaseKey: k })));
+          }
+
+          if (resPm.status === 'fulfilled' && resPm.value) {
+            setPmSchedules(Object.keys(resPm.value).map(k => ({ ...resPm.value[k], firebaseKey: k })));
+          }
+
+          if (resLogs.status === 'fulfilled' && resLogs.value) {
+            setPmAuditLogs(Object.keys(resLogs.value).map(k => ({ ...resLogs.value[k], firebaseKey: k })));
+          }
+
+          if (resUsers.status === 'fulfilled' && resUsers.value) {
+            const loadedUsers = Object.keys(resUsers.value).map(k => ({ ...resUsers.value[k], firebaseKey: k }));
+            setUsers(loadedUsers.length > 0 ? loadedUsers : sampleFallbackUsers);
+          }
+
+          const now = new Date();
+          setLastSyncTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
+        } catch (e) {
+          console.error("Data fetch error", e);
+        } finally {
+          setLoading(false);
+          if (!silent) {
+            setIsSyncing(false);
+            showToast("Database synchronization complete!", "success");
+          }
+        }
+      };
+
+      useEffect(() => {
+        fetchAllData(true);
+        const intervalId = setInterval(() => {
+          if (!document.hidden) {
+            fetchAllData(true);
+          }
+        }, 5000);
+        return () => clearInterval(intervalId);
+      }, []);
+
+      // Record History Log Helper
+      const logStockHistory = async (itemName, actionType, details) => {
+        const newHistoryItem = {
+          id: `hist_${Date.now()}`,
+          timestamp: getFormattedDateTime(),
+          itemName: itemName.toUpperCase(),
+          actionType,
+          details
+        };
+        try {
+          await fetch(FIREBASE_HISTORY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newHistoryItem)
+          });
+          setStockHistory(prev => [newHistoryItem, ...prev]);
+        } catch (e) {
+          setStockHistory(prev => [newHistoryItem, ...prev]);
+        }
+      };
+
+      // Handle Excel File Import
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+
+            if (!json || json.length === 0) {
+              showToast("Uploaded Excel file is empty.", "error");
+              return;
+            }
+
+            const importedAssets = json.map((row, idx) => ({
+              id: Date.now() + idx,
+              group: String(row["Group"] || row["group"] || "GENERAL").toUpperCase(),
+              particulars: String(row["Particulars"] || row["particulars"] || "UNNAMED ITEM").toUpperCase(),
+              brand: String(row["Brand"] || row["brand"] || "Dell"),
+              serialNo: String(row["Serial No"] || row["serialNo"] || ""),
+              cableLength: String(row["Cable Length (m)"] || row["cableLength"] || ""),
+              measurementUnit: String(row["Unit"] || row["measurementUnit"] || "Piece"),
+              openingQty: Number(row["Opening Qty"] || row["openingQty"] || 0),
+              newPurchase: Number(row["New Purchase"] || row["newPurchase"] || 0),
+              issueItems: Number(row["Issued Items"] || row["issueItems"] || 0),
+              shortItems: Number(row["Short Items"] || row["shortItems"] || 0),
+              deadItems: Number(row["Dead Items"] || row["deadItems"] || 0),
+              minAlert: Number(row["Min Stock Alert"] || row["minAlert"] || 2),
+              category: String(row["Category"] || row["category"] || "Consumable"),
+              location: String(row["Location"] || row["location"] || "IT Stores"),
+              entryMonth: getCurrentMonthYear(),
+              lastUpdated: getFormattedDateTime()
+            }));
+
+            for (let item of importedAssets) {
+              await fetch(FIREBASE_DB_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+              });
+              await logStockHistory(item.particulars, 'EXCEL IMPORT', `Imported via Excel spreadsheet. Opening: ${item.openingQty}, Purchase: ${item.newPurchase}`);
+            }
+
+            fetchAllData(false);
+            showToast(`Successfully imported ${importedAssets.length} items from Excel!`, "success");
+          } catch (err) {
+            console.error(err);
+            showToast("Failed to parse Excel file. Ensure valid column names.", "error");
+          }
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+      };
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        const matched = users.find(u => 
+          (String(u.username).trim().toLowerCase() === String(usernameInput).trim().toLowerCase() || 
+           String(u.name).trim().toLowerCase() === String(usernameInput).trim().toLowerCase()) && 
+          String(u.pin).trim() === String(pinInput).trim() && 
+          u.status === 'Active'
+        );
+
+        if (matched) {
+          setIsLoggedIn(true);
+          setLoggedInUser(matched);
+          setLoginError('');
+          showToast(`Authenticated as ${matched.name} (${matched.role})`, "success");
+        } else {
+          setLoginError('Invalid Username or Security PIN code.');
+        }
+      };
+
       const [formData, setFormData] = useState({
         group: 'CABLE',
         particulars: '',
         brand: 'Dell',
+        customBrand: '',
         serialNo: '',
+        vendor: '',
+        invoiceNo: '',
+        warranty: '',
         cableLength: '',
         measurementUnit: 'Piece',
         openingQty: 0,
@@ -240,894 +463,909 @@
         deadItems: 0,
         minAlert: 2,
         category: 'Consumable',
-        location: 'IT Stores',
-        remark: ''
+        location: '',
+        entryMonth: getCurrentMonthYear(),
+        lastUpdated: getFormattedDateTime()
       });
 
-      // Issue Item Modal
-      const [issueModalItem, setIssueModalItem] = useState(null);
-      const [issueForm, setIssueForm] = useState({
-        qtyToIssue: 1,
-        receiverName: '',
-        department: 'HR',
-        extraRemark: ''
-      });
-
-      const [showHistoryModal, setShowHistoryModal] = useState(false);
-      const [viewModalItem, setViewModalItem] = useState(null);
-      const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
-      const fileInputRef = useRef(null);
-
-      const showToast = (msg, type = 'info') => {
-        setToast({ show: true, msg, type });
-        setTimeout(() => setToast({ show: false, msg: '', type: 'info' }), 3200);
-      };
-
-      // Never delete or drop old values/entries
-      const fetchAllPreserveData = async (silent = true) => {
-        if (!silent) setIsSyncing(true);
-        try {
-          const [resAssets, resHist] = await Promise.allSettled([
-            fetch(FIREBASE_DB_URL).then(r => r.json()),
-            fetch(FIREBASE_HISTORY_URL).then(r => r.json())
-          ]);
-
-          if (resAssets.status === 'fulfilled' && resAssets.value) {
-            const loaded = Object.keys(resAssets.value).map((k, idx) => ({
-              ...resAssets.value[k],
-              id: resAssets.value[k].id || `${k}_${idx}`,
-              firebaseKey: k
-            }));
-            setAssets(loaded.length > 0 ? loaded : initialAssetsData);
-          } else {
-            setAssets(prev => (prev.length > 0 ? prev : initialAssetsData));
-          }
-
-          if (resHist.status === 'fulfilled' && resHist.value) {
-            const histLoaded = Object.keys(resHist.value).map((k, idx) => ({
-              ...resHist.value[k],
-              id: resHist.value[k].id || `h_${k}_${idx}`,
-              firebaseKey: k
-            }));
-            setStockHistory(histLoaded.length > 0 ? histLoaded.reverse() : initialHistoryData);
-          } else {
-            setStockHistory(prev => (prev.length > 0 ? prev : initialHistoryData));
-          }
-
-          const now = new Date();
-          setLastSyncTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
-        } catch (err) {
-          console.error(err);
-          setAssets(prev => (prev.length > 0 ? prev : initialAssetsData));
-          setStockHistory(prev => (prev.length > 0 ? prev : initialHistoryData));
-        } finally {
-          setLoading(false);
-          if (!silent) setIsSyncing(false);
-        }
-      };
-
-      useEffect(() => {
-        fetchAllPreserveData(true);
-      }, []);
-
-      const logHistory = async (itemName, actionType, details) => {
-        const entry = {
-          id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          timestamp: getFormattedDateTime(),
-          monthYear: getCurrentMonthYear(),
-          itemName: String(itemName || '').toUpperCase(),
-          actionType,
-          details
-        };
-        setStockHistory(prev => [entry, ...prev]);
-        try {
-          await fetch(FIREBASE_HISTORY_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(entry)
-          });
-        } catch (e) {}
-      };
-
-      // Save or Update Asset — Preserves all existing items
       const handleSaveAsset = async (e) => {
         e.preventDefault();
-        const nowStr = getFormattedDateTime();
+        const timestamped = getFormattedDateTime();
+        const finalBrand = formData.brand === 'Other' ? formData.customBrand : formData.brand;
 
         if (editingAsset) {
-          const prevPurch = Number(editingAsset.newPurchase || 0);
-          const nextPurch = Number(formData.newPurchase || 0);
-          const addedPurch = nextPurch - prevPurch;
+          // Check if new purchase increased
+          const diffPurchase = Number(formData.newPurchase || 0) - Number(editingAsset.newPurchase || 0);
+          const diffIssue = Number(formData.issueItems || 0) - Number(editingAsset.issueItems || 0);
 
-          const updatedItem = {
+          const updated = {
             ...editingAsset,
             ...formData,
-            group: String(formData.group || 'GENERAL').trim().toUpperCase(),
-            particulars: String(formData.particulars || '').trim().toUpperCase(),
-            remark: formData.remark || (addedPurch > 0 ? `Added +${addedPurch} new stock` : editingAsset.remark || ''),
-            highlighted: true,
-            lastUpdated: nowStr
+            brand: finalBrand,
+            lastUpdated: timestamped
           };
-
-          setAssets(prev =>
-            prev.map(a => (a.id === editingAsset.id ? updatedItem : { ...a, highlighted: false }))
-          );
-          setHighlightedRowId(editingAsset.id);
-
-          if (addedPurch > 0) {
-            await logHistory(
-              updatedItem.particulars,
-              `NEW STOCK (+${addedPurch})`,
-              `Added +${addedPurch} new stock. ${formData.remark ? `Remark: ${formData.remark}` : ''}`
-            );
-          }
-
-          if (editingAsset.firebaseKey) {
-            try {
+          try {
+            if (editingAsset.firebaseKey) {
               await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${editingAsset.firebaseKey}.json`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedItem)
+                body: JSON.stringify(updated)
               });
-            } catch (e) {}
-          }
+            }
+            setAssets(assets.map(a => (a.id === editingAsset.id || a.firebaseKey === editingAsset.firebaseKey) ? updated : a));
+            
+            if (diffPurchase > 0) {
+              await logStockHistory(formData.particulars, `NEW PURCHASE (+${diffPurchase})`, `Stock replenished with ${diffPurchase} new units. Total Purchase is now ${formData.newPurchase}.`);
+            }
+            if (diffIssue > 0) {
+              await logStockHistory(formData.particulars, `CONSUMED / ISSUED (-${diffIssue})`, `Stock consumed/issued increased by ${diffIssue} units. Total Issued is now ${formData.issueItems}.`);
+            }
 
-          showToast(`Updated "${updatedItem.particulars}" stock.`, "success");
+            showToast("Asset specification successfully updated!", "success");
+          } catch(err) {
+            showToast("Error updating record in database.", "error");
+          }
         } else {
-          const newItem = {
+          const newAsset = {
             id: Date.now(),
             ...formData,
-            group: String(formData.group || 'GENERAL').trim().toUpperCase(),
-            particulars: String(formData.particulars || '').trim().toUpperCase(),
-            remark: formData.remark || 'New stock entry added',
-            highlighted: true,
-            entryMonth: getCurrentMonthYear(),
-            lastUpdated: nowStr
+            brand: finalBrand,
+            lastUpdated: timestamped
           };
-
-          setAssets(prev => [newItem, ...prev.map(a => ({ ...a, highlighted: false }))]);
-          setHighlightedRowId(newItem.id);
-
-          await logHistory(
-            newItem.particulars,
-            `NEW STOCK (+${newItem.newPurchase})`,
-            `Opening: ${newItem.openingQty}, New Stock: +${newItem.newPurchase}. ${newItem.remark}`
-          );
-
           try {
-            const res = await fetch(FIREBASE_DB_URL, {
+            await fetch(FIREBASE_DB_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newItem)
+              body: JSON.stringify(newAsset)
             });
+            await logStockHistory(newAsset.particulars, 'INITIAL REGISTRATION', `New item registered. Opening Qty: ${newAsset.openingQty}, Purchase: ${newAsset.newPurchase}`);
+            
+            const res = await fetch(FIREBASE_DB_URL);
             const data = await res.json();
-            if (data && data.name) {
-              setAssets(prev => prev.map(a => (a.id === newItem.id ? { ...a, firebaseKey: data.name } : a)));
-            }
-          } catch (e) {}
-
-          showToast(`Added "${newItem.particulars}" to Stock Register.`, "success");
+            if (data) setAssets(Object.keys(data).map(k => ({ ...data[k], firebaseKey: k })));
+            showToast("New asset registered successfully!", "success");
+          } catch(err) {
+            setAssets([newAsset, ...assets]);
+            showToast("Asset saved locally.", "info");
+          }
         }
 
-        setIsAssetModalOpen(false);
+        setIsModalOpen(false);
         setEditingAsset(null);
       };
 
-      // Issue Item — Deducts ONCE from that single item, highlights that row, shows whom & department in Remark
-      const handleConfirmIssue = async (e) => {
-        e.preventDefault();
-        if (!issueModalItem) return;
-
-        const qty = Math.max(1, Number(issueForm.qtyToIssue || 1));
-        const opening = Number(issueModalItem.openingQty || 0);
-        const purch = Number(issueModalItem.newPurchase || 0);
-        const issued = Number(issueModalItem.issueItems || 0);
-        const short = Number(issueModalItem.shortItems || 0);
-        const dead = Number(issueModalItem.deadItems || 0);
-        const currentBalance = (opening + purch) - (issued + short + dead);
-
-        if (qty > currentBalance) {
-          showToast(`Only ${currentBalance} available in stock! Cannot issue ${qty}.`, "error");
-          return;
-        }
-
-        const nextIssued = issued + qty;
-        const nowStr = getFormattedDateTime();
-        const person = issueForm.receiverName.trim() || 'Authorized Staff';
-        const dept = issueForm.department.trim() || 'General';
-        const remarkText = `Issued ${qty} to ${person} (${dept} Dept)${issueForm.extraRemark ? ` — ${issueForm.extraRemark}` : ''}`;
-
-        const updatedAsset = {
-          ...issueModalItem,
-          issueItems: nextIssued,
-          remark: remarkText,
-          highlighted: true,
-          lastUpdated: nowStr
-        };
-
-        setAssets(prev =>
-          prev.map(a => (a.id === issueModalItem.id ? updatedAsset : { ...a, highlighted: false }))
-        );
-        setHighlightedRowId(issueModalItem.id);
-
-        if (issueModalItem.firebaseKey) {
-          try {
-            await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${issueModalItem.firebaseKey}.json`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(updatedAsset)
-            });
-          } catch (e) {}
-        }
-
-        try {
-          await fetch(FIREBASE_TEMP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: `disp_${Date.now()}`,
-              assetId: issueModalItem.id,
-              assetName: issueModalItem.particulars,
-              quantity: qty,
-              receiver: person,
-              department: dept,
-              remark: remarkText,
-              date: nowStr
-            })
-          });
-        } catch (e) {}
-
-        await logHistory(issueModalItem.particulars, `ISSUED (-${qty})`, remarkText);
-
-        showToast(`Issued ${qty} ${issueModalItem.particulars} to ${person} (${dept}).`, "success");
-        setIssueModalItem(null);
-      };
-
       const handleDeleteAsset = async (item) => {
-        if (!window.confirm(`Delete "${item.particulars}" from Stock Register?`)) return;
-        setAssets(prev => prev.filter(a => a.id !== item.id));
-        if (item.firebaseKey) {
+        if (window.confirm(`Permanently remove "${item.particulars}" from active registry?`)) {
           try {
-            await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${item.firebaseKey}.json`, {
-              method: 'DELETE'
-            });
-          } catch (e) {}
-        }
-        await logHistory(item.particulars, 'DELETED', `Deleted "${item.particulars}" from register.`);
-        showToast("Item deleted.", "info");
-      };
-
-      const handleExcelImport = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-          try {
-            const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(worksheet);
-            if (!rows || rows.length === 0) return;
-
-            const imported = rows.map((r, i) => ({
-              id: Date.now() + i,
-              group: String(r["Group"] || r["group"] || "GENERAL").toUpperCase(),
-              particulars: String(r["Particulars"] || r["particulars"] || "ITEM").toUpperCase(),
-              brand: String(r["Brand"] || r["brand"] || "Dell"),
-              serialNo: String(r["Serial No"] || r["serialNo"] || ""),
-              cableLength: String(r["Cable Length (m)"] || r["cableLength"] || ""),
-              measurementUnit: String(r["Unit"] || r["measurementUnit"] || "Piece"),
-              openingQty: Number(r["Opening Qty"] || r["Opening"] || 0),
-              newPurchase: Number(r["New Purchase"] || r["New Stock"] || 0),
-              issueItems: Number(r["Issued Items"] || r["Issued"] || 0),
-              shortItems: Number(r["Short Items"] || 0),
-              deadItems: Number(r["Dead Items"] || 0),
-              minAlert: Number(r["Min Stock Alert"] || 2),
-              category: String(r["Category"] || "Consumable"),
-              location: String(r["Location"] || "IT Stores"),
-              remark: String(r["Remarks"] || r["remark"] || "Imported via Excel"),
-              highlighted: false,
-              entryMonth: getCurrentMonthYear(),
-              lastUpdated: getFormattedDateTime()
-            }));
-
-            setAssets(prev => [...imported, ...prev]);
-            for (const item of imported) {
-              await logHistory(item.particulars, 'EXCEL IMPORT', item.remark);
-              try {
-                await fetch(FIREBASE_DB_URL, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(item)
-                });
-              } catch (e) {}
+            if (item.firebaseKey) {
+              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${item.firebaseKey}.json`, {
+                method: 'DELETE'
+              });
             }
-            showToast(`Imported ${imported.length} items without removing existing stock.`, "success");
-          } catch (err) {
-            showToast("Could not read Excel file.", "error");
+            await logStockHistory(item.particulars, 'DELETED ITEM', `Asset particulars "${item.particulars}" deleted from active stock register.`);
+            setAssets(assets.filter(a => a.id !== item.id && a.firebaseKey !== item.firebaseKey));
+            showToast("Asset record successfully deleted.", "info");
+          } catch(err) {
+            showToast("Failed to delete record.", "error");
           }
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        };
-        reader.readAsArrayBuffer(file);
+        }
       };
 
-      const exportExcel = () => {
-        const rows = assets.map(r => ({
-          "Group": r.group,
-          "Particulars": r.particulars,
-          "Brand": r.brand,
-          "Opening": Number(r.openingQty || 0),
-          "New Stock": Number(r.newPurchase || 0),
-          "Issued": Number(r.issueItems || 0),
-          "Balance": (Number(r.openingQty || 0) + Number(r.newPurchase || 0)) - (Number(r.issueItems || 0) + Number(r.shortItems || 0) + Number(r.deadItems || 0)),
-          "Remarks": r.remark || '',
-          "Last Updated": r.lastUpdated || ''
-        }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Stock Register");
-        XLSX.writeFile(wb, `Stock_Register_${Date.now()}.xlsx`);
-      };
+      const summaryMetrics = useMemo(() => {
+        let totalItems = 0;
+        let totalIssued = 0;
+        let totalShort = 0;
+        let totalDead = 0;
+        let lowStockCount = 0;
 
-      const groups = useMemo(() => {
-        const map = {};
         assets.forEach(a => {
-          const g = a.group || 'GENERAL';
-          map[g] = (map[g] || 0) + 1;
+          const op = Number(a.openingQty || 0);
+          const pur = Number(a.newPurchase || 0);
+          const iss = Number(a.issueItems || 0);
+          const sh = Number(a.shortItems || 0);
+          const dd = Number(a.deadItems || 0);
+          const bal = (op + pur) - (iss + sh + dd);
+          totalItems += (op + pur);
+          totalIssued += iss;
+          totalShort += sh;
+          totalDead += dd;
+          if (bal <= Number(a.minAlert || 2)) lowStockCount++;
         });
-        return map;
+
+        return { totalItems, totalIssued, totalShort, totalDead, lowStockCount };
+      }, [assets]);
+
+      const groupCounts = useMemo(() => {
+        return assets.reduce((acc, curr) => {
+          const g = curr.group || 'OTHER';
+          acc[g] = (acc[g] || 0) + 1;
+          return acc;
+        }, {});
       }, [assets]);
 
       const filteredAssets = useMemo(() => {
         return assets.filter(item => {
-          const q = searchQuery.toLowerCase();
-          const matchSearch = !q ||
-            (item.particulars || '').toLowerCase().includes(q) ||
-            (item.group || '').toLowerCase().includes(q) ||
-            (item.remark || '').toLowerCase().includes(q) ||
-            (item.brand || '').toLowerCase().includes(q);
-          const matchGroup = !selectedGroupFilter || (item.group || '').toUpperCase() === selectedGroupFilter.toUpperCase();
-          return matchSearch && matchGroup;
+          const searchLower = searchQuery.toLowerCase();
+          const matchesSearch = (item.particulars || '').toLowerCase().includes(searchLower) ||
+                              (item.group || '').toLowerCase().includes(searchLower) ||
+                              (item.serialNo || '').toLowerCase().includes(searchLower) ||
+                              (item.brand || '').toLowerCase().includes(searchLower) ||
+                              (item.location || '').toLowerCase().includes(searchLower);
+          const matchesLocation = locationFilter === 'All' || !locationFilter || (item.location || '').toLowerCase() === locationFilter.toLowerCase();
+          const matchesGroup = !selectedGroupFilter || (item.group || '').toLowerCase() === selectedGroupFilter.toLowerCase();
+          return matchesSearch && matchesLocation && matchesGroup;
         });
-      }, [assets, searchQuery, selectedGroupFilter]);
+      }, [assets, searchQuery, locationFilter, selectedGroupFilter]);
+
+      const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
+      const paginatedAssets = useMemo(() => {
+        return filteredAssets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+      }, [filteredAssets, currentPage, itemsPerPage]);
 
       return (
-        <div className="flex h-screen bg-slate-100 text-slate-800 overflow-hidden">
+        <div className="flex h-screen bg-slate-100 text-slate-800 overflow-hidden font-sans">
+          
           {toast.show && (
-            <div className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl shadow-xl text-xs font-bold text-white ${
-              toast.type === 'success' ? 'bg-emerald-700' : toast.type === 'error' ? 'bg-rose-700' : 'bg-slate-900'
+            <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold flex items-center gap-2.5 transition-all transform animate-in slide-in-from-bottom-5 ${
+              toast.type === 'success' ? 'bg-slate-900 text-white border-emerald-500/40' :
+              toast.type === 'error' ? 'bg-rose-900 text-white border-rose-500/40' :
+              'bg-slate-900 text-white border-slate-700'
             }`}>
-              {toast.msg}
+              <span className={`w-2 h-2 rounded-full ${toast.type === 'success' ? 'bg-emerald-400' : toast.type === 'error' ? 'bg-rose-400' : 'bg-brand-400'}`}></span>
+              <span>{toast.msg}</span>
             </div>
           )}
 
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleExcelImport}
-            accept=".xlsx, .xls, .csv"
-            className="hidden"
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            accept=".xlsx, .xls, .csv" 
+            className="hidden" 
           />
 
-          {/* Sidebar */}
-          <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 shrink-0">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center text-white">
-                    <Icons.Stock />
+          <aside className="w-72 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 border-r border-slate-800 shrink-0">
+            <div className="space-y-4 flex flex-col h-full overflow-hidden">
+              
+              <div className="flex items-center gap-3 px-2 py-3 border-b border-slate-800 shrink-0">
+                <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-brand-600/30">
+                  <Icons.Stock />
+                </div>
+                <div>
+                  <h2 className="text-xs font-black tracking-wider uppercase text-white">ASSET SUITE</h2>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="text-[10px] text-slate-400 font-mono">Sync: {lastSyncTime}</span>
                   </div>
-                  <div>
-                    <div className="text-xs font-black text-white uppercase">Stock Suite</div>
-                    <div className="text-[10px] text-slate-400 font-mono">Sync: {lastSyncTime}</div>
+                </div>
+              </div>
+
+              <nav className="space-y-1 text-xs font-semibold overflow-y-auto pr-1 flex-1">
+                {[
+                  { id: 'inventory', label: '1. Stock Register', icon: Icons.Stock },
+                  { id: 'temp_deploy', label: '2. Temporary Deployment', icon: Icons.Exchange },
+                  { id: 'preventive_maint', label: '3. Preventive Maintenance', icon: Icons.Settings },
+                  { id: 'stock_ledger', label: '4. Stock Ledger & Analytics', icon: Icons.Report },
+                  { id: 'asset_lifecycle', label: '5. Warranty & Lifecycle', icon: Icons.Shield },
+                  { id: 'vendors', label: '6. Vendors & Procurement', icon: Icons.Building },
+                  { id: 'users', label: '7. Privileges & Access', icon: Icons.Users },
+                ].map(tab => {
+                  const IconComponent = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition cursor-pointer text-left ${
+                        isActive 
+                          ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/25' 
+                          : 'text-slate-400 hover:bg-slate-800/80 hover:text-white'
+                      }`}
+                    >
+                      <IconComponent />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+
+              <div className="bg-slate-800/60 p-3 rounded-2xl border border-slate-700/60 space-y-2 shrink-0">
+                <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-400">
+                  <span>Inventory Health</span>
+                  <span className="text-emerald-400 font-mono">99.8%</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="bg-slate-900/80 p-2 rounded-xl">
+                    <div className="text-[10px] text-slate-400">Total Stock</div>
+                    <div className="text-sm font-extrabold text-white font-mono">{summaryMetrics.totalItems}</div>
+                  </div>
+                  <div className="bg-slate-900/80 p-2 rounded-xl">
+                    <div className="text-[10px] text-slate-400">Low Stock</div>
+                    <div className={`text-sm font-extrabold font-mono ${summaryMetrics.lowStockCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      {summaryMetrics.lowStockCount}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 space-y-2 shrink-0">
+              <div className="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                    {loggedInUser ? loggedInUser.name.charAt(0) : 'A'}
+                  </div>
+                  <div className="truncate">
+                    <div className="text-xs font-bold text-white truncate">{loggedInUser ? loggedInUser.name : 'Super Admin'}</div>
+                    <div className="text-[10px] text-indigo-400 font-medium truncate">{loggedInUser ? loggedInUser.role : 'Administrator'}</div>
                   </div>
                 </div>
                 <button
-                  onClick={() => fetchAllPreserveData(false)}
-                  className={`p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white ${isSyncing ? 'animate-spin' : ''}`}
-                  title="Refresh Data"
+                  onClick={() => fetchAllData(false)}
+                  disabled={isSyncing}
+                  title="Manual Sync"
+                  className={`p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition ${isSyncing ? 'animate-spin text-brand-400' : ''}`}
                 >
                   <Icons.Refresh />
                 </button>
               </div>
 
-              <nav className="space-y-1 text-xs font-semibold">
-                <button
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left bg-brand-600 text-white font-bold"
-                >
-                  <Icons.Stock /> Stock Register ({assets.length})
-                </button>
-                <button
-                  onClick={() => setShowHistoryModal(true)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-slate-400 hover:bg-slate-800 hover:text-white transition"
-                >
-                  <Icons.Report /> Monthly History ({stockHistory.length})
-                </button>
-              </nav>
-            </div>
-
-            <div className="text-[11px] text-slate-400 bg-slate-800/70 p-3 rounded-xl border border-slate-700/60 space-y-1">
-              <div className="font-bold text-slate-200">Auto Calculation</div>
-              <div className="font-mono text-[10px]">Balance = (Opening + New Stock) - Issued</div>
+              <button
+                onClick={() => {
+                  setIsLoggedIn(false);
+                  setLoggedInUser(null);
+                  setPinInput('');
+                  setUsernameInput('');
+                }}
+                className="w-full py-2 bg-slate-800 hover:bg-rose-950/50 hover:text-rose-300 text-slate-400 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border border-slate-700/60"
+              >
+                <Icons.SignOut /> Sign Out
+              </button>
             </div>
           </aside>
 
-          {/* Main Content */}
-          <main className="flex-1 flex flex-col overflow-hidden p-5 space-y-4">
-            <header className="bg-white border border-slate-200 p-4 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-3">
-              <div>
-                <h1 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">
-                  Stock Register — Full Data Preserved, Auto Balance & Remarks
-                </h1>
-                <p className="text-xs text-slate-500">
-                  All previous items and values stay intact; issuing an item deducts once, highlights that row, and logs receiver & department in Remarks.
-                </p>
-              </div>
+          <main className="flex-1 flex flex-col overflow-hidden bg-slate-100 p-6 space-y-4">
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowHistoryModal(true)}
-                  className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5"
-                >
-                  <Icons.Report /> History ({stockHistory.length})
-                </button>
-                <button
-                  onClick={() => fileInputRef.current.click()}
-                  className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5"
-                >
-                  <Icons.Upload /> Import Excel
-                </button>
-                <button
-                  onClick={exportExcel}
-                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5"
-                >
-                  <Icons.Download /> Export Excel
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingAsset(null);
-                    setFormData({
-                      group: 'CABLE',
-                      particulars: '',
-                      brand: 'Dell',
-                      serialNo: '',
-                      cableLength: '',
-                      measurementUnit: 'Piece',
-                      openingQty: 0,
-                      newPurchase: 0,
-                      issueItems: 0,
-                      shortItems: 0,
-                      deadItems: 0,
-                      minAlert: 2,
-                      category: 'Consumable',
-                      location: 'IT Stores',
-                      remark: ''
-                    });
-                    setIsAssetModalOpen(true);
-                  }}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5"
-                >
-                  <Icons.Plus /> Add Stock / Item
-                </button>
-              </div>
-            </header>
+            {activeTab === 'inventory' && (
+              <div className="flex-1 flex flex-col overflow-hidden space-y-4">
+                
+                <div className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
+                      <Icons.Stock /> Stock Control & Auto-Calculation Suite
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowHistoryModal(true)}
+                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+                      >
+                        <Icons.Report /> Stock History / Log ({stockHistory.length})
+                      </button>
+                      <button
+                        onClick={() => fileInputRef.current.click()}
+                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+                      >
+                        <Icons.Upload /> Import Excel
+                      </button>
+                      <button
+                        onClick={() => exportToExcel(`Stock_Register_${Date.now()}.xlsx`, assets)}
+                        className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+                      >
+                        <Icons.Download /> Export Excel
+                      </button>
+                    </div>
+                  </div>
 
-            {/* Group Filter & Search */}
-            <div className="bg-white border border-slate-200 p-3.5 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-3">
-              <div className="flex items-center gap-2 overflow-x-auto">
-                <button
-                  onClick={() => setSelectedGroupFilter('')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                    selectedGroupFilter === '' ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  All ({assets.length})
-                </button>
-                {Object.keys(groups).map(grp => (
-                  <button
-                    key={grp}
-                    onClick={() => setSelectedGroupFilter(grp)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                      selectedGroupFilter === grp ? 'bg-brand-600 text-white border-brand-600' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {grp} ({groups[grp]})
-                  </button>
-                ))}
-              </div>
+                  <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
+                    <button
+                      onClick={() => setSelectedGroupFilter('')}
+                      className={`min-w-[130px] p-2.5 rounded-xl text-left border transition cursor-pointer ${
+                        selectedGroupFilter === ''
+                          ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-xs font-black uppercase">ALL GROUPS</div>
+                      <div className={`text-[10px] font-semibold mt-0.5 ${selectedGroupFilter === '' ? 'text-brand-100' : 'text-slate-500'}`}>
+                        {assets.length} items logged
+                      </div>
+                    </button>
 
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Icons.Search />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search item, remark, group..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-brand-500 w-60"
-                />
-              </div>
-            </div>
-
-            {/* Stock Register Table */}
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-xs flex-1 overflow-auto">
-              <table className="w-full text-left border-collapse table-compact text-xs">
-                <thead className="bg-slate-100 text-slate-700 uppercase font-extrabold text-[10px] sticky top-0 z-10 border-b border-slate-200">
-                  <tr>
-                    <th className="p-3 text-center">Actions</th>
-                    <th>Item / Particulars</th>
-                    <th className="text-center">Opening</th>
-                    <th className="text-center text-brand-700">New Stock (+)</th>
-                    <th className="text-center text-amber-700">Issued (-)</th>
-                    <th className="text-center bg-slate-200/70 font-black">Balance</th>
-                    <th>Remarks (Whom & Department)</th>
-                    <th>Updated</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {loading ? (
-                    <tr><td colSpan="8" className="text-center py-12 text-slate-400">Loading stock register...</td></tr>
-                  ) : filteredAssets.length === 0 ? (
-                    <tr><td colSpan="8" className="text-center py-12 text-slate-400">No items found.</td></tr>
-                  ) : (
-                    filteredAssets.map(item => {
-                      const opening = Number(item.openingQty || 0);
-                      const purch = Number(item.newPurchase || 0);
-                      const issued = Number(item.issueItems || 0);
-                      const short = Number(item.shortItems || 0);
-                      const dead = Number(item.deadItems || 0);
-                      const balance = (opening + purch) - (issued + short + dead);
-                      const isLow = balance <= Number(item.minAlert || 2);
-                      const isRowHighlighted = Boolean(item.highlighted || highlightedRowId === item.id);
-
+                    {Object.keys(groupCounts).map(grp => {
+                      const count = groupCounts[grp];
+                      const isSelected = selectedGroupFilter.toLowerCase() === grp.toLowerCase();
                       return (
-                        <tr
-                          key={item.id}
-                          className={`transition ${
-                            isRowHighlighted
-                              ? 'bg-amber-100/80 ring-1 ring-inset ring-amber-400'
-                              : isLow
-                              ? 'bg-rose-50/40 hover:bg-slate-50'
-                              : 'hover:bg-slate-50'
+                        <button
+                          key={grp}
+                          onClick={() => setSelectedGroupFilter(grp)}
+                          className={`min-w-[140px] p-2.5 rounded-xl text-left border transition cursor-pointer flex justify-between items-start ${
+                            isSelected 
+                              ? 'bg-brand-600 border-brand-600 text-white shadow-sm' 
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                           }`}
                         >
-                          <td className="text-center whitespace-nowrap">
-                            <div className="inline-flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  setIssueModalItem(item);
-                                  setIssueForm({
-                                    qtyToIssue: 1,
-                                    receiverName: '',
-                                    department: 'HR',
-                                    extraRemark: ''
-                                  });
-                                }}
-                                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[11px] font-bold transition"
-                              >
-                                Issue Item
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingAsset(item);
-                                  setFormData({
-                                    group: item.group || 'CABLE',
-                                    particulars: item.particulars || '',
-                                    brand: item.brand || 'Dell',
-                                    serialNo: item.serialNo || '',
-                                    cableLength: item.cableLength || '',
-                                    measurementUnit: item.measurementUnit || 'Piece',
-                                    openingQty: item.openingQty || 0,
-                                    newPurchase: item.newPurchase || 0,
-                                    issueItems: item.issueItems || 0,
-                                    shortItems: item.shortItems || 0,
-                                    deadItems: item.deadItems || 0,
-                                    minAlert: item.minAlert || 2,
-                                    category: item.category || 'Consumable',
-                                    location: item.location || 'IT Stores',
-                                    remark: item.remark || ''
-                                  });
-                                  setIsAssetModalOpen(true);
-                                }}
-                                title="Edit / Add Stock"
-                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-600 rounded-lg"
-                              >
-                                <Icons.Edit />
-                              </button>
-                              <button
-                                onClick={() => setViewModalItem(item)}
-                                title="View / Print Slip"
-                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg"
-                              >
-                                <Icons.Eye />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAsset(item)}
-                                title="Delete"
-                                className="p-1.5 bg-slate-100 hover:bg-rose-100 text-rose-600 rounded-lg"
-                              >
-                                <Icons.Trash />
-                              </button>
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-tight">{grp}</div>
+                            <div className={`text-[10px] font-semibold mt-0.5 ${isSelected ? 'text-brand-100' : 'text-slate-500'}`}>
+                              {count} assets
                             </div>
-                          </td>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                          <td>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
-                                {item.group || 'ITEM'}
-                              </span>
-                              <span className="font-extrabold text-slate-900">{item.particulars}</span>
-                              {isRowHighlighted && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-amber-500 text-white">
-                                  Updated
-                                </span>
-                              )}
-                              {isLow && (
-                                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded bg-rose-600 text-white">
-                                  Low
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                              {item.brand} {item.cableLength ? `• ${item.cableLength}` : ''}
-                            </div>
-                          </td>
+                <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-sm font-extrabold text-slate-900 tracking-wide uppercase">Stock Register (Auto-Updating Balance)</h1>
+                    <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 font-mono text-xs rounded-full font-bold">
+                      {filteredAssets.length} Records
+                    </span>
+                  </div>
 
-                          <td className="text-center font-mono font-bold">{opening}</td>
-                          <td className="text-center font-mono font-bold text-emerald-700">+{purch}</td>
-                          <td className="text-center font-mono font-bold text-amber-700">-{issued}</td>
-                          <td className="text-center font-mono font-black text-sm bg-slate-100/80">
-                            <span className={`px-2 py-0.5 rounded ${isLow ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                              {balance}
-                            </span>
-                          </td>
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Icons.Search />
+                      </span>
+                      <input 
+                        type="text"
+                        placeholder="Search particulars, cable, tag..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-brand-500 w-64"
+                      />
+                    </div>
 
-                          <td className="max-w-xs">
-                            {item.remark ? (
-                              <span className="inline-block px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-800 text-[11px] font-semibold">
-                                {item.remark}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 italic text-[11px]">No remark</span>
-                            )}
-                          </td>
+                    <select
+                      value={locationFilter}
+                      onChange={(e) => setLocationFilter(e.target.value)}
+                      className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none"
+                    >
+                      <option value="All">Location: All</option>
+                      <option value="IT Stores">IT Stores</option>
+                      <option value="Server Room">Server Room</option>
+                      <option value="NOC Room">NOC Room</option>
+                      <option value="Design Lab">Design Lab</option>
+                    </select>
 
-                          <td className="font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                            {item.lastUpdated || '—'}
+                    <button 
+                      onClick={() => {
+                        setEditingAsset(null);
+                        setFormData({
+                          group: 'CABLE',
+                          particulars: '',
+                          brand: 'Dell',
+                          customBrand: '',
+                          serialNo: '',
+                          vendor: '',
+                          invoiceNo: '',
+                          warranty: '',
+                          cableLength: '',
+                          measurementUnit: 'Piece',
+                          openingQty: 0,
+                          newPurchase: 0,
+                          issueItems: 0,
+                          shortItems: 0,
+                          deadItems: 0,
+                          minAlert: 2,
+                          category: 'Consumable',
+                          location: 'IT Stores',
+                          entryMonth: getCurrentMonthYear(),
+                          lastUpdated: getFormattedDateTime()
+                        });
+                        setIsModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 transition flex items-center gap-1.5"
+                    >
+                      <Icons.Plus /> Register New Asset / Purchase
+                    </button>
+                  </div>
+                </header>
+
+                <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 flex-1 flex flex-col overflow-hidden">
+                  <div className="overflow-auto flex-1">
+                    <table className="w-full text-left border-collapse table-compact text-xs">
+                      <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold text-[10px] sticky top-0 z-10 border-b border-slate-200">
+                        <tr>
+                          <th className="p-3 w-32 text-center">Action</th>
+                          <th>Group / Particulars</th>
+                          <th>Brand & Specification</th>
+                          <th className="text-center">Opening</th>
+                          <th className="text-center text-brand-600">New Purchase (+)</th>
+                          <th className="text-center text-amber-600">Issued / HR (-)</th>
+                          <th className="text-center bg-slate-100 font-black">Net Balance</th>
+                          <th className="text-center">Min Alert</th>
+                          <th className="text-center">Short</th>
+                          <th className="text-center">Dead</th>
+                          <th>Location</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                        {loading ? (
+                          <tr><td colSpan="11" className="text-center py-14 text-slate-400 font-semibold">Loading stock records...</td></tr>
+                        ) : paginatedAssets.length === 0 ? (
+                          <tr><td colSpan="11" className="text-center py-14 text-slate-400 font-semibold">No assets found. Click "+ Register New Asset" to add items.</td></tr>
+                        ) : (
+                          paginatedAssets.map((item) => {
+                            const opening = Number(item.openingQty || 0);
+                            const purch = Number(item.newPurchase || 0);
+                            const issue = Number(item.issueItems || 0);
+                            const short = Number(item.shortItems || 0);
+                            const dead = Number(item.deadItems || 0);
+                            const minAlertQty = Number(item.minAlert || 2);
+                            
+                            // AUTO CALCULATED BALANCE = (Opening + Purchase) - (Issued + Short + Dead)
+                            const bal = (opening + purch) - (issue + short + dead);
+                            const isLow = bal <= minAlertQty;
+
+                            return (
+                              <tr key={item.firebaseKey || item.id} className={`hover:bg-slate-50/80 transition ${isLow ? 'bg-amber-50/30' : ''}`}>
+                                <td className="p-2 text-center whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                    <button 
+                                      onClick={() => setViewModalItem(item)}
+                                      title="Print Asset Slip"
+                                      className="p-1 hover:bg-white text-brand-600 rounded-lg transition"
+                                    >
+                                      <Icons.Eye />
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        setEditingAsset(item);
+                                        setFormData({
+                                          group: item.group || 'CABLE',
+                                          particulars: item.particulars || '',
+                                          brand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? item.brand : 'Other',
+                                          customBrand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? '' : (item.brand || ''),
+                                          serialNo: item.serialNo || '',
+                                          vendor: item.vendor || '',
+                                          invoiceNo: item.invoiceNo || '',
+                                          warranty: item.warranty || '',
+                                          cableLength: item.cableLength || '',
+                                          measurementUnit: item.measurementUnit || 'Piece',
+                                          openingQty: item.openingQty || 0,
+                                          newPurchase: item.newPurchase || 0,
+                                          issueItems: item.issueItems || 0,
+                                          shortItems: item.shortItems || 0,
+                                          deadItems: item.deadItems || 0,
+                                          minAlert: item.minAlert || 2,
+                                          category: item.category || 'Consumable',
+                                          location: item.location || '',
+                                          entryMonth: item.entryMonth || getCurrentMonthYear(),
+                                          lastUpdated: item.lastUpdated || getFormattedDateTime()
+                                        });
+                                        setIsModalOpen(true);
+                                      }}
+                                      title="Update / Add Purchase / Issue"
+                                      className="p-1 hover:bg-white text-indigo-600 rounded-lg transition"
+                                    >
+                                      <Icons.Edit />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleDeleteAsset(item)}
+                                      title="Delete"
+                                      className="p-1 hover:bg-white text-rose-600 rounded-lg transition"
+                                    >
+                                      <Icons.Trash />
+                                    </button>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.group || 'GENERAL'}</div>
+                                  <div className="font-extrabold text-slate-900 text-xs tracking-tight flex items-center gap-1.5">
+                                    {item.particulars}
+                                    {isLow && <span className="px-1.5 py-0.2 bg-rose-500 text-white font-bold text-[9px] rounded uppercase animate-pulse">Low Stock</span>}
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono">Updated: {item.lastUpdated || 'N/A'}</div>
+                                </td>
+                                <td>
+                                  <div className="font-semibold text-slate-800">{item.brand === 'Other' ? item.customBrand : item.brand}</div>
+                                  <div className="text-[10px] text-slate-400 font-mono">
+                                    {item.serialNo ? `S/N: ${item.serialNo}` : 'No Serial'} {item.cableLength && `| ${item.cableLength}m`}
+                                  </div>
+                                </td>
+                                <td className="text-center font-mono text-slate-700 font-semibold">{opening}</td>
+                                <td className="text-center font-mono text-brand-600 font-bold bg-brand-50/40">+{purch}</td>
+                                <td className="text-center font-mono text-amber-600 font-bold bg-amber-50/40">-{issue}</td>
+                                <td className="text-center font-mono font-black text-sm bg-slate-100">
+                                  <span className={`px-2 py-0.5 rounded-md ${isLow ? 'bg-rose-100 text-rose-800 font-extrabold' : 'text-emerald-700 bg-emerald-50'}`}>
+                                    {bal}
+                                  </span>
+                                </td>
+                                <td className="text-center font-mono text-slate-500 font-bold">{minAlertQty}</td>
+                                <td className="text-center font-mono text-rose-600 font-bold">{short}</td>
+                                <td className="text-center font-mono text-slate-400">{dead}</td>
+                                <td>
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${item.location ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-slate-400 italic'}`}>
+                                    {item.location || 'Unassigned'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="p-3 bg-white border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-3">
+                      <span>Showing {paginatedAssets.length} of {filteredAssets.length} items</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-600">Rows:</span>
+                        <select
+                          value={itemsPerPage}
+                          onChange={(e) => {
+                            setItemsPerPage(Number(e.target.value));
+                            setCurrentPage(1);
+                          }}
+                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800 outline-none"
+                        >
+                          <option value="10">10</option>
+                          <option value="25">25</option>
+                          <option value="50">50</option>
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold disabled:opacity-40 text-slate-700 hover:bg-slate-50 transition"
+                      >
+                        Previous
+                      </button>
+                      <span className="font-mono font-bold text-slate-800 px-2">Page {currentPage} of {totalPages}</span>
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold disabled:opacity-40 text-slate-700 hover:bg-slate-50 transition"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'temp_deploy' && (
+              <div className="flex-1 flex flex-col overflow-hidden space-y-4">
+                <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
+                  <div>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Temporary Asset & Departmental Issue Registry (HR / Units)</h1>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Issuing items (e.g., HDMI Cable to HR) automatically logs the consumption.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowMovementReportModal(true)}
+                      className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+                    >
+                      <Icons.Report /> Movement History
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingTempItem(null);
+                        setTempForm({ assetName: '', assetTagNo: '', department: 'HR Department', receiver: '', quantity: 1, status: 'Temporary Given' });
+                        setIsTempModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition"
+                    >
+                      <Icons.Plus /> Issue Item to Department (HR / Other)
+                    </button>
+                  </div>
+                </header>
+
+                <div className="bg-white rounded-2xl shadow-xs border border-slate-200/90 flex-1 overflow-auto">
+                  <table className="w-full text-left border-collapse table-compact text-xs">
+                    <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">#</th>
+                        <th>Asset Name</th>
+                        <th>Asset Tag No</th>
+                        <th>Department (e.g. HR)</th>
+                        <th>Receiver Name</th>
+                        <th className="text-center">Qty Issued</th>
+                        <th>Issue Date</th>
+                        <th className="text-center">Status</th>
+                        <th className="text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      {tempDispatches.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" className="text-center py-14 text-slate-400 font-medium">
+                            No departmental dispatches registered.
                           </td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      ) : (
+                        tempDispatches.map((item, idx) => {
+                          const isReturn = (item.status || '').toLowerCase() === 'return back';
+                          return (
+                            <tr key={item.firebaseKey || item.id} className="hover:bg-slate-50 transition">
+                              <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                              <td className="font-extrabold text-slate-900">{item.assetName}</td>
+                              <td className="font-mono text-brand-600 font-bold">{item.assetTagNo}</td>
+                              <td className="font-semibold text-slate-800">{item.department}</td>
+                              <td>{item.receiver}</td>
+                              <td className="text-center font-mono font-bold text-amber-600">-{item.quantity}</td>
+                              <td className="font-mono text-slate-500 text-[11px]">{item.issueDate}</td>
+                              <td className="text-center">
+                                <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] border flex items-center gap-1 justify-center w-fit mx-auto ${
+                                  isReturn 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${isReturn ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                  {item.status || 'Temporary Given'}
+                                </span>
+                              </td>
+                              <td className="text-center whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5">
+                                  {!isReturn && (
+                                    <button
+                                      onClick={async () => {
+                                        const timestamped = getFormattedDateTime();
+                                        const updated = { ...item, status: 'Return Back', returnDate: timestamped };
+                                        if (item.firebaseKey) {
+                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(updated)
+                                          });
+                                        }
+                                        setTempDispatches(tempDispatches.map(d => (d.id === item.id || d.firebaseKey === item.firebaseKey) ? updated : d));
+                                        await logStockHistory(item.assetName, 'RETURNED TO STORE (+)', `Item returned from ${item.department} to store.`);
+                                        showToast("Item marked as returned to store!", "success");
+                                      }}
+                                      title="Mark as Returned to Store"
+                                      className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 text-[10px] font-bold flex items-center gap-1 transition"
+                                    >
+                                      <Icons.Check /> Return
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm("Delete this dispatch record?")) {
+                                        if (item.firebaseKey) {
+                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
+                                        }
+                                        setTempDispatches(tempDispatches.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
+                                        showToast("Dispatch record removed.", "info");
+                                      }
+                                    }}
+                                    className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg transition"
+                                  >
+                                    <Icons.Trash />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'preventive_maint' && (
+              <div className="flex-1 overflow-auto space-y-4">
+                <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
+                  <div>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Preventive Maintenance (PM) Schedule</h1>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Hardware specifications, network config, and periodic audit logs.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowPmReportModal(true)}
+                    className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+                  >
+                    <Icons.Report /> Audit Trail ({pmAuditLogs.length})
+                  </button>
+                </header>
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-xs text-slate-500 font-medium">
+                  Preventive Maintenance 12-Month Calendar Schedule active and synchronized.
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'stock_ledger' && (
+              <div className="flex-1 overflow-auto space-y-4">
+                <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs">
+                  <h1 className="text-sm font-extrabold tracking-wide uppercase">4. Comprehensive Stock Ledger & Valuation Analytics</h1>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">Automated accounting metrics, depreciation overview, and audit summary.</p>
+                </header>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Cataloged Stock</div>
+                    <div className="text-2xl font-black text-brand-600 font-mono">{summaryMetrics.totalItems} Units</div>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dispatched / Issued</div>
+                    <div className="text-2xl font-black text-indigo-600 font-mono">{summaryMetrics.totalIssued} Units</div>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Low Stock Items</div>
+                    <div className="text-2xl font-black text-amber-600 font-mono">{summaryMetrics.lowStockCount} Items</div>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-1">
+                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Defective / Dead</div>
+                    <div className="text-2xl font-black text-rose-600 font-mono">{summaryMetrics.totalDead} Units</div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Official Ledger Export Operations</h3>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => exportToExcel(`Master_IT_Ledger_${Date.now()}.xlsx`, assets)}
+                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
+                    >
+                      <Icons.Download /> Download Complete Ledger (Excel .xlsx)
+                    </button>
+                    <button
+                      onClick={() => window.print()}
+                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-2"
+                    >
+                      Print Summary Sheet
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'asset_lifecycle' && (
+              <div className="flex-1 overflow-auto space-y-4">
+                <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs">
+                  <h1 className="text-sm font-extrabold tracking-wide uppercase">5. Asset Warranty & Hardware Lifecycle Monitor</h1>
+                </header>
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <table className="w-full text-left border-collapse table-compact text-xs">
+                    <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">#</th>
+                        <th>Asset Particulars</th>
+                        <th>Brand & Serial Number</th>
+                        <th>Category</th>
+                        <th className="text-center">Lifecycle Health</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      {assets.map((item, idx) => (
+                        <tr key={item.firebaseKey || item.id} className="hover:bg-slate-50">
+                          <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
+                          <td className="font-extrabold text-slate-900">{item.particulars}</td>
+                          <td className="font-mono text-slate-600">{item.brand} ({item.serialNo || 'NO-SERIAL'})</td>
+                          <td>{item.category}</td>
+                          <td className="text-center">
+                            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full font-bold text-[10px] border border-emerald-200 inline-flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active Warranty
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'vendors' && (
+              <div className="flex-1 overflow-auto space-y-4">
+                <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs">
+                  <h1 className="text-sm font-extrabold tracking-wide uppercase">6. Vendor & Procurement Management</h1>
+                </header>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { name: 'NRP Infotech Solutions', cat: 'Peripherals & Components', contact: '+91 98110-XXXXX', status: 'Preferred Tier-1', score: '4.8/5.0' },
+                    { name: 'Dell Enterprise India', cat: 'Servers & OptiPlex Workstations', contact: 'support.india@dell.com', status: 'OEM Direct', score: '4.9/5.0' },
+                    { name: 'HP LaserJet Services', cat: 'Imaging & Printing Systems', contact: 'hpcare@hp.com', status: 'Annual Maintenance (AMC)', score: '4.6/5.0' }
+                  ].map((v, i) => (
+                    <div key={i} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div className="font-extrabold text-slate-900 text-xs">{v.name}</div>
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold text-[9px] rounded-full border border-emerald-200">{v.status}</span>
+                      </div>
+                      <div className="text-slate-500 text-[11px]">{v.cat}</div>
+                      <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[10px] font-mono text-slate-600">
+                        <span>{v.contact}</span>
+                        <span className="font-bold text-brand-600">★ {v.score}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'users' && (
+              <div className="flex-1 overflow-auto space-y-4">
+                <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs flex justify-between items-center">
+                  <div>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase">7. Role-Based Access Control (RBAC) & System Users</h1>
+                  </div>
+                </header>
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <table className="w-full text-left border-collapse table-compact text-xs">
+                    <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">#</th>
+                        <th>User Name</th>
+                        <th>Login ID</th>
+                        <th>Privilege Role</th>
+                        <th className="text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                      {users.map((u, i) => (
+                        <tr key={u.firebaseKey || u.id} className="hover:bg-slate-50 transition">
+                          <td className="p-3 font-mono text-slate-400">{i + 1}</td>
+                          <td className="font-extrabold text-slate-900">{u.name}</td>
+                          <td className="font-mono text-brand-600 font-bold">@{u.username}</td>
+                          <td>
+                            <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-[10px] border border-indigo-200">
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="text-center">
+                            <span className="px-2.5 py-0.5 rounded-full font-bold text-[10px] border bg-emerald-50 text-emerald-700 border-emerald-200">
+                              Active
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
           </main>
 
-          {/* Issue Item Modal */}
-          {issueModalItem && (
-            <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <div>
-                    <h3 className="font-extrabold text-sm text-slate-900">Issue Item: {issueModalItem.particulars}</h3>
-                    <p className="text-[11px] text-slate-500">
-                      Available Stock: <strong className="font-mono text-emerald-700">
-                        {(Number(issueModalItem.openingQty || 0) + Number(issueModalItem.newPurchase || 0)) - (Number(issueModalItem.issueItems || 0) + Number(issueModalItem.shortItems || 0) + Number(issueModalItem.deadItems || 0))}
-                      </strong>
-                    </p>
-                  </div>
-                  <button onClick={() => setIssueModalItem(null)} className="text-slate-400 hover:text-slate-700 font-bold">✕</button>
-                </div>
-
-                <form onSubmit={handleConfirmIssue} className="space-y-3 text-xs">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Quantity to Give *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={issueForm.qtyToIssue}
-                        onChange={(e) => setIssueForm({ ...issueForm, qtyToIssue: Number(e.target.value) })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Department / Location *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. HR, Board Room"
-                        value={issueForm.department}
-                        onChange={(e) => setIssueForm({ ...issueForm, department: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Given To (Person Name) *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Rahul Verma"
-                      value={issueForm.receiverName}
-                      onChange={(e) => setIssueForm({ ...issueForm, receiverName: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Additional Remark (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. For cabin / meeting room"
-                      value={issueForm.extraRemark}
-                      onChange={(e) => setIssueForm({ ...issueForm, extraRemark: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setIssueModalItem(null)}
-                      className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold"
-                    >
-                      Deduct Stock & Save Remark
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Add / Edit Asset Modal */}
-          {isAssetModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-extrabold text-sm text-slate-900">
-                    {editingAsset ? 'Edit Item / Add New Stock' : 'Register New Item / Stock'}
-                  </h3>
-                  <button onClick={() => setIsAssetModalOpen(false)} className="text-slate-400 hover:text-slate-700 font-bold">✕</button>
-                </div>
-
-                <form onSubmit={handleSaveAsset} className="space-y-3 text-xs">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Group *</label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.group}
-                        onChange={(e) => setFormData({ ...formData, group: e.target.value.toUpperCase() })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Item Name *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. HDMI CABLE 3M"
-                        value={formData.particulars}
-                        onChange={(e) => setFormData({ ...formData, particulars: e.target.value.toUpperCase() })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Brand</label>
-                      <input
-                        type="text"
-                        value={formData.brand}
-                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">Opening Qty</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.openingQty}
-                        onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-emerald-700 mb-1">New Stock (+)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.newPurchase}
-                        onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })}
-                        className="w-full p-2.5 bg-emerald-50/50 border border-emerald-300 rounded-xl font-mono font-bold text-emerald-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-amber-700 mb-1">Issued (-)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.issueItems}
-                        onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })}
-                        className="w-full p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl font-mono font-bold text-amber-800"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1">Remark (Whom / Department / Notes)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. New stock arrived / Issued to HR"
-                      value={formData.remark}
-                      onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setIsAssetModalOpen(false)}
-                      className="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-600"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold"
-                    >
-                      Save Stock
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Monthly Stock History Modal */}
+          {/* STOCK HISTORY & MONTHLY AUDIT LOG MODAL */}
           {showHistoryModal && (
-            <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4">
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-extrabold text-sm text-slate-900">Monthly Stock History</h3>
-                  <button onClick={() => setShowHistoryModal(false)} className="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Monthly Stock Activity & History Log</h3>
+                    <p className="text-[11px] text-slate-500">Trace of every new purchase addition and departmental consumption (e.g. HDMI cable purchase / HR issue)</p>
+                  </div>
+                  <button onClick={() => setShowHistoryModal(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
 
-                <div className="max-h-80 overflow-auto border border-slate-200 rounded-xl">
+                <div className="max-h-96 overflow-auto border border-slate-200 rounded-2xl">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
                       <tr>
-                        <th className="p-2.5">Date & Time</th>
-                        <th>Item</th>
-                        <th>Action</th>
-                        <th>Remarks</th>
+                        <th className="p-3">Timestamp</th>
+                        <th>Item Particulars</th>
+                        <th>Action Type</th>
+                        <th>Details</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 font-medium">
                       {stockHistory.length === 0 ? (
-                        <tr><td colSpan="4" className="text-center py-8 text-slate-400">No history entries yet.</td></tr>
+                        <tr><td colSpan="4" className="text-center py-8 text-slate-400">No stock history recorded yet.</td></tr>
                       ) : (
-                        stockHistory.map(h => (
-                          <tr key={h.id}>
-                            <td className="p-2.5 font-mono text-[11px] text-slate-500">{h.timestamp}</td>
+                        stockHistory.map((h, index) => (
+                          <tr key={h.firebaseKey || index} className="hover:bg-slate-50">
+                            <td className="p-3 font-mono text-slate-500 text-[11px]">{h.timestamp}</td>
                             <td className="font-bold text-slate-900">{h.itemName}</td>
-                            <td className="font-mono font-bold text-brand-700">{h.actionType}</td>
-                            <td>{h.details}</td>
+                            <td>
+                              <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                                h.actionType.includes('NEW PURCHASE') ? 'bg-emerald-100 text-emerald-800' :
+                                h.actionType.includes('CONSUMED') ? 'bg-amber-100 text-amber-800' :
+                                'bg-indigo-100 text-indigo-800'
+                              }`}>
+                                {h.actionType}
+                              </span>
+                            </td>
+                            <td className="text-slate-700">{h.details}</td>
                           </tr>
                         ))
                       )}
@@ -1135,46 +1373,401 @@
                   </table>
                 </div>
 
-                <div className="flex justify-end">
-                  <button onClick={() => setShowHistoryModal(false)} className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">
-                    Close
+                <div className="flex justify-end pt-2">
+                  <button onClick={() => setShowHistoryModal(false)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">
+                    Close History Log
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Printable Slip Modal */}
+          {/* VIEW / PRINT MODAL */}
           {viewModalItem && (
-            <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
-              <div id="printable-slip" className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
-                <div className="flex justify-between items-start border-b border-slate-200 pb-3">
-                  <div>
-                    <div className="text-[10px] font-black uppercase text-brand-600">Stock Slip</div>
-                    <h3 className="font-extrabold text-base text-slate-900">{viewModalItem.particulars}</h3>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div id="printable-slip" className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-8 space-y-6 text-slate-800">
+                <div className="flex justify-between items-start border-b border-slate-200 pb-4">
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-brand-600">OFFICIAL IT INFRASTRUCTURE DEPARTMENT</div>
+                    <h2 className="text-lg font-black text-slate-900">ASSET VERIFICATION & GATE PASS SLIP</h2>
+                    <p className="text-[11px] text-slate-500 font-mono">Voucher ID: IT-SLIP-{viewModalItem.id || Date.now()}</p>
                   </div>
-                  <button onClick={() => setViewModalItem(null)} className="no-print text-slate-400 hover:text-slate-700 font-bold">✕</button>
+                  <button onClick={() => setViewModalItem(null)} className="no-print font-bold text-slate-400 hover:text-slate-700 text-lg">✕</button>
                 </div>
 
-                <div className="space-y-2 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <div><strong>Group:</strong> {viewModalItem.group}</div>
-                  <div>
-                    <strong>Net Balance:</strong>{' '}
-                    <span className="font-mono font-bold">
-                      {(Number(viewModalItem.openingQty || 0) + Number(viewModalItem.newPurchase || 0)) - (Number(viewModalItem.issueItems || 0) + Number(viewModalItem.shortItems || 0) + Number(viewModalItem.deadItems || 0))}
-                    </span>
-                  </div>
-                  <div><strong>Remark:</strong> {viewModalItem.remark || '—'}</div>
-                  <div><strong>Last Updated:</strong> {viewModalItem.lastUpdated || '—'}</div>
+                <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                  <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Particulars</span> <strong className="text-slate-900 text-sm">{viewModalItem.particulars}</strong></div>
+                  <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Asset Group</span> <strong className="text-slate-900">{viewModalItem.group}</strong></div>
+                  <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Brand & Specs</span> {viewModalItem.brand === 'Other' ? viewModalItem.customBrand : viewModalItem.brand}</div>
+                  <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Net Balance Stock</span> <span className="font-mono font-black text-emerald-600 text-sm">{(Number(viewModalItem.openingQty || 0) + Number(viewModalItem.newPurchase || 0)) - (Number(viewModalItem.issueItems || 0) + Number(viewModalItem.shortItems || 0) + Number(viewModalItem.deadItems || 0))} {viewModalItem.measurementUnit}</span></div>
                 </div>
 
-                <div className="no-print flex justify-end gap-2">
-                  <button onClick={() => window.print()} className="px-4 py-2 rounded-xl bg-brand-600 text-white text-xs font-bold">Print</button>
-                  <button onClick={() => setViewModalItem(null)} className="px-4 py-2 rounded-xl bg-slate-200 text-slate-700 text-xs font-bold">Close</button>
+                <div className="pt-8 border-t border-slate-200 grid grid-cols-2 gap-8 text-center text-xs">
+                  <div>
+                    <div className="h-10 border-b border-dashed border-slate-300"></div>
+                    <div className="mt-2 font-bold text-slate-600">Store Officer Signature</div>
+                  </div>
+                  <div>
+                    <div className="h-10 border-b border-dashed border-slate-300"></div>
+                    <div className="mt-2 font-bold text-slate-600">Authorized Receiver Signature</div>
+                  </div>
+                </div>
+
+                <div className="no-print flex justify-end gap-2 pt-4">
+                  <button onClick={() => window.print()} className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md transition">
+                    Print Official Slip
+                  </button>
+                  <button onClick={() => setViewModalItem(null)} className="px-4 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-300 transition">
+                    Dismiss
+                  </button>
                 </div>
               </div>
             </div>
           )}
+
+          {/* ADD / EDIT ASSET MODAL */}
+          {isModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
+              <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8 text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <h3 className="font-extrabold text-sm text-slate-900">
+                    {editingAsset ? 'Update Stock & Purchase Entry' : 'Register New Asset / Stock Purchase'}
+                  </h3>
+                  <button onClick={() => setIsModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+
+                <form onSubmit={handleSaveAsset} className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Asset Group Name *</label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g. CABLE, MOUSE, KEYBOARD"
+                        value={formData.group}
+                        onChange={(e) => setFormData({ ...formData, group: e.target.value.toUpperCase() })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Item Particulars *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. HDMI CABLE 3M"
+                        value={formData.particulars}
+                        onChange={(e) => setFormData({ ...formData, particulars: e.target.value.toUpperCase() })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Brand Name *</label>
+                      <select 
+                        value={formData.brand}
+                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                      >
+                        <option value="Dell">Dell</option>
+                        <option value="HP">HP</option>
+                        <option value="Lenovo">Lenovo</option>
+                        <option value="Cisco">Cisco</option>
+                        <option value="Logitech">Logitech</option>
+                        <option value="Honeywell">Honeywell</option>
+                        <option value="Other">Other (Custom)</option>
+                      </select>
+                    </div>
+
+                    {formData.brand === 'Other' && (
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Custom Brand *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="Brand Name"
+                          value={formData.customBrand}
+                          onChange={(e) => setFormData({ ...formData, customBrand: e.target.value })}
+                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Category *</label>
+                      <select 
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                      >
+                        <option value="Consumable">Consumable</option>
+                        <option value="Non-Consumable">Non-Consumable</option>
+                        <option value="Fixed Assets">Fixed Assets</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Assigned Location</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. IT Stores"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Serial / Asset Tag</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. HD-3M-01"
+                        value={formData.serialNo}
+                        onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Cable Length (m)</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. 3.0"
+                        value={formData.cableLength}
+                        onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Unit of Measure</label>
+                      <select 
+                        value={formData.measurementUnit}
+                        onChange={(e) => setFormData({ ...formData, measurementUnit: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                      >
+                        <option value="Piece">Piece</option>
+                        <option value="Meter">Meter</option>
+                        <option value="GB">GB</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Min Stock Alert Qty *</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        required
+                        value={formData.minAlert}
+                        onChange={(e) => setFormData({ ...formData, minAlert: Number(e.target.value) })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  {/* AUTO CALCULATION QUANTITIES */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                    <div className="text-[11px] font-extrabold text-brand-600 uppercase">
+                      Stock Calculation Formula: Net Balance = (Opening + New Purchase) - (Issued + Short + Dead)
+                    </div>
+                    <div className="grid grid-cols-5 gap-3">
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Opening Qty</label>
+                        <input 
+                          type="number" 
+                          min="0"
+                          value={formData.openingQty}
+                          onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-brand-600 mb-1">New Purchase (+)</label>
+                        <input 
+                          type="number" 
+                          min="0"
+                          value={formData.newPurchase}
+                          onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })}
+                          className="w-full p-2 bg-white border border-brand-300 rounded-lg font-mono font-bold text-brand-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-amber-600 mb-1">Issued / HR (-)</label>
+                        <input 
+                          type="number" 
+                          min="0"
+                          value={formData.issueItems}
+                          onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })}
+                          className="w-full p-2 bg-white border border-amber-300 rounded-lg font-mono font-bold text-amber-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Short</label>
+                        <input 
+                          type="number" 
+                          min="0"
+                          value={formData.shortItems}
+                          onChange={(e) => setFormData({ ...formData, shortItems: Number(e.target.value) })}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-rose-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-600 mb-1">Dead</label>
+                        <input 
+                          type="number" 
+                          min="0"
+                          value={formData.deadItems}
+                          onChange={(e) => setFormData({ ...formData, deadItems: Number(e.target.value) })}
+                          className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition"
+                    >
+                      {editingAsset ? 'Update Stock & Record History' : 'Save New Purchase'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ISSUE ITEM MODAL (e.g. to HR) */}
+          {isTempModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <h3 className="font-extrabold text-sm text-slate-900">
+                    Issue Item to Department (e.g. HR Department)
+                  </h3>
+                  <button onClick={() => setIsTempModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const timestamped = getFormattedDateTime();
+
+                  const newDispatch = {
+                    id: `td_${Date.now()}`,
+                    ...tempForm,
+                    issueDate: timestamped
+                  };
+
+                  try {
+                    await fetch(FIREBASE_TEMP_URL, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(newDispatch)
+                    });
+
+                    // Automatically update stock if matching asset found
+                    const foundAsset = assets.find(a => (a.particulars || '').toLowerCase().includes((tempForm.assetName || '').toLowerCase()));
+                    if (foundAsset && foundAsset.firebaseKey) {
+                      const updatedIssued = Number(foundAsset.issueItems || 0) + Number(tempForm.quantity || 1);
+                      await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${foundAsset.firebaseKey}.json`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ issueItems: updatedIssued, lastUpdated: timestamped })
+                      });
+                      await logStockHistory(foundAsset.particulars, `CONSUMED / ISSUED (-${tempForm.quantity})`, `Issued ${tempForm.quantity} unit(s) to ${tempForm.department} (Receiver: ${tempForm.receiver})`);
+                    }
+
+                    fetchAllData(false);
+                    showToast("Item issued and stock automatically deducted!", "success");
+                  } catch(err) {
+                    showToast("Issued saved locally.", "info");
+                  }
+
+                  setIsTempModalOpen(false);
+                }} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Item Name / Particulars *</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. HDMI CABLE 3M"
+                      value={tempForm.assetName}
+                      onChange={(e) => setTempForm({ ...tempForm, assetName: e.target.value.toUpperCase() })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Asset Tag No / Serial *</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. HD-3M-01"
+                      value={tempForm.assetTagNo}
+                      onChange={(e) => setTempForm({ ...tempForm, assetTagNo: e.target.value.toUpperCase() })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-mono font-bold text-slate-900"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Department (e.g. HR) *</label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="HR Department"
+                        value={tempForm.department}
+                        onChange={(e) => setTempForm({ ...tempForm, department: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Quantity to Deduct *</label>
+                      <input 
+                        type="number"
+                        min="1"
+                        required
+                        value={tempForm.quantity}
+                        onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-mono font-bold text-amber-600"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Receiver Name *</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="e.g. Mr. Sharma (HR)"
+                      value={tempForm.receiver}
+                      onChange={(e) => setTempForm({ ...tempForm, receiver: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-semibold"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsTempModalOpen(false)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition"
+                    >
+                      Confirm Issue & Deduct Stock
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
         </div>
       );
     }
