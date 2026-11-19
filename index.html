@@ -68,7 +68,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
 
     const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
     const FIREBASE_TEMP_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches.json";
@@ -83,6 +83,7 @@
       Trash: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>,
       Eye: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>,
       Download: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>,
+      Upload: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>,
       Refresh: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
     };
 
@@ -105,48 +106,30 @@
       return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
     };
 
-    // Deduplicate items so identical items never show up multiple times
-    const deduplicateAssets = async (rawItems, cleanRemoteDuplicates = false) => {
-      const uniqueMap = new Map();
-      const duplicateFirebaseKeys = [];
-
-      for (const item of rawItems) {
-        const normGroup = String(item.group || 'GENERAL').trim().toUpperCase();
-        const normName = String(item.particulars || '').trim().toUpperCase();
-        const normBrand = String(item.brand || '').trim().toUpperCase();
-        const sig = `${normGroup}__${normName}__${normBrand}`;
-
-        if (!uniqueMap.has(sig)) {
-          uniqueMap.set(sig, {
-            ...item,
-            id: item.id || Date.now() + Math.random(),
-            group: normGroup,
-            particulars: normName,
-            brand: item.brand || 'Dell'
-          });
-        } else {
-          if (item.firebaseKey) {
-            duplicateFirebaseKeys.push(item.firebaseKey);
-          }
-        }
-      }
-
-      if (cleanRemoteDuplicates && duplicateFirebaseKeys.length > 0) {
-        for (const dupKey of duplicateFirebaseKeys) {
-          try {
-            await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${dupKey}.json`, {
-              method: 'DELETE'
-            });
-          } catch (e) {}
-        }
-      }
-
-      return Array.from(uniqueMap.values());
-    };
-
-    const initialSampleAssets = [
+    const initialAssetsData = [
       {
         id: 101,
+        group: 'CABLE',
+        particulars: 'HDMI CABLE 3M',
+        brand: 'Dell',
+        serialNo: 'HD-3M-01',
+        cableLength: '3.0m',
+        measurementUnit: 'Piece',
+        openingQty: 5,
+        newPurchase: 3,
+        issueItems: 0,
+        shortItems: 0,
+        deadItems: 0,
+        minAlert: 2,
+        category: 'Consumable',
+        location: 'IT Stores',
+        remark: '5 opening + 3 new stock',
+        highlighted: false,
+        entryMonth: getCurrentMonthYear(),
+        lastUpdated: '19 Nov 2026, 11:30 AM'
+      },
+      {
+        id: 102,
         group: 'MOUSE',
         particulars: 'USB MOUSE',
         brand: 'Dell',
@@ -161,31 +144,71 @@
         minAlert: 2,
         category: 'Consumable',
         location: 'IT Stores',
-        remark: 'Ready in stock',
+        remark: 'Opening stock 12 available',
         highlighted: false,
         entryMonth: getCurrentMonthYear(),
-        lastUpdated: getFormattedDateTime()
+        lastUpdated: '19 Nov 2026, 10:00 AM'
       },
       {
-        id: 102,
-        group: 'CABLE',
-        particulars: 'HDMI CABLE 3M',
+        id: 103,
+        group: 'KEYBOARD',
+        particulars: 'PRO MECHANICAL KEYBOARD',
         brand: 'Dell',
-        serialNo: 'HD-3M-05',
-        cableLength: '3.0m',
+        serialNo: 'KB-DL-104',
+        cableLength: '1.8m',
         measurementUnit: 'Piece',
-        openingQty: 5,
-        newPurchase: 3,
-        issueItems: 0,
+        openingQty: 9,
+        newPurchase: 2,
+        issueItems: 1,
         shortItems: 0,
         deadItems: 0,
         minAlert: 2,
-        category: 'Consumable',
-        location: 'IT Stores',
-        remark: '5 opening + 3 new stock',
+        category: 'Non-Consumable',
+        location: 'Server Room',
+        remark: '1 issued to Server Room',
         highlighted: false,
         entryMonth: getCurrentMonthYear(),
-        lastUpdated: getFormattedDateTime()
+        lastUpdated: '18 Nov 2026, 02:20 PM'
+      },
+      {
+        id: 104,
+        group: 'CABLE',
+        particulars: 'CAT6 PATCH CABLE 2M',
+        brand: 'Cisco',
+        serialNo: 'CT6-2M-08',
+        cableLength: '2.0m',
+        measurementUnit: 'Piece',
+        openingQty: 15,
+        newPurchase: 5,
+        issueItems: 3,
+        shortItems: 0,
+        deadItems: 0,
+        minAlert: 3,
+        category: 'Consumable',
+        location: 'NOC Room',
+        remark: '3 issued for NOC switch rack',
+        highlighted: false,
+        entryMonth: getCurrentMonthYear(),
+        lastUpdated: '17 Nov 2026, 03:45 PM'
+      }
+    ];
+
+    const initialHistoryData = [
+      {
+        id: 'hist_init_1',
+        timestamp: '19 Nov 2026, 11:30 AM',
+        monthYear: getCurrentMonthYear(),
+        itemName: 'HDMI CABLE 3M',
+        actionType: 'NEW STOCK (+3)',
+        details: 'Added 3 new HDMI cables to existing stock of 5.'
+      },
+      {
+        id: 'hist_init_2',
+        timestamp: '19 Nov 2026, 10:00 AM',
+        monthYear: getCurrentMonthYear(),
+        itemName: 'USB MOUSE',
+        actionType: 'OPENING STOCK (12)',
+        details: 'Initial opening stock recorded.'
       }
     ];
 
@@ -198,9 +221,9 @@
 
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
-      const [activeHighlightId, setActiveHighlightId] = useState(null);
+      const [highlightedRowId, setHighlightedRowId] = useState(null);
 
-      // Add / Edit Asset Modal
+      // Add/Edit Asset Modal
       const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
       const [formData, setFormData] = useState({
@@ -233,13 +256,15 @@
       const [showHistoryModal, setShowHistoryModal] = useState(false);
       const [viewModalItem, setViewModalItem] = useState(null);
       const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
+      const fileInputRef = useRef(null);
 
       const showToast = (msg, type = 'info') => {
         setToast({ show: true, msg, type });
         setTimeout(() => setToast({ show: false, msg: '', type: 'info' }), 3200);
       };
 
-      const loadAndCleanData = async (silent = true, cleanDupes = false) => {
+      // Never delete or drop old values/entries
+      const fetchAllPreserveData = async (silent = true) => {
         if (!silent) setIsSyncing(true);
         try {
           const [resAssets, resHist] = await Promise.allSettled([
@@ -248,23 +273,33 @@
           ]);
 
           if (resAssets.status === 'fulfilled' && resAssets.value) {
-            const rawList = Object.keys(resAssets.value).map(k => ({ ...resAssets.value[k], firebaseKey: k }));
-            const cleaned = await deduplicateAssets(rawList, cleanDupes);
-            setAssets(cleaned.length > 0 ? cleaned : initialSampleAssets);
+            const loaded = Object.keys(resAssets.value).map((k, idx) => ({
+              ...resAssets.value[k],
+              id: resAssets.value[k].id || `${k}_${idx}`,
+              firebaseKey: k
+            }));
+            setAssets(loaded.length > 0 ? loaded : initialAssetsData);
           } else {
-            setAssets(prev => prev.length > 0 ? prev : initialSampleAssets);
+            setAssets(prev => (prev.length > 0 ? prev : initialAssetsData));
           }
 
           if (resHist.status === 'fulfilled' && resHist.value) {
-            const histList = Object.keys(resHist.value).map(k => ({ ...resHist.value[k], firebaseKey: k }));
-            setStockHistory(histList.reverse());
+            const histLoaded = Object.keys(resHist.value).map((k, idx) => ({
+              ...resHist.value[k],
+              id: resHist.value[k].id || `h_${k}_${idx}`,
+              firebaseKey: k
+            }));
+            setStockHistory(histLoaded.length > 0 ? histLoaded.reverse() : initialHistoryData);
+          } else {
+            setStockHistory(prev => (prev.length > 0 ? prev : initialHistoryData));
           }
 
           const now = new Date();
           setLastSyncTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
         } catch (err) {
           console.error(err);
-          setAssets(prev => prev.length > 0 ? prev : initialSampleAssets);
+          setAssets(prev => (prev.length > 0 ? prev : initialAssetsData));
+          setStockHistory(prev => (prev.length > 0 ? prev : initialHistoryData));
         } finally {
           setLoading(false);
           if (!silent) setIsSyncing(false);
@@ -272,10 +307,10 @@
       };
 
       useEffect(() => {
-        loadAndCleanData(true, true);
+        fetchAllPreserveData(true);
       }, []);
 
-      const recordHistory = async (itemName, actionType, details) => {
+      const logHistory = async (itemName, actionType, details) => {
         const entry = {
           id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           timestamp: getFormattedDateTime(),
@@ -294,6 +329,7 @@
         } catch (e) {}
       };
 
+      // Save or Update Asset — Preserves all existing items
       const handleSaveAsset = async (e) => {
         e.preventDefault();
         const nowStr = getFormattedDateTime();
@@ -313,19 +349,16 @@
             lastUpdated: nowStr
           };
 
-          // Clear highlight from other rows so only this exact updated row is highlighted
           setAssets(prev =>
-            prev.map(a =>
-              a.id === editingAsset.id ? updatedItem : { ...a, highlighted: false }
-            )
+            prev.map(a => (a.id === editingAsset.id ? updatedItem : { ...a, highlighted: false }))
           );
-          setActiveHighlightId(editingAsset.id);
+          setHighlightedRowId(editingAsset.id);
 
           if (addedPurch > 0) {
-            await recordHistory(
+            await logHistory(
               updatedItem.particulars,
               `NEW STOCK (+${addedPurch})`,
-              `New stock added (+${addedPurch}). ${formData.remark ? `Remark: ${formData.remark}` : ''}`
+              `Added +${addedPurch} new stock. ${formData.remark ? `Remark: ${formData.remark}` : ''}`
             );
           }
 
@@ -341,95 +374,46 @@
 
           showToast(`Updated "${updatedItem.particulars}" stock.`, "success");
         } else {
-          // Check if item already exists by group + particulars + brand
-          const normGroup = String(formData.group || 'GENERAL').trim().toUpperCase();
-          const normName = String(formData.particulars || '').trim().toUpperCase();
-          const normBrand = String(formData.brand || 'Dell').trim().toUpperCase();
+          const newItem = {
+            id: Date.now(),
+            ...formData,
+            group: String(formData.group || 'GENERAL').trim().toUpperCase(),
+            particulars: String(formData.particulars || '').trim().toUpperCase(),
+            remark: formData.remark || 'New stock entry added',
+            highlighted: true,
+            entryMonth: getCurrentMonthYear(),
+            lastUpdated: nowStr
+          };
 
-          const existing = assets.find(
-            a =>
-              String(a.group || '').toUpperCase() === normGroup &&
-              String(a.particulars || '').toUpperCase() === normName &&
-              String(a.brand || '').toUpperCase() === normBrand
+          setAssets(prev => [newItem, ...prev.map(a => ({ ...a, highlighted: false }))]);
+          setHighlightedRowId(newItem.id);
+
+          await logHistory(
+            newItem.particulars,
+            `NEW STOCK (+${newItem.newPurchase})`,
+            `Opening: ${newItem.openingQty}, New Stock: +${newItem.newPurchase}. ${newItem.remark}`
           );
 
-          if (existing) {
-            // Merge into existing single item instead of creating duplicate row
-            const addedPurchase = Number(formData.newPurchase || 0);
-            const mergedItem = {
-              ...existing,
-              openingQty: Number(existing.openingQty || 0) + Number(formData.openingQty || 0),
-              newPurchase: Number(existing.newPurchase || 0) + addedPurchase,
-              remark: formData.remark || (addedPurchase > 0 ? `Added +${addedPurchase} new stock` : existing.remark),
-              highlighted: true,
-              lastUpdated: nowStr
-            };
-
-            setAssets(prev =>
-              prev.map(a => (a.id === existing.id ? mergedItem : { ...a, highlighted: false }))
-            );
-            setActiveHighlightId(existing.id);
-
-            if (addedPurchase > 0) {
-              await recordHistory(
-                mergedItem.particulars,
-                `NEW STOCK (+${addedPurchase})`,
-                `Added ${addedPurchase} to existing stock. ${formData.remark ? `Remark: ${formData.remark}` : ''}`
-              );
+          try {
+            const res = await fetch(FIREBASE_DB_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newItem)
+            });
+            const data = await res.json();
+            if (data && data.name) {
+              setAssets(prev => prev.map(a => (a.id === newItem.id ? { ...a, firebaseKey: data.name } : a)));
             }
+          } catch (e) {}
 
-            if (existing.firebaseKey) {
-              try {
-                await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${existing.firebaseKey}.json`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(mergedItem)
-                });
-              } catch (e) {}
-            }
-
-            showToast(`Merged with existing "${mergedItem.particulars}" stock!`, "success");
-          } else {
-            const newItem = {
-              id: Date.now(),
-              ...formData,
-              group: normGroup,
-              particulars: normName,
-              remark: formData.remark || 'New stock registered',
-              highlighted: true,
-              entryMonth: getCurrentMonthYear(),
-              lastUpdated: nowStr
-            };
-
-            setAssets(prev => [newItem, ...prev.map(a => ({ ...a, highlighted: false }))]);
-            setActiveHighlightId(newItem.id);
-
-            await recordHistory(
-              newItem.particulars,
-              `NEW ENTRY (Op: ${newItem.openingQty}, Pur: +${newItem.newPurchase})`,
-              `Registered in stock. ${newItem.remark}`
-            );
-
-            try {
-              const res = await fetch(FIREBASE_DB_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newItem)
-              });
-              const data = await res.json();
-              if (data && data.name) {
-                setAssets(prev => prev.map(a => (a.id === newItem.id ? { ...a, firebaseKey: data.name } : a)));
-              }
-            } catch (e) {}
-
-            showToast(`Added "${newItem.particulars}" to Stock Register.`, "success");
-          }
+          showToast(`Added "${newItem.particulars}" to Stock Register.`, "success");
         }
 
         setIsAssetModalOpen(false);
         setEditingAsset(null);
       };
 
+      // Issue Item — Deducts ONCE from that single item, highlights that row, shows whom & department in Remark
       const handleConfirmIssue = async (e) => {
         e.preventDefault();
         if (!issueModalItem) return;
@@ -461,11 +445,10 @@
           lastUpdated: nowStr
         };
 
-        // Update ONLY this single item and un-highlight others
         setAssets(prev =>
           prev.map(a => (a.id === issueModalItem.id ? updatedAsset : { ...a, highlighted: false }))
         );
-        setActiveHighlightId(issueModalItem.id);
+        setHighlightedRowId(issueModalItem.id);
 
         if (issueModalItem.firebaseKey) {
           try {
@@ -477,26 +460,24 @@
           } catch (e) {}
         }
 
-        const dispatchRecord = {
-          id: `disp_${Date.now()}`,
-          assetId: issueModalItem.id,
-          assetName: issueModalItem.particulars,
-          quantity: qty,
-          receiver: person,
-          department: dept,
-          remark: remarkText,
-          date: nowStr
-        };
-
         try {
           await fetch(FIREBASE_TEMP_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dispatchRecord)
+            body: JSON.stringify({
+              id: `disp_${Date.now()}`,
+              assetId: issueModalItem.id,
+              assetName: issueModalItem.particulars,
+              quantity: qty,
+              receiver: person,
+              department: dept,
+              remark: remarkText,
+              date: nowStr
+            })
           });
         } catch (e) {}
 
-        await recordHistory(issueModalItem.particulars, `ISSUED (-${qty})`, remarkText);
+        await logHistory(issueModalItem.particulars, `ISSUED (-${qty})`, remarkText);
 
         showToast(`Issued ${qty} ${issueModalItem.particulars} to ${person} (${dept}).`, "success");
         setIssueModalItem(null);
@@ -512,8 +493,80 @@
             });
           } catch (e) {}
         }
-        await recordHistory(item.particulars, 'DELETED', `Deleted "${item.particulars}" from register.`);
+        await logHistory(item.particulars, 'DELETED', `Deleted "${item.particulars}" from register.`);
         showToast("Item deleted.", "info");
+      };
+
+      const handleExcelImport = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+          try {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(worksheet);
+            if (!rows || rows.length === 0) return;
+
+            const imported = rows.map((r, i) => ({
+              id: Date.now() + i,
+              group: String(r["Group"] || r["group"] || "GENERAL").toUpperCase(),
+              particulars: String(r["Particulars"] || r["particulars"] || "ITEM").toUpperCase(),
+              brand: String(r["Brand"] || r["brand"] || "Dell"),
+              serialNo: String(r["Serial No"] || r["serialNo"] || ""),
+              cableLength: String(r["Cable Length (m)"] || r["cableLength"] || ""),
+              measurementUnit: String(r["Unit"] || r["measurementUnit"] || "Piece"),
+              openingQty: Number(r["Opening Qty"] || r["Opening"] || 0),
+              newPurchase: Number(r["New Purchase"] || r["New Stock"] || 0),
+              issueItems: Number(r["Issued Items"] || r["Issued"] || 0),
+              shortItems: Number(r["Short Items"] || 0),
+              deadItems: Number(r["Dead Items"] || 0),
+              minAlert: Number(r["Min Stock Alert"] || 2),
+              category: String(r["Category"] || "Consumable"),
+              location: String(r["Location"] || "IT Stores"),
+              remark: String(r["Remarks"] || r["remark"] || "Imported via Excel"),
+              highlighted: false,
+              entryMonth: getCurrentMonthYear(),
+              lastUpdated: getFormattedDateTime()
+            }));
+
+            setAssets(prev => [...imported, ...prev]);
+            for (const item of imported) {
+              await logHistory(item.particulars, 'EXCEL IMPORT', item.remark);
+              try {
+                await fetch(FIREBASE_DB_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(item)
+                });
+              } catch (e) {}
+            }
+            showToast(`Imported ${imported.length} items without removing existing stock.`, "success");
+          } catch (err) {
+            showToast("Could not read Excel file.", "error");
+          }
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+      };
+
+      const exportExcel = () => {
+        const rows = assets.map(r => ({
+          "Group": r.group,
+          "Particulars": r.particulars,
+          "Brand": r.brand,
+          "Opening": Number(r.openingQty || 0),
+          "New Stock": Number(r.newPurchase || 0),
+          "Issued": Number(r.issueItems || 0),
+          "Balance": (Number(r.openingQty || 0) + Number(r.newPurchase || 0)) - (Number(r.issueItems || 0) + Number(r.shortItems || 0) + Number(r.deadItems || 0)),
+          "Remarks": r.remark || '',
+          "Last Updated": r.lastUpdated || ''
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Stock Register");
+        XLSX.writeFile(wb, `Stock_Register_${Date.now()}.xlsx`);
       };
 
       const groups = useMemo(() => {
@@ -538,24 +591,6 @@
         });
       }, [assets, searchQuery, selectedGroupFilter]);
 
-      const exportExcel = () => {
-        const rows = assets.map(r => ({
-          "Group": r.group,
-          "Particulars": r.particulars,
-          "Brand": r.brand,
-          "Opening": Number(r.openingQty || 0),
-          "New Stock": Number(r.newPurchase || 0),
-          "Issued": Number(r.issueItems || 0),
-          "Balance": (Number(r.openingQty || 0) + Number(r.newPurchase || 0)) - (Number(r.issueItems || 0) + Number(r.shortItems || 0) + Number(r.deadItems || 0)),
-          "Remarks": r.remark || '',
-          "Last Updated": r.lastUpdated || ''
-        }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Stock Register");
-        XLSX.writeFile(wb, `Stock_Register_${Date.now()}.xlsx`);
-      };
-
       return (
         <div className="flex h-screen bg-slate-100 text-slate-800 overflow-hidden">
           {toast.show && (
@@ -565,6 +600,14 @@
               {toast.msg}
             </div>
           )}
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleExcelImport}
+            accept=".xlsx, .xls, .csv"
+            className="hidden"
+          />
 
           {/* Sidebar */}
           <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 shrink-0">
@@ -580,9 +623,9 @@
                   </div>
                 </div>
                 <button
-                  onClick={() => loadAndCleanData(false, true)}
+                  onClick={() => fetchAllPreserveData(false)}
                   className={`p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white ${isSyncing ? 'animate-spin' : ''}`}
-                  title="Sync & Clean Duplicates"
+                  title="Refresh Data"
                 >
                   <Icons.Refresh />
                 </button>
@@ -592,7 +635,7 @@
                 <button
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left bg-brand-600 text-white font-bold"
                 >
-                  <Icons.Stock /> Stock Register
+                  <Icons.Stock /> Stock Register ({assets.length})
                 </button>
                 <button
                   onClick={() => setShowHistoryModal(true)}
@@ -614,25 +657,25 @@
             <header className="bg-white border border-slate-200 p-4 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-3">
               <div>
                 <h1 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">
-                  Stock Register — Single Entry, Auto Balance & Remarks
+                  Stock Register — Full Data Preserved, Auto Balance & Remarks
                 </h1>
                 <p className="text-xs text-slate-500">
-                  Issuing an item updates only that item once, highlights its row, and shows who & which department received it.
+                  All previous items and values stay intact; issuing an item deducts once, highlights that row, and logs receiver & department in Remarks.
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => loadAndCleanData(false, true)}
-                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5"
-                >
-                  <Icons.Refresh /> Clean Duplicates
-                </button>
-                <button
                   onClick={() => setShowHistoryModal(true)}
                   className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5"
                 >
                   <Icons.Report /> History ({stockHistory.length})
+                </button>
+                <button
+                  onClick={() => fileInputRef.current.click()}
+                  className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                >
+                  <Icons.Upload /> Import Excel
                 </button>
                 <button
                   onClick={exportExcel}
@@ -736,7 +779,7 @@
                       const dead = Number(item.deadItems || 0);
                       const balance = (opening + purch) - (issued + short + dead);
                       const isLow = balance <= Number(item.minAlert || 2);
-                      const isRowHighlighted = Boolean(item.highlighted || activeHighlightId === item.id);
+                      const isRowHighlighted = Boolean(item.highlighted || highlightedRowId === item.id);
 
                       return (
                         <tr
@@ -827,7 +870,7 @@
                               )}
                             </div>
                             <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                              {item.brand}
+                              {item.brand} {item.cableLength ? `• ${item.cableLength}` : ''}
                             </div>
                           </td>
 
