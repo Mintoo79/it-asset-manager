@@ -68,7 +68,7 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useRef } = React;
+    const { useState, useEffect, useMemo } = React;
 
     const FIREBASE_DB_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets.json";
     const FIREBASE_TEMP_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches.json";
@@ -76,7 +76,6 @@
 
     const Icons = {
       Stock: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
-      Exchange: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>,
       Report: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>,
       Search: () => <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
       Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
@@ -106,16 +105,55 @@
       return `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
     };
 
+    // Deduplicate items so identical items never show up multiple times
+    const deduplicateAssets = async (rawItems, cleanRemoteDuplicates = false) => {
+      const uniqueMap = new Map();
+      const duplicateFirebaseKeys = [];
+
+      for (const item of rawItems) {
+        const normGroup = String(item.group || 'GENERAL').trim().toUpperCase();
+        const normName = String(item.particulars || '').trim().toUpperCase();
+        const normBrand = String(item.brand || '').trim().toUpperCase();
+        const sig = `${normGroup}__${normName}__${normBrand}`;
+
+        if (!uniqueMap.has(sig)) {
+          uniqueMap.set(sig, {
+            ...item,
+            id: item.id || Date.now() + Math.random(),
+            group: normGroup,
+            particulars: normName,
+            brand: item.brand || 'Dell'
+          });
+        } else {
+          if (item.firebaseKey) {
+            duplicateFirebaseKeys.push(item.firebaseKey);
+          }
+        }
+      }
+
+      if (cleanRemoteDuplicates && duplicateFirebaseKeys.length > 0) {
+        for (const dupKey of duplicateFirebaseKeys) {
+          try {
+            await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${dupKey}.json`, {
+              method: 'DELETE'
+            });
+          } catch (e) {}
+        }
+      }
+
+      return Array.from(uniqueMap.values());
+    };
+
     const initialSampleAssets = [
       {
         id: 101,
         group: 'MOUSE',
-        particulars: 'WIRELESS OPTICAL MOUSE',
-        brand: 'Logitech',
-        serialNo: 'MS-LOG-11',
-        cableLength: 'Wireless',
+        particulars: 'USB MOUSE',
+        brand: 'Dell',
+        serialNo: 'MS-DL-12',
+        cableLength: '1.5m',
         measurementUnit: 'Piece',
-        openingQty: 11,
+        openingQty: 12,
         newPurchase: 0,
         issueItems: 0,
         shortItems: 0,
@@ -123,10 +161,10 @@
         minAlert: 2,
         category: 'Consumable',
         location: 'IT Stores',
-        remark: 'Opening stock available',
+        remark: 'Ready in stock',
         highlighted: false,
         entryMonth: getCurrentMonthYear(),
-        lastUpdated: '19 Nov 2026, 10:00 AM'
+        lastUpdated: getFormattedDateTime()
       },
       {
         id: 102,
@@ -134,7 +172,7 @@
         particulars: 'HDMI CABLE 3M',
         brand: 'Dell',
         serialNo: 'HD-3M-05',
-        cableLength: '3.0',
+        cableLength: '3.0m',
         measurementUnit: 'Piece',
         openingQty: 5,
         newPurchase: 3,
@@ -144,15 +182,14 @@
         minAlert: 2,
         category: 'Consumable',
         location: 'IT Stores',
-        remark: '3 new cables added to stock',
+        remark: '5 opening + 3 new stock',
         highlighted: false,
         entryMonth: getCurrentMonthYear(),
-        lastUpdated: '19 Nov 2026, 11:15 AM'
+        lastUpdated: getFormattedDateTime()
       }
     ];
 
     function App() {
-      const [activeTab, setActiveTab] = useState('inventory');
       const [assets, setAssets] = useState([]);
       const [stockHistory, setStockHistory] = useState([]);
       const [loading, setLoading] = useState(true);
@@ -161,9 +198,9 @@
 
       const [searchQuery, setSearchQuery] = useState('');
       const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
-      const [highlightedItemId, setHighlightedItemId] = useState(null);
+      const [activeHighlightId, setActiveHighlightId] = useState(null);
 
-      // Add/Edit Asset Modal
+      // Add / Edit Asset Modal
       const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
       const [editingAsset, setEditingAsset] = useState(null);
       const [formData, setFormData] = useState({
@@ -184,7 +221,7 @@
         remark: ''
       });
 
-      // Issue Item Modal (Targets ONE exact item)
+      // Issue Item Modal
       const [issueModalItem, setIssueModalItem] = useState(null);
       const [issueForm, setIssueForm] = useState({
         qtyToIssue: 1,
@@ -202,7 +239,7 @@
         setTimeout(() => setToast({ show: false, msg: '', type: 'info' }), 3200);
       };
 
-      const fetchData = async (silent = true) => {
+      const loadAndCleanData = async (silent = true, cleanDupes = false) => {
         if (!silent) setIsSyncing(true);
         try {
           const [resAssets, resHist] = await Promise.allSettled([
@@ -212,17 +249,8 @@
 
           if (resAssets.status === 'fulfilled' && resAssets.value) {
             const rawList = Object.keys(resAssets.value).map(k => ({ ...resAssets.value[k], firebaseKey: k }));
-            // Deduplicate by id if any duplicate keys exist in DB
-            const uniqueById = [];
-            const seenIds = new Set();
-            for (const item of rawList) {
-              const key = item.id || item.firebaseKey;
-              if (!seenIds.has(key)) {
-                seenIds.add(key);
-                uniqueById.push(item);
-              }
-            }
-            setAssets(uniqueById.length > 0 ? uniqueById : initialSampleAssets);
+            const cleaned = await deduplicateAssets(rawList, cleanDupes);
+            setAssets(cleaned.length > 0 ? cleaned : initialSampleAssets);
           } else {
             setAssets(prev => prev.length > 0 ? prev : initialSampleAssets);
           }
@@ -244,15 +272,15 @@
       };
 
       useEffect(() => {
-        fetchData(true);
+        loadAndCleanData(true, true);
       }, []);
 
-      const appendHistoryOnce = async (itemName, actionType, details) => {
+      const recordHistory = async (itemName, actionType, details) => {
         const entry = {
           id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           timestamp: getFormattedDateTime(),
           monthYear: getCurrentMonthYear(),
-          itemName: itemName.toUpperCase(),
+          itemName: String(itemName || '').toUpperCase(),
           actionType,
           details
         };
@@ -263,12 +291,9 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(entry)
           });
-        } catch (e) {
-          // Ignore network fallback
-        }
+        } catch (e) {}
       };
 
-      // Save or Update Asset in Stock Register
       const handleSaveAsset = async (e) => {
         e.preventDefault();
         const nowStr = getFormattedDateTime();
@@ -278,20 +303,27 @@
           const nextPurch = Number(formData.newPurchase || 0);
           const addedPurch = nextPurch - prevPurch;
 
-          const updatedAsset = {
+          const updatedItem = {
             ...editingAsset,
             ...formData,
+            group: String(formData.group || 'GENERAL').trim().toUpperCase(),
+            particulars: String(formData.particulars || '').trim().toUpperCase(),
             remark: formData.remark || (addedPurch > 0 ? `Added +${addedPurch} new stock` : editingAsset.remark || ''),
             highlighted: true,
             lastUpdated: nowStr
           };
 
-          setAssets(prev => prev.map(a => (a.id === editingAsset.id ? updatedAsset : a)));
-          setHighlightedItemId(editingAsset.id);
+          // Clear highlight from other rows so only this exact updated row is highlighted
+          setAssets(prev =>
+            prev.map(a =>
+              a.id === editingAsset.id ? updatedItem : { ...a, highlighted: false }
+            )
+          );
+          setActiveHighlightId(editingAsset.id);
 
           if (addedPurch > 0) {
-            await appendHistoryOnce(
-              updatedAsset.particulars,
+            await recordHistory(
+              updatedItem.particulars,
               `NEW STOCK (+${addedPurch})`,
               `New stock added (+${addedPurch}). ${formData.remark ? `Remark: ${formData.remark}` : ''}`
             );
@@ -302,72 +334,124 @@
               await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${editingAsset.firebaseKey}.json`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedAsset)
+                body: JSON.stringify(updatedItem)
               });
             } catch (e) {}
           }
-          showToast(`Updated "${updatedAsset.particulars}" stock automatically.`, "success");
+
+          showToast(`Updated "${updatedItem.particulars}" stock.`, "success");
         } else {
-          const newItem = {
-            id: Date.now(),
-            ...formData,
-            remark: formData.remark || 'New stock entry created',
-            highlighted: true,
-            entryMonth: getCurrentMonthYear(),
-            lastUpdated: nowStr
-          };
+          // Check if item already exists by group + particulars + brand
+          const normGroup = String(formData.group || 'GENERAL').trim().toUpperCase();
+          const normName = String(formData.particulars || '').trim().toUpperCase();
+          const normBrand = String(formData.brand || 'Dell').trim().toUpperCase();
 
-          setAssets(prev => [newItem, ...prev]);
-          setHighlightedItemId(newItem.id);
-
-          await appendHistoryOnce(
-            newItem.particulars,
-            `NEW ENTRY (Op: ${newItem.openingQty}, Pur: +${newItem.newPurchase})`,
-            `Registered in stock. ${newItem.remark}`
+          const existing = assets.find(
+            a =>
+              String(a.group || '').toUpperCase() === normGroup &&
+              String(a.particulars || '').toUpperCase() === normName &&
+              String(a.brand || '').toUpperCase() === normBrand
           );
 
-          try {
-            const res = await fetch(FIREBASE_DB_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newItem)
-            });
-            const data = await res.json();
-            if (data && data.name) {
-              setAssets(prev => prev.map(a => a.id === newItem.id ? { ...a, firebaseKey: data.name } : a));
-            }
-          } catch (e) {}
+          if (existing) {
+            // Merge into existing single item instead of creating duplicate row
+            const addedPurchase = Number(formData.newPurchase || 0);
+            const mergedItem = {
+              ...existing,
+              openingQty: Number(existing.openingQty || 0) + Number(formData.openingQty || 0),
+              newPurchase: Number(existing.newPurchase || 0) + addedPurchase,
+              remark: formData.remark || (addedPurchase > 0 ? `Added +${addedPurchase} new stock` : existing.remark),
+              highlighted: true,
+              lastUpdated: nowStr
+            };
 
-          showToast(`Added "${newItem.particulars}" to Stock Register.`, "success");
+            setAssets(prev =>
+              prev.map(a => (a.id === existing.id ? mergedItem : { ...a, highlighted: false }))
+            );
+            setActiveHighlightId(existing.id);
+
+            if (addedPurchase > 0) {
+              await recordHistory(
+                mergedItem.particulars,
+                `NEW STOCK (+${addedPurchase})`,
+                `Added ${addedPurchase} to existing stock. ${formData.remark ? `Remark: ${formData.remark}` : ''}`
+              );
+            }
+
+            if (existing.firebaseKey) {
+              try {
+                await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${existing.firebaseKey}.json`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(mergedItem)
+                });
+              } catch (e) {}
+            }
+
+            showToast(`Merged with existing "${mergedItem.particulars}" stock!`, "success");
+          } else {
+            const newItem = {
+              id: Date.now(),
+              ...formData,
+              group: normGroup,
+              particulars: normName,
+              remark: formData.remark || 'New stock registered',
+              highlighted: true,
+              entryMonth: getCurrentMonthYear(),
+              lastUpdated: nowStr
+            };
+
+            setAssets(prev => [newItem, ...prev.map(a => ({ ...a, highlighted: false }))]);
+            setActiveHighlightId(newItem.id);
+
+            await recordHistory(
+              newItem.particulars,
+              `NEW ENTRY (Op: ${newItem.openingQty}, Pur: +${newItem.newPurchase})`,
+              `Registered in stock. ${newItem.remark}`
+            );
+
+            try {
+              const res = await fetch(FIREBASE_DB_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newItem)
+              });
+              const data = await res.json();
+              if (data && data.name) {
+                setAssets(prev => prev.map(a => (a.id === newItem.id ? { ...a, firebaseKey: data.name } : a)));
+              }
+            } catch (e) {}
+
+            showToast(`Added "${newItem.particulars}" to Stock Register.`, "success");
+          }
         }
 
         setIsAssetModalOpen(false);
         setEditingAsset(null);
       };
 
-      // Issue / Consume Item — Updates ONLY that exact single item once
       const handleConfirmIssue = async (e) => {
         e.preventDefault();
         if (!issueModalItem) return;
 
         const qty = Math.max(1, Number(issueForm.qtyToIssue || 1));
-        const currentOpening = Number(issueModalItem.openingQty || 0);
-        const currentPurch = Number(issueModalItem.newPurchase || 0);
-        const currentIssued = Number(issueModalItem.issueItems || 0);
-        const currentShort = Number(issueModalItem.shortItems || 0);
-        const currentDead = Number(issueModalItem.deadItems || 0);
-        const currentBalance = (currentOpening + currentPurch) - (currentIssued + currentShort + currentDead);
+        const opening = Number(issueModalItem.openingQty || 0);
+        const purch = Number(issueModalItem.newPurchase || 0);
+        const issued = Number(issueModalItem.issueItems || 0);
+        const short = Number(issueModalItem.shortItems || 0);
+        const dead = Number(issueModalItem.deadItems || 0);
+        const currentBalance = (opening + purch) - (issued + short + dead);
 
         if (qty > currentBalance) {
           showToast(`Only ${currentBalance} available in stock! Cannot issue ${qty}.`, "error");
           return;
         }
 
-        const nextIssued = currentIssued + qty;
+        const nextIssued = issued + qty;
         const nowStr = getFormattedDateTime();
-        const personText = issueForm.receiverName.trim() || 'Authorized Staff';
-        const deptText = issueForm.department.trim() || 'General';
-        const remarkText = `Issued ${qty} to ${personText} (${deptText} Dept)${issueForm.extraRemark ? ` — ${issueForm.extraRemark}` : ''}`;
+        const person = issueForm.receiverName.trim() || 'Authorized Staff';
+        const dept = issueForm.department.trim() || 'General';
+        const remarkText = `Issued ${qty} to ${person} (${dept} Dept)${issueForm.extraRemark ? ` — ${issueForm.extraRemark}` : ''}`;
 
         const updatedAsset = {
           ...issueModalItem,
@@ -377,11 +461,12 @@
           lastUpdated: nowStr
         };
 
-        // Update only the matching single item in state
-        setAssets(prev => prev.map(a => a.id === issueModalItem.id ? updatedAsset : a));
-        setHighlightedItemId(issueModalItem.id);
+        // Update ONLY this single item and un-highlight others
+        setAssets(prev =>
+          prev.map(a => (a.id === issueModalItem.id ? updatedAsset : { ...a, highlighted: false }))
+        );
+        setActiveHighlightId(issueModalItem.id);
 
-        // Save single update to Firebase
         if (issueModalItem.firebaseKey) {
           try {
             await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${issueModalItem.firebaseKey}.json`, {
@@ -392,14 +477,13 @@
           } catch (e) {}
         }
 
-        // Log single dispatch & history entry
         const dispatchRecord = {
           id: `disp_${Date.now()}`,
           assetId: issueModalItem.id,
           assetName: issueModalItem.particulars,
           quantity: qty,
-          receiver: personText,
-          department: deptText,
+          receiver: person,
+          department: dept,
           remark: remarkText,
           date: nowStr
         };
@@ -412,13 +496,9 @@
           });
         } catch (e) {}
 
-        await appendHistoryOnce(
-          issueModalItem.particulars,
-          `ISSUED (-${qty})`,
-          remarkText
-        );
+        await recordHistory(issueModalItem.particulars, `ISSUED (-${qty})`, remarkText);
 
-        showToast(`Issued ${qty} ${issueModalItem.particulars} to ${deptText}. Stock updated!`, "success");
+        showToast(`Issued ${qty} ${issueModalItem.particulars} to ${person} (${dept}).`, "success");
         setIssueModalItem(null);
       };
 
@@ -432,7 +512,7 @@
             });
           } catch (e) {}
         }
-        await appendHistoryOnce(item.particulars, 'DELETED', `Removed "${item.particulars}" from register.`);
+        await recordHistory(item.particulars, 'DELETED', `Deleted "${item.particulars}" from register.`);
         showToast("Item deleted.", "info");
       };
 
@@ -452,7 +532,7 @@
             (item.particulars || '').toLowerCase().includes(q) ||
             (item.group || '').toLowerCase().includes(q) ||
             (item.remark || '').toLowerCase().includes(q) ||
-            (item.serialNo || '').toLowerCase().includes(q);
+            (item.brand || '').toLowerCase().includes(q);
           const matchGroup = !selectedGroupFilter || (item.group || '').toUpperCase() === selectedGroupFilter.toUpperCase();
           return matchSearch && matchGroup;
         });
@@ -463,9 +543,8 @@
           "Group": r.group,
           "Particulars": r.particulars,
           "Brand": r.brand,
-          "Serial No": r.serialNo,
           "Opening": Number(r.openingQty || 0),
-          "New Purchase": Number(r.newPurchase || 0),
+          "New Stock": Number(r.newPurchase || 0),
           "Issued": Number(r.issueItems || 0),
           "Balance": (Number(r.openingQty || 0) + Number(r.newPurchase || 0)) - (Number(r.issueItems || 0) + Number(r.shortItems || 0) + Number(r.deadItems || 0)),
           "Remarks": r.remark || '',
@@ -501,9 +580,9 @@
                   </div>
                 </div>
                 <button
-                  onClick={() => fetchData(false)}
+                  onClick={() => loadAndCleanData(false, true)}
                   className={`p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white ${isSyncing ? 'animate-spin' : ''}`}
-                  title="Refresh"
+                  title="Sync & Clean Duplicates"
                 >
                   <Icons.Refresh />
                 </button>
@@ -511,10 +590,7 @@
 
               <nav className="space-y-1 text-xs font-semibold">
                 <button
-                  onClick={() => setActiveTab('inventory')}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition ${
-                    activeTab === 'inventory' ? 'bg-brand-600 text-white font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                  }`}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left bg-brand-600 text-white font-bold"
                 >
                   <Icons.Stock /> Stock Register
                 </button>
@@ -527,9 +603,9 @@
               </nav>
             </div>
 
-            <div className="text-[11px] text-slate-400 bg-slate-800/70 p-3 rounded-xl border border-slate-700/60">
-              <div className="font-bold text-slate-200 mb-1">Auto Formula</div>
-              <div className="font-mono text-[10px]">Balance = (Opening + Purchase) - Issued</div>
+            <div className="text-[11px] text-slate-400 bg-slate-800/70 p-3 rounded-xl border border-slate-700/60 space-y-1">
+              <div className="font-bold text-slate-200">Auto Calculation</div>
+              <div className="font-mono text-[10px]">Balance = (Opening + New Stock) - Issued</div>
             </div>
           </aside>
 
@@ -538,14 +614,20 @@
             <header className="bg-white border border-slate-200 p-4 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-3">
               <div>
                 <h1 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">
-                  Stock Register — Auto Balance & Issue Remarks
+                  Stock Register — Single Entry, Auto Balance & Remarks
                 </h1>
                 <p className="text-xs text-slate-500">
-                  New stock increases balance; issuing an item deducts once, highlights that row, and shows receiver & department remarks.
+                  Issuing an item updates only that item once, highlights its row, and shows who & which department received it.
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => loadAndCleanData(false, true)}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                >
+                  <Icons.Refresh /> Clean Duplicates
+                </button>
                 <button
                   onClick={() => setShowHistoryModal(true)}
                   className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5"
@@ -654,7 +736,7 @@
                       const dead = Number(item.deadItems || 0);
                       const balance = (opening + purch) - (issued + short + dead);
                       const isLow = balance <= Number(item.minAlert || 2);
-                      const isRowHighlighted = item.highlighted || highlightedItemId === item.id;
+                      const isRowHighlighted = Boolean(item.highlighted || activeHighlightId === item.id);
 
                       return (
                         <tr
@@ -745,7 +827,7 @@
                               )}
                             </div>
                             <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                              {item.brand} {item.cableLength ? `• ${item.cableLength}` : ''} {item.serialNo ? `• ${item.serialNo}` : ''}
+                              {item.brand}
                             </div>
                           </td>
 
@@ -780,7 +862,7 @@
             </div>
           </main>
 
-          {/* Issue Item Modal (Single Item Only) */}
+          {/* Issue Item Modal */}
           {issueModalItem && (
             <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
@@ -838,7 +920,7 @@
                     <label className="block font-bold text-slate-700 mb-1">Additional Remark (Optional)</label>
                     <input
                       type="text"
-                      placeholder="e.g. For interview cabin / projector"
+                      placeholder="e.g. For cabin / meeting room"
                       value={issueForm.extraRemark}
                       onChange={(e) => setIssueForm({ ...issueForm, extraRemark: e.target.value })}
                       className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
@@ -877,7 +959,7 @@
                 </div>
 
                 <form onSubmit={handleSaveAsset} className="space-y-3 text-xs">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block font-bold text-slate-700 mb-1">Group *</label>
                       <input
@@ -889,7 +971,7 @@
                       />
                     </div>
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">Particulars / Item Name *</label>
+                      <label className="block font-bold text-slate-700 mb-1">Item Name *</label>
                       <input
                         type="text"
                         required
@@ -897,6 +979,15 @@
                         value={formData.particulars}
                         onChange={(e) => setFormData({ ...formData, particulars: e.target.value.toUpperCase() })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Brand</label>
+                      <input
+                        type="text"
+                        value={formData.brand}
+                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-semibold"
                       />
                     </div>
                   </div>
@@ -938,7 +1029,7 @@
                     <label className="block font-bold text-slate-700 mb-1">Remark (Whom / Department / Notes)</label>
                     <input
                       type="text"
-                      placeholder="e.g. Received new batch / Issued to HR"
+                      placeholder="e.g. New stock arrived / Issued to HR"
                       value={formData.remark}
                       onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
                       className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl"
