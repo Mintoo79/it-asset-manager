@@ -124,6 +124,7 @@
         "Min Stock Alert": r.minAlert || 2,
         "Category": r.category,
         "Location": r.location,
+        "Remarks": r.remark || '',
         "Last Updated": r.lastUpdated
       }));
       const worksheet = XLSX.utils.json_to_sheet(cleanRows);
@@ -157,6 +158,16 @@
       const [viewModalItem, setViewModalItem] = useState(null);
       const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
 
+      // Direct Row Issue Modal (for issuing directly on a specific row)
+      const [quickIssueAsset, setQuickIssueAsset] = useState(null);
+      const [quickIssueForm, setQuickIssueForm] = useState({
+        quantity: 1,
+        department: 'HR Department',
+        receiver: '',
+        extraNote: ''
+      });
+      const [highlightedAssetKey, setHighlightedAssetKey] = useState(null);
+
       const fileInputRef = useRef(null);
 
       const [tempDispatches, setTempDispatches] = useState([]);
@@ -167,6 +178,7 @@
       const [showHistoryModal, setShowHistoryModal] = useState(false);
       
       const [tempForm, setTempForm] = useState({ 
+        selectedAssetKey: '',
         assetName: '', 
         assetTagNo: '', 
         department: '', 
@@ -270,10 +282,12 @@
         return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
       };
 
+      const getRowUniqueKey = (item) => item.firebaseKey || String(item.id);
+
       const sampleFallbackAssets = [
-        { id: 101, group: 'CABLE', particulars: 'HDMI CABLE 3M', brand: 'Dell', serialNo: 'HD-3M-01', cableLength: '3.0', measurementUnit: 'Piece', openingQty: 5, newPurchase: 3, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Consumable', location: 'IT Stores', entryMonth: 'Nov 2026', lastUpdated: '16 Nov 2026, 11:30 AM' },
-        { id: 102, group: 'MOUSE', particulars: 'WIRELESS ERGO MOUSE', brand: 'Lenovo', serialNo: 'MS-LN-02', cableLength: 'Wireless', measurementUnit: 'Piece', openingQty: 6, newPurchase: 0, issueItems: 4, shortItems: 0, deadItems: 1, minAlert: 2, category: 'Consumable', location: 'Design Lab', entryMonth: 'Nov 2026', lastUpdated: '15 Nov 2026, 04:12 PM' },
-        { id: 103, group: 'KEYBOARD', particulars: 'PRO MECHANICAL KEYBOARD', brand: 'Dell', serialNo: 'KB-DL-104', cableLength: '1.8', measurementUnit: 'Piece', openingQty: 9, newPurchase: 2, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Non-Consumable', location: 'Server Room', entryMonth: 'Nov 2026', lastUpdated: '14 Nov 2026, 02:20 PM' }
+        { id: 101, group: 'CABLE', particulars: 'HDMI CABLE 3M', brand: 'Dell', serialNo: 'HD-3M-01', cableLength: '3.0', measurementUnit: 'Piece', openingQty: 5, newPurchase: 3, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Consumable', location: 'IT Stores', remark: 'Issued 1 to HR Department (Mr. Sharma)', entryMonth: 'Nov 2026', lastUpdated: '16 Nov 2026, 11:30 AM' },
+        { id: 102, group: 'MOUSE', particulars: 'WIRELESS ERGO MOUSE', brand: 'Lenovo', serialNo: 'MS-LN-02', cableLength: 'Wireless', measurementUnit: 'Piece', openingQty: 6, newPurchase: 0, issueItems: 4, shortItems: 0, deadItems: 1, minAlert: 2, category: 'Consumable', location: 'Design Lab', remark: 'Issued 4 to Design Lab', entryMonth: 'Nov 2026', lastUpdated: '15 Nov 2026, 04:12 PM' },
+        { id: 103, group: 'KEYBOARD', particulars: 'PRO MECHANICAL KEYBOARD', brand: 'Dell', serialNo: 'KB-DL-104', cableLength: '1.8', measurementUnit: 'Piece', openingQty: 9, newPurchase: 2, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Non-Consumable', location: 'Server Room', remark: 'Issued 1 to Server Room', entryMonth: 'Nov 2026', lastUpdated: '14 Nov 2026, 02:20 PM' }
       ];
 
       const sampleFallbackHistory = [
@@ -347,7 +361,6 @@
         return () => clearInterval(intervalId);
       }, []);
 
-      // Record History Log Helper
       const logStockHistory = async (itemName, actionType, details) => {
         const newHistoryItem = {
           id: `hist_${Date.now()}`,
@@ -368,7 +381,87 @@
         }
       };
 
-      // Handle Excel File Import
+      // Single-item issue logic: deducts once on that exact item, highlights ONLY that row, and saves receiver + department in remark
+      const applyIssueToSingleAsset = async (targetAsset, qtyToDeduct, departmentName, receiverName, extraNote = '') => {
+        const qty = Math.max(1, Number(qtyToDeduct || 1));
+        const opening = Number(targetAsset.openingQty || 0);
+        const purch = Number(targetAsset.newPurchase || 0);
+        const issued = Number(targetAsset.issueItems || 0);
+        const short = Number(targetAsset.shortItems || 0);
+        const dead = Number(targetAsset.deadItems || 0);
+        const availableBal = (opening + purch) - (issued + short + dead);
+
+        if (qty > availableBal) {
+          showToast(`Insufficient stock! Only ${availableBal} available in "${targetAsset.particulars}".`, "error");
+          return false;
+        }
+
+        const timestamped = getFormattedDateTime();
+        const deptText = (departmentName || 'General').trim();
+        const personText = (receiverName || 'Staff').trim();
+        const remarkStr = `Issued ${qty} to ${personText} (${deptText})${extraNote ? ` — ${extraNote.trim()}` : ''}`;
+        const updatedIssued = issued + qty;
+        const targetKey = getRowUniqueKey(targetAsset);
+
+        // Update ONLY this single item in state (no duplicate rows created, and only this row is highlighted)
+        setAssets(prevAssets =>
+          prevAssets.map(item => {
+            const isTarget = getRowUniqueKey(item) === targetKey;
+            if (isTarget) {
+              return {
+                ...item,
+                issueItems: updatedIssued,
+                remark: remarkStr,
+                highlighted: true,
+                lastUpdated: timestamped
+              };
+            }
+            return item.highlighted ? { ...item, highlighted: false } : item;
+          })
+        );
+        setHighlightedAssetKey(targetKey);
+
+        // Update ONLY this exact item in Firebase using PATCH
+        if (targetAsset.firebaseKey) {
+          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${targetAsset.firebaseKey}.json`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              issueItems: updatedIssued,
+              remark: remarkStr,
+              highlighted: true,
+              lastUpdated: timestamped
+            })
+          });
+        }
+
+        // Also record in Temporary Deployment / Dispatch log once
+        await fetch(FIREBASE_TEMP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: `td_${Date.now()}`,
+            assetKey: targetKey,
+            assetName: targetAsset.particulars,
+            assetTagNo: targetAsset.serialNo || 'N/A',
+            department: deptText,
+            receiver: personText,
+            quantity: qty,
+            remark: remarkStr,
+            status: 'Temporary Given',
+            issueDate: timestamped
+          })
+        });
+
+        await logStockHistory(
+          targetAsset.particulars,
+          `CONSUMED / ISSUED (-${qty})`,
+          remarkStr
+        );
+
+        return true;
+      };
+
       const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -402,6 +495,7 @@
               minAlert: Number(row["Min Stock Alert"] || row["minAlert"] || 2),
               category: String(row["Category"] || row["category"] || "Consumable"),
               location: String(row["Location"] || row["location"] || "IT Stores"),
+              remark: String(row["Remarks"] || row["remark"] || ""),
               entryMonth: getCurrentMonthYear(),
               lastUpdated: getFormattedDateTime()
             }));
@@ -464,6 +558,7 @@
         minAlert: 2,
         category: 'Consumable',
         location: '',
+        remark: '',
         entryMonth: getCurrentMonthYear(),
         lastUpdated: getFormattedDateTime()
       });
@@ -474,14 +569,15 @@
         const finalBrand = formData.brand === 'Other' ? formData.customBrand : formData.brand;
 
         if (editingAsset) {
-          // Check if new purchase increased
           const diffPurchase = Number(formData.newPurchase || 0) - Number(editingAsset.newPurchase || 0);
           const diffIssue = Number(formData.issueItems || 0) - Number(editingAsset.issueItems || 0);
+          const targetKey = getRowUniqueKey(editingAsset);
 
           const updated = {
             ...editingAsset,
             ...formData,
             brand: finalBrand,
+            highlighted: true,
             lastUpdated: timestamped
           };
           try {
@@ -492,13 +588,14 @@
                 body: JSON.stringify(updated)
               });
             }
-            setAssets(assets.map(a => (a.id === editingAsset.id || a.firebaseKey === editingAsset.firebaseKey) ? updated : a));
+            setAssets(prev => prev.map(a => getRowUniqueKey(a) === targetKey ? updated : { ...a, highlighted: false }));
+            setHighlightedAssetKey(targetKey);
             
             if (diffPurchase > 0) {
-              await logStockHistory(formData.particulars, `NEW PURCHASE (+${diffPurchase})`, `Stock replenished with ${diffPurchase} new units. Total Purchase is now ${formData.newPurchase}.`);
+              await logStockHistory(formData.particulars, `NEW PURCHASE (+${diffPurchase})`, `Stock replenished with ${diffPurchase} new units. Total Purchase is now ${formData.newPurchase}. ${formData.remark ? `Remark: ${formData.remark}` : ''}`);
             }
             if (diffIssue > 0) {
-              await logStockHistory(formData.particulars, `CONSUMED / ISSUED (-${diffIssue})`, `Stock consumed/issued increased by ${diffIssue} units. Total Issued is now ${formData.issueItems}.`);
+              await logStockHistory(formData.particulars, `CONSUMED / ISSUED (-${diffIssue})`, `Stock consumed/issued increased by ${diffIssue} units. ${formData.remark ? `Remark: ${formData.remark}` : ''}`);
             }
 
             showToast("Asset specification successfully updated!", "success");
@@ -510,6 +607,7 @@
             id: Date.now(),
             ...formData,
             brand: finalBrand,
+            highlighted: true,
             lastUpdated: timestamped
           };
           try {
@@ -590,6 +688,7 @@
                               (item.group || '').toLowerCase().includes(searchLower) ||
                               (item.serialNo || '').toLowerCase().includes(searchLower) ||
                               (item.brand || '').toLowerCase().includes(searchLower) ||
+                              (item.remark || '').toLowerCase().includes(searchLower) ||
                               (item.location || '').toLowerCase().includes(searchLower);
           const matchesLocation = locationFilter === 'All' || !locationFilter || (item.location || '').toLowerCase() === locationFilter.toLowerCase();
           const matchesGroup = !selectedGroupFilter || (item.group || '').toLowerCase() === selectedGroupFilter.toLowerCase();
@@ -811,7 +910,7 @@
                       </span>
                       <input 
                         type="text"
-                        placeholder="Search particulars, cable, tag..."
+                        placeholder="Search particulars, remark, tag..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-brand-500 w-64"
@@ -852,6 +951,7 @@
                           minAlert: 2,
                           category: 'Consumable',
                           location: 'IT Stores',
+                          remark: '',
                           entryMonth: getCurrentMonthYear(),
                           lastUpdated: getFormattedDateTime()
                         });
@@ -869,7 +969,7 @@
                     <table className="w-full text-left border-collapse table-compact text-xs">
                       <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold text-[10px] sticky top-0 z-10 border-b border-slate-200">
                         <tr>
-                          <th className="p-3 w-32 text-center">Action</th>
+                          <th className="p-3 w-44 text-center">Action</th>
                           <th>Group / Particulars</th>
                           <th>Brand & Specification</th>
                           <th className="text-center">Opening</th>
@@ -880,13 +980,14 @@
                           <th className="text-center">Short</th>
                           <th className="text-center">Dead</th>
                           <th>Location</th>
+                          <th>Remarks (Whom & Department)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                         {loading ? (
-                          <tr><td colSpan="11" className="text-center py-14 text-slate-400 font-semibold">Loading stock records...</td></tr>
+                          <tr><td colSpan="12" className="text-center py-14 text-slate-400 font-semibold">Loading stock records...</td></tr>
                         ) : paginatedAssets.length === 0 ? (
-                          <tr><td colSpan="11" className="text-center py-14 text-slate-400 font-semibold">No assets found. Click "+ Register New Asset" to add items.</td></tr>
+                          <tr><td colSpan="12" className="text-center py-14 text-slate-400 font-semibold">No assets found. Click "+ Register New Asset" to add items.</td></tr>
                         ) : (
                           paginatedAssets.map((item) => {
                             const opening = Number(item.openingQty || 0);
@@ -899,11 +1000,37 @@
                             // AUTO CALCULATED BALANCE = (Opening + Purchase) - (Issued + Short + Dead)
                             const bal = (opening + purch) - (issue + short + dead);
                             const isLow = bal <= minAlertQty;
+                            const rowKey = getRowUniqueKey(item);
+                            const isHighlighted = Boolean(item.highlighted || highlightedAssetKey === rowKey);
 
                             return (
-                              <tr key={item.firebaseKey || item.id} className={`hover:bg-slate-50/80 transition ${isLow ? 'bg-amber-50/30' : ''}`}>
+                              <tr
+                                key={rowKey}
+                                className={`transition ${
+                                  isHighlighted
+                                    ? 'bg-amber-100/80 ring-1 ring-inset ring-amber-400'
+                                    : isLow
+                                    ? 'bg-rose-50/30 hover:bg-slate-50/80'
+                                    : 'hover:bg-slate-50/80'
+                                }`}
+                              >
                                 <td className="p-2 text-center whitespace-nowrap">
                                   <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                                    <button
+                                      onClick={() => {
+                                        setQuickIssueAsset(item);
+                                        setQuickIssueForm({
+                                          quantity: 1,
+                                          department: 'HR Department',
+                                          receiver: '',
+                                          extraNote: ''
+                                        });
+                                      }}
+                                      title="Issue Item (Deduct Stock & Add Remark)"
+                                      className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-bold transition"
+                                    >
+                                      Issue
+                                    </button>
                                     <button 
                                       onClick={() => setViewModalItem(item)}
                                       title="Print Asset Slip"
@@ -933,6 +1060,7 @@
                                           minAlert: item.minAlert || 2,
                                           category: item.category || 'Consumable',
                                           location: item.location || '',
+                                          remark: item.remark || '',
                                           entryMonth: item.entryMonth || getCurrentMonthYear(),
                                           lastUpdated: item.lastUpdated || getFormattedDateTime()
                                         });
@@ -956,6 +1084,7 @@
                                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.group || 'GENERAL'}</div>
                                   <div className="font-extrabold text-slate-900 text-xs tracking-tight flex items-center gap-1.5">
                                     {item.particulars}
+                                    {isHighlighted && <span className="px-1.5 py-0.2 bg-amber-500 text-white font-bold text-[9px] rounded uppercase">Issued / Updated</span>}
                                     {isLow && <span className="px-1.5 py-0.2 bg-rose-500 text-white font-bold text-[9px] rounded uppercase animate-pulse">Low Stock</span>}
                                   </div>
                                   <div className="text-[10px] text-slate-400 font-mono">Updated: {item.lastUpdated || 'N/A'}</div>
@@ -981,6 +1110,15 @@
                                   <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${item.location ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-slate-400 italic'}`}>
                                     {item.location || 'Unassigned'}
                                   </span>
+                                </td>
+                                <td className="max-w-xs">
+                                  {item.remark ? (
+                                    <span className="inline-block px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-800 text-[11px] font-semibold">
+                                      {item.remark}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 italic text-[11px]">—</span>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -1037,7 +1175,7 @@
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
                   <div>
                     <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Temporary Asset & Departmental Issue Registry (HR / Units)</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Issuing items (e.g., HDMI Cable to HR) automatically logs the consumption.</p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Issuing items deducts once from that exact stock item, highlights its row, and logs department & receiver remarks.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -1048,8 +1186,17 @@
                     </button>
                     <button
                       onClick={() => {
+                        const firstItem = assets[0];
                         setEditingTempItem(null);
-                        setTempForm({ assetName: '', assetTagNo: '', department: 'HR Department', receiver: '', quantity: 1, status: 'Temporary Given' });
+                        setTempForm({
+                          selectedAssetKey: firstItem ? getRowUniqueKey(firstItem) : '',
+                          assetName: firstItem ? firstItem.particulars : '',
+                          assetTagNo: firstItem ? (firstItem.serialNo || '') : '',
+                          department: 'HR Department',
+                          receiver: '',
+                          quantity: 1,
+                          status: 'Temporary Given'
+                        });
                         setIsTempModalOpen(true);
                       }}
                       className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition"
@@ -1326,6 +1473,108 @@
 
           </main>
 
+          {/* DIRECT SINGLE-ITEM ISSUE MODAL (From Row "Issue" Button) */}
+          {quickIssueAsset && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900">Issue Item: {quickIssueAsset.particulars}</h3>
+                    <p className="text-[11px] text-slate-500">
+                      Current Net Balance:{' '}
+                      <strong className="font-mono text-emerald-700">
+                        {(Number(quickIssueAsset.openingQty || 0) + Number(quickIssueAsset.newPurchase || 0)) - (Number(quickIssueAsset.issueItems || 0) + Number(quickIssueAsset.shortItems || 0) + Number(quickIssueAsset.deadItems || 0))}
+                      </strong>
+                    </p>
+                  </div>
+                  <button onClick={() => setQuickIssueAsset(null)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const ok = await applyIssueToSingleAsset(
+                      quickIssueAsset,
+                      quickIssueForm.quantity,
+                      quickIssueForm.department,
+                      quickIssueForm.receiver,
+                      quickIssueForm.extraNote
+                    );
+                    if (ok) {
+                      showToast(`Issued ${quickIssueForm.quantity} ${quickIssueAsset.particulars} to ${quickIssueForm.receiver} (${quickIssueForm.department}).`, "success");
+                      setQuickIssueAsset(null);
+                    }
+                  }}
+                  className="space-y-3.5 text-xs"
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Quantity to Issue *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={quickIssueForm.quantity}
+                        onChange={(e) => setQuickIssueForm({ ...quickIssueForm, quantity: Number(e.target.value) })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-mono font-bold text-amber-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-slate-600 mb-1">Department *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. HR Department, OPD"
+                        value={quickIssueForm.department}
+                        onChange={(e) => setQuickIssueForm({ ...quickIssueForm, department: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Given To (Person Name) *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mr. Sharma"
+                      value={quickIssueForm.receiver}
+                      onChange={(e) => setQuickIssueForm({ ...quickIssueForm, receiver: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Additional Note (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. For reception desk"
+                      value={quickIssueForm.extraNote}
+                      onChange={(e) => setQuickIssueForm({ ...quickIssueForm, extraNote: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setQuickIssueAsset(null)}
+                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-md transition"
+                    >
+                      Deduct Stock & Save Remark
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* STOCK HISTORY & MONTHLY AUDIT LOG MODAL */}
           {showHistoryModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
@@ -1400,6 +1649,7 @@
                   <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Asset Group</span> <strong className="text-slate-900">{viewModalItem.group}</strong></div>
                   <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Brand & Specs</span> {viewModalItem.brand === 'Other' ? viewModalItem.customBrand : viewModalItem.brand}</div>
                   <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Net Balance Stock</span> <span className="font-mono font-black text-emerald-600 text-sm">{(Number(viewModalItem.openingQty || 0) + Number(viewModalItem.newPurchase || 0)) - (Number(viewModalItem.issueItems || 0) + Number(viewModalItem.shortItems || 0) + Number(viewModalItem.deadItems || 0))} {viewModalItem.measurementUnit}</span></div>
+                  <div className="col-span-2"><span className="text-slate-400 font-bold block text-[10px] uppercase">Issue Remarks</span> <span className="font-semibold text-slate-800">{viewModalItem.remark || '—'}</span></div>
                 </div>
 
                 <div className="pt-8 border-t border-slate-200 grid grid-cols-2 gap-8 text-center text-xs">
@@ -1565,6 +1815,17 @@
                     </div>
                   </div>
 
+                  <div>
+                    <label className="block font-semibold text-slate-600 mb-1">Remarks (Whom / Department / Notes)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Issued to Mr. Sharma (HR Department)"
+                      value={formData.remark}
+                      onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                    />
+                  </div>
+
                   {/* AUTO CALCULATION QUANTITIES */}
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                     <div className="text-[11px] font-extrabold text-brand-600 uppercase">
@@ -1644,7 +1905,7 @@
             </div>
           )}
 
-          {/* ISSUE ITEM MODAL (e.g. to HR) */}
+          {/* ISSUE ITEM MODAL (From Temporary Deployment Tab — targets exact selected item) */}
           {isTempModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
@@ -1656,51 +1917,62 @@
                 </div>
                 <form onSubmit={async (e) => {
                   e.preventDefault();
-                  const timestamped = getFormattedDateTime();
+                  const selectedItem = assets.find(a => getRowUniqueKey(a) === tempForm.selectedAssetKey) ||
+                                       assets.find(a => (a.particulars || '').toLowerCase() === (tempForm.assetName || '').trim().toLowerCase());
 
-                  const newDispatch = {
-                    id: `td_${Date.now()}`,
-                    ...tempForm,
-                    issueDate: timestamped
-                  };
-
-                  try {
+                  if (selectedItem) {
+                    const ok = await applyIssueToSingleAsset(
+                      selectedItem,
+                      tempForm.quantity,
+                      tempForm.department,
+                      tempForm.receiver
+                    );
+                    if (ok) {
+                      showToast("Item issued once, row highlighted & remark saved!", "success");
+                      setIsTempModalOpen(false);
+                    }
+                  } else {
+                    const timestamped = getFormattedDateTime();
                     await fetch(FIREBASE_TEMP_URL, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(newDispatch)
+                      body: JSON.stringify({
+                        id: `td_${Date.now()}`,
+                        ...tempForm,
+                        issueDate: timestamped
+                      })
                     });
-
-                    // Automatically update stock if matching asset found
-                    const foundAsset = assets.find(a => (a.particulars || '').toLowerCase().includes((tempForm.assetName || '').toLowerCase()));
-                    if (foundAsset && foundAsset.firebaseKey) {
-                      const updatedIssued = Number(foundAsset.issueItems || 0) + Number(tempForm.quantity || 1);
-                      await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${foundAsset.firebaseKey}.json`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ issueItems: updatedIssued, lastUpdated: timestamped })
-                      });
-                      await logStockHistory(foundAsset.particulars, `CONSUMED / ISSUED (-${tempForm.quantity})`, `Issued ${tempForm.quantity} unit(s) to ${tempForm.department} (Receiver: ${tempForm.receiver})`);
-                    }
-
                     fetchAllData(false);
-                    showToast("Item issued and stock automatically deducted!", "success");
-                  } catch(err) {
-                    showToast("Issued saved locally.", "info");
+                    showToast("Dispatch recorded.", "info");
+                    setIsTempModalOpen(false);
                   }
-
-                  setIsTempModalOpen(false);
                 }} className="space-y-3.5 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Item Name / Particulars *</label>
-                    <input 
-                      type="text"
+                    <label className="block font-semibold text-slate-600 mb-1">Select Exact Stock Item *</label>
+                    <select
                       required
-                      placeholder="e.g. HDMI CABLE 3M"
-                      value={tempForm.assetName}
-                      onChange={(e) => setTempForm({ ...tempForm, assetName: e.target.value.toUpperCase() })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                    />
+                      value={tempForm.selectedAssetKey}
+                      onChange={(e) => {
+                        const chosen = assets.find(a => getRowUniqueKey(a) === e.target.value);
+                        setTempForm({
+                          ...tempForm,
+                          selectedAssetKey: e.target.value,
+                          assetName: chosen ? chosen.particulars : '',
+                          assetTagNo: chosen ? (chosen.serialNo || '') : ''
+                        });
+                      }}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900"
+                    >
+                      <option value="">-- Choose Stock Item --</option>
+                      {assets.map(a => {
+                        const bal = (Number(a.openingQty || 0) + Number(a.newPurchase || 0)) - (Number(a.issueItems || 0) + Number(a.shortItems || 0) + Number(a.deadItems || 0));
+                        return (
+                          <option key={getRowUniqueKey(a)} value={getRowUniqueKey(a)}>
+                            {a.particulars} ({a.brand}) — Available: {bal}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-600 mb-1">Asset Tag No / Serial *</label>
