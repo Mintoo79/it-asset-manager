@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- SheetJS for Excel Export / Import -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script>
     tailwind.config = {
@@ -20,13 +19,8 @@
           },
           colors: {
             brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-              800: '#3730a3',
-              900: '#312e81',
+              50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5',
+              700: '#4338ca', 800: '#3730a3', 900: '#312e81',
             }
           }
         }
@@ -51,16 +45,8 @@
       body * { visibility: hidden; }
       #printable-slip, #printable-slip * { visibility: visible; }
       #printable-slip {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 24px;
-        background: white;
-        color: black;
-        box-shadow: none !important;
-        border: none !important;
+        position: fixed; left: 0; top: 0; width: 100%; margin: 0; padding: 24px;
+        background: white; color: black; box-shadow: none !important; border: none !important;
       }
       .no-print { display: none !important; }
     }
@@ -86,11 +72,6 @@
     const FIREBASE_PM_LOGS_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/pm_audit_logs.json";
     const FIREBASE_HISTORY_URL = "https://it-asset-system-31cb8-default-rtdb.firebaseio.com/stock_history.json";
 
-    const normalizeGroup = (grp) => {
-      const cleaned = String(grp || '').trim().toUpperCase();
-      return cleaned || 'GENERAL';
-    };
-
     const Icons = {
       Stock: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
       Exchange: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>,
@@ -114,7 +95,7 @@
     function exportToExcel(filename, rows) {
       if (!rows || !rows.length) return;
       const cleanRows = rows.map(r => ({
-        "Group": normalizeGroup(r.group),
+        "Group": r.group,
         "Particulars": r.particulars,
         "Brand": r.brand,
         "Serial No": r.serialNo,
@@ -129,7 +110,6 @@
         "Min Stock Alert": r.minAlert || 2,
         "Category": r.category,
         "Location": r.location,
-        "Remarks": r.remark || '',
         "Last Updated": r.lastUpdated
       }));
       const worksheet = XLSX.utils.json_to_sheet(cleanRows);
@@ -153,7 +133,7 @@
       const [locationFilter, setLocationFilter] = useState('All');
       const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
       const [currentPage, setCurrentPage] = useState(1);
-      const [itemsPerPage, setItemsPerPage] = useState(25);
+      const [itemsPerPage, setItemsPerPage] = useState(10);
       const [assets, setAssets] = useState([]);
       const [stockHistory, setStockHistory] = useState([]);
       const [loading, setLoading] = useState(true);
@@ -163,16 +143,9 @@
       const [viewModalItem, setViewModalItem] = useState(null);
       const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
 
-      const [quickIssueAsset, setQuickIssueAsset] = useState(null);
-      const [quickIssueForm, setQuickIssueForm] = useState({
-        quantity: 1,
-        department: 'HR Department',
-        receiver: '',
-        extraNote: ''
-      });
-      const [highlightedAssetKey, setHighlightedAssetKey] = useState(null);
-
       const fileInputRef = useRef(null);
+      const fetchAllDataRef = useRef(null); // Fix #4: stable interval reference
+      const isSavingRef = useRef(false);    // Fix #1: prevent double-click duplicate saves
 
       const [tempDispatches, setTempDispatches] = useState([]);
       const [isTempModalOpen, setIsTempModalOpen] = useState(false);
@@ -180,15 +153,9 @@
       const [showMovementReportModal, setShowMovementReportModal] = useState(false);
       const [showStockReportModal, setShowStockReportModal] = useState(false);
       const [showHistoryModal, setShowHistoryModal] = useState(false);
-      
-      const [tempForm, setTempForm] = useState({ 
-        selectedAssetKey: '',
-        assetName: '', 
-        assetTagNo: '', 
-        department: '', 
-        receiver: '', 
-        quantity: 1, 
-        status: 'Temporary Given' 
+
+      const [tempForm, setTempForm] = useState({
+        assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1, status: 'Temporary Given'
       });
 
       const [pmSchedules, setPmSchedules] = useState([]);
@@ -199,6 +166,36 @@
       const [pmSelectedSlot, setPmSelectedSlot] = useState('01 to 10 January');
       const [showPmReportModal, setShowPmReportModal] = useState(false);
 
+      const [pmForm, setPmForm] = useState({
+        department: 'General Registration',
+        equipmentName: 'Desktop PC Workstation',
+        cpuBrand: 'Dell',
+        cpuProcessor: 'Intel Core i5-12400 (2.50GHz)',
+        cpuTag: 'CPU-TAG-101',
+        monitorBrand: 'Dell',
+        monitorTag: 'MON-TAG-101',
+        printerBrand: 'HP',
+        printerModel: 'HP LaserJet Pro M126nw',
+        printerTag: 'PRN-TAG-202',
+        printerIP: '192.168.1.150',
+        systemIP: '192.168.1.50',
+        systemMac: '00:1A:2B:3C:4D:5E',
+        ramType: 'DDR4',
+        ramCapacityValue: '16',
+        ramCapacityUnit: 'GB',
+        hddType: 'SSD',
+        hddCapacityValue: '512',
+        hddCapacityUnit: 'GB',
+        msOffice: 'Office 2021 Pro Plus',
+        outlook: 'Configured & Synced',
+        backup: 'Active Daily',
+        antiVirus: 'Quick Heal Total Security (Updated)',
+        status: 'Scheduled',
+        dueDate: '2026-01-05',
+        targetMonth: 'Jan',
+        slotRange: '01 to 10 January'
+      });
+
       const sampleFallbackUsers = [
         { id: 1, name: 'Super Admin', username: 'admin', pin: '1234', role: 'Super Administrator', department: 'IT Management', status: 'Active' },
         { id: 2, name: 'IT Inventory Desk', username: 'store', pin: '5678', role: 'Store Keeper', department: 'IT Stores', status: 'Active' },
@@ -206,6 +203,26 @@
       ];
 
       const [users, setUsers] = useState(sampleFallbackUsers);
+      const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+      const [editingUser, setEditingUser] = useState(null);
+      const [userForm, setUserForm] = useState({
+        name: '', username: '', pin: '', role: 'Store Keeper', department: 'IT Operations', status: 'Active'
+      });
+
+      const monthsList = [
+        { code: 'Jan', name: 'January', slots: ['01 to 10 January', '11 to 20 January', '21 to 31 January'] },
+        { code: 'Feb', name: 'February', slots: ['01 to 10 February', '11 to 20 February', '21 to 28 February'] },
+        { code: 'Mar', name: 'March', slots: ['01 to 10 March', '11 to 20 March', '21 to 31 March'] },
+        { code: 'Apr', name: 'April', slots: ['01 to 10 April', '11 to 20 April', '21 to 30 April'] },
+        { code: 'May', name: 'May', slots: ['01 to 10 May', '11 to 20 May', '21 to 31 May'] },
+        { code: 'Jun', name: 'June', slots: ['01 to 10 June', '11 to 20 June', '21 to 30 June'] },
+        { code: 'Jul', name: 'July', slots: ['01 to 10 July', '11 to 20 July', '21 to 31 July'] },
+        { code: 'Aug', name: 'August', slots: ['01 to 10 August', '11 to 20 August', '21 to 31 August'] },
+        { code: 'Sep', name: 'September', slots: ['01 to 10 September', '11 to 20 September', '21 to 30 September'] },
+        { code: 'Oct', name: 'October', slots: ['01 to 10 October', '11 to 20 October', '21 to 31 October'] },
+        { code: 'Nov', name: 'November', slots: ['01 to 10 November', '11 to 20 November', '21 to 30 November'] },
+        { code: 'Dec', name: 'December', slots: ['01 to 10 December', '11 to 20 December', '21 to 31 December'] }
+      ];
 
       const showToast = (msg, type = 'info') => {
         setToast({ show: true, msg, type });
@@ -231,12 +248,10 @@
         return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
       };
 
-      const getRowUniqueKey = (item) => item.firebaseKey || String(item.id);
-
       const sampleFallbackAssets = [
-        { id: 101, group: 'CABLE', particulars: 'HDMI CABLE 3M', brand: 'Dell', serialNo: 'HD-3M-01', cableLength: '3.0', measurementUnit: 'Piece', openingQty: 5, newPurchase: 3, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Consumable', location: 'IT Stores', remark: 'Issued 1 to HR Department (Mr. Sharma)', entryMonth: 'Nov 2026', lastUpdated: '16 Nov 2026, 11:30 AM' },
-        { id: 102, group: 'MOUSE', particulars: 'WIRELESS ERGO MOUSE', brand: 'Lenovo', serialNo: 'MS-LN-02', cableLength: 'Wireless', measurementUnit: 'Piece', openingQty: 6, newPurchase: 0, issueItems: 4, shortItems: 0, deadItems: 1, minAlert: 2, category: 'Consumable', location: 'Design Lab', remark: 'Issued 4 to Design Lab', entryMonth: 'Nov 2026', lastUpdated: '15 Nov 2026, 04:12 PM' },
-        { id: 103, group: 'KEYBOARD', particulars: 'PRO MECHANICAL KEYBOARD', brand: 'Dell', serialNo: 'KB-DL-104', cableLength: '1.8', measurementUnit: 'Piece', openingQty: 9, newPurchase: 2, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Non-Consumable', location: 'Server Room', remark: 'Issued 1 to Server Room', entryMonth: 'Nov 2026', lastUpdated: '14 Nov 2026, 02:20 PM' }
+        { id: 101, group: 'CABLE', particulars: 'HDMI CABLE 3M', brand: 'Dell', serialNo: 'HD-3M-01', cableLength: '3.0', measurementUnit: 'Piece', openingQty: 5, newPurchase: 3, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Consumable', location: 'IT Stores', entryMonth: 'Nov 2026', lastUpdated: '16 Nov 2026, 11:30 AM' },
+        { id: 102, group: 'MOUSE', particulars: 'WIRELESS ERGO MOUSE', brand: 'Lenovo', serialNo: 'MS-LN-02', cableLength: 'Wireless', measurementUnit: 'Piece', openingQty: 6, newPurchase: 0, issueItems: 4, shortItems: 0, deadItems: 1, minAlert: 2, category: 'Consumable', location: 'Design Lab', entryMonth: 'Nov 2026', lastUpdated: '15 Nov 2026, 04:12 PM' },
+        { id: 103, group: 'KEYBOARD', particulars: 'PRO MECHANICAL KEYBOARD', brand: 'Dell', serialNo: 'KB-DL-104', cableLength: '1.8', measurementUnit: 'Piece', openingQty: 9, newPurchase: 2, issueItems: 1, shortItems: 0, deadItems: 0, minAlert: 2, category: 'Non-Consumable', location: 'Server Room', entryMonth: 'Nov 2026', lastUpdated: '14 Nov 2026, 02:20 PM' }
       ];
 
       const sampleFallbackHistory = [
@@ -244,7 +259,25 @@
         { id: 'h2', timestamp: '16 Nov 2026, 01:15 PM', itemName: 'HDMI CABLE 3M', actionType: 'CONSUMED / ISSUED (-1)', details: 'Issued 1 unit to HR Department (Receiver: Mr. Sharma)' }
       ];
 
-      // Load ALL records from Firebase without dropping or filtering out any item
+      // ============================================================
+      // Fix #2: Deduplicate on fetch — purane duplicate records UI me nahi dikhenge
+      // ============================================================
+      const dedupeAssets = (list) => {
+        const seen = new Map();
+        list.forEach(item => {
+          const sig = `${(item.particulars || '').trim().toUpperCase()}|${(item.brand || '').trim().toUpperCase()}|${(item.serialNo || '').trim().toUpperCase()}`;
+          const existing = seen.get(sig);
+          if (!existing) {
+            seen.set(sig, item);
+          } else {
+            const itemTime = new Date(item.lastUpdated || 0).getTime() || 0;
+            const existingTime = new Date(existing.lastUpdated || 0).getTime() || 0;
+            if (itemTime > existingTime) seen.set(sig, item);
+          }
+        });
+        return Array.from(seen.values());
+      };
+
       const fetchAllData = async (silent = true) => {
         if (!silent) setIsSyncing(true);
         try {
@@ -257,71 +290,42 @@
             fetch(FIREBASE_HISTORY_URL).then(r => r.json())
           ]);
 
-          if (resAssets.status === 'fulfilled' && resAssets.value && typeof resAssets.value === 'object') {
-            const loaded = Object.entries(resAssets.value).map(([k, val], idx) => {
-              const obj = (val && typeof val === 'object') ? val : {};
-              return {
-                ...obj,
-                id: obj.id || `${k}_${idx}`,
-                group: normalizeGroup(obj.group),
-                particulars: obj.particulars || obj.name || obj.itemName || `ITEM-${idx + 1}`,
-                firebaseKey: k
-              };
-            });
-            setAssets(loaded.length > 0 ? loaded : sampleFallbackAssets);
-          } else {
-            setAssets(prev => (prev.length > 0 ? prev : sampleFallbackAssets));
+          if (resAssets.status === 'fulfilled' && resAssets.value) {
+            const loaded = Object.keys(resAssets.value).map(k => ({ ...resAssets.value[k], firebaseKey: k }));
+            const deduped = dedupeAssets(loaded);
+            setAssets(deduped.length > 0 ? deduped : sampleFallbackAssets);
+          } else if (assets.length === 0) {
+            setAssets(sampleFallbackAssets);
           }
 
-          if (resHist.status === 'fulfilled' && resHist.value && typeof resHist.value === 'object') {
-            const loadedHist = Object.entries(resHist.value).map(([k, val], idx) => ({
-              ...(val || {}),
-              id: (val && val.id) || `${k}_${idx}`,
-              firebaseKey: k
-            }));
+          if (resHist.status === 'fulfilled' && resHist.value) {
+            const loadedHist = Object.keys(resHist.value).map(k => ({ ...resHist.value[k], firebaseKey: k }));
             setStockHistory(loadedHist.length > 0 ? loadedHist : sampleFallbackHistory);
           } else {
-            setStockHistory(prev => (prev.length > 0 ? prev : sampleFallbackHistory));
+            setStockHistory(sampleFallbackHistory);
           }
 
-          if (resTemp.status === 'fulfilled' && resTemp.value && typeof resTemp.value === 'object') {
-            setTempDispatches(Object.entries(resTemp.value).map(([k, val], idx) => ({
-              ...(val || {}),
-              id: (val && val.id) || `${k}_${idx}`,
-              firebaseKey: k
-            })));
+          if (resTemp.status === 'fulfilled' && resTemp.value) {
+            setTempDispatches(Object.keys(resTemp.value).map(k => ({ ...resTemp.value[k], firebaseKey: k })));
           }
 
-          if (resPm.status === 'fulfilled' && resPm.value && typeof resPm.value === 'object') {
-            setPmSchedules(Object.entries(resPm.value).map(([k, val], idx) => ({
-              ...(val || {}),
-              id: (val && val.id) || `${k}_${idx}`,
-              firebaseKey: k
-            })));
+          if (resPm.status === 'fulfilled' && resPm.value) {
+            setPmSchedules(Object.keys(resPm.value).map(k => ({ ...resPm.value[k], firebaseKey: k })));
           }
 
-          if (resLogs.status === 'fulfilled' && resLogs.value && typeof resLogs.value === 'object') {
-            setPmAuditLogs(Object.entries(resLogs.value).map(([k, val], idx) => ({
-              ...(val || {}),
-              id: (val && val.id) || `${k}_${idx}`,
-              firebaseKey: k
-            })));
+          if (resLogs.status === 'fulfilled' && resLogs.value) {
+            setPmAuditLogs(Object.keys(resLogs.value).map(k => ({ ...resLogs.value[k], firebaseKey: k })));
           }
 
-          if (resUsers.status === 'fulfilled' && resUsers.value && typeof resUsers.value === 'object') {
-            const loadedUsers = Object.entries(resUsers.value).map(([k, val], idx) => ({
-              ...(val || {}),
-              id: (val && val.id) || `${k}_${idx}`,
-              firebaseKey: k
-            }));
-            if (loadedUsers.length > 0) setUsers(loadedUsers);
+          if (resUsers.status === 'fulfilled' && resUsers.value) {
+            const loadedUsers = Object.keys(resUsers.value).map(k => ({ ...resUsers.value[k], firebaseKey: k }));
+            setUsers(loadedUsers.length > 0 ? loadedUsers : sampleFallbackUsers);
           }
 
           const now = new Date();
           setLastSyncTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
         } catch (e) {
           console.error("Data fetch error", e);
-          setAssets(prev => (prev.length > 0 ? prev : sampleFallbackAssets));
         } finally {
           setLoading(false);
           if (!silent) {
@@ -331,15 +335,27 @@
         }
       };
 
+      // Keep ref synced so interval always uses latest closure
+      fetchAllDataRef.current = fetchAllData;
+
+      // ============================================================
+      // Fix #4: Stable interval via ref (no stale closure)
+      // ============================================================
       useEffect(() => {
-        fetchAllData(true);
+        fetchAllDataRef.current(true);
+        const intervalId = setInterval(() => {
+          if (!document.hidden) {
+            fetchAllDataRef.current(true);
+          }
+        }, 5000);
+        return () => clearInterval(intervalId);
       }, []);
 
       const logStockHistory = async (itemName, actionType, details) => {
         const newHistoryItem = {
           id: `hist_${Date.now()}`,
           timestamp: getFormattedDateTime(),
-          itemName: String(itemName || '').toUpperCase(),
+          itemName: itemName.toUpperCase(),
           actionType,
           details
         };
@@ -353,88 +369,6 @@
         } catch (e) {
           setStockHistory(prev => [newHistoryItem, ...prev]);
         }
-      };
-
-      // Single-item issue logic: deducts once on that exact item, highlights ONLY that row, and saves receiver + department in remark
-      const applyIssueToSingleAsset = async (targetAsset, qtyToDeduct, departmentName, receiverName, extraNote = '') => {
-        const qty = Math.max(1, Number(qtyToDeduct || 1));
-        const opening = Number(targetAsset.openingQty || 0);
-        const purch = Number(targetAsset.newPurchase || 0);
-        const issued = Number(targetAsset.issueItems || 0);
-        const short = Number(targetAsset.shortItems || 0);
-        const dead = Number(targetAsset.deadItems || 0);
-        const availableBal = (opening + purch) - (issued + short + dead);
-
-        if (qty > availableBal) {
-          showToast(`Insufficient stock! Only ${availableBal} available in "${targetAsset.particulars}".`, "error");
-          return false;
-        }
-
-        const timestamped = getFormattedDateTime();
-        const deptText = (departmentName || 'General').trim();
-        const personText = (receiverName || 'Staff').trim();
-        const remarkStr = `Issued ${qty} to ${personText} (${deptText})${extraNote ? ` — ${extraNote.trim()}` : ''}`;
-        const updatedIssued = issued + qty;
-        const targetKey = getRowUniqueKey(targetAsset);
-
-        setAssets(prevAssets =>
-          prevAssets.map(item => {
-            const isTarget = getRowUniqueKey(item) === targetKey;
-            if (isTarget) {
-              return {
-                ...item,
-                issueItems: updatedIssued,
-                remark: remarkStr,
-                highlighted: true,
-                lastUpdated: timestamped
-              };
-            }
-            return item.highlighted ? { ...item, highlighted: false } : item;
-          })
-        );
-        setHighlightedAssetKey(targetKey);
-
-        if (targetAsset.firebaseKey) {
-          try {
-            await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${targetAsset.firebaseKey}.json`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                issueItems: updatedIssued,
-                remark: remarkStr,
-                highlighted: true,
-                lastUpdated: timestamped
-              })
-            });
-          } catch (e) {}
-        }
-
-        try {
-          await fetch(FIREBASE_TEMP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: `td_${Date.now()}`,
-              assetKey: targetKey,
-              assetName: targetAsset.particulars,
-              assetTagNo: targetAsset.serialNo || 'N/A',
-              department: deptText,
-              receiver: personText,
-              quantity: qty,
-              remark: remarkStr,
-              status: 'Temporary Given',
-              issueDate: timestamped
-            })
-          });
-        } catch (e) {}
-
-        await logStockHistory(
-          targetAsset.particulars,
-          `CONSUMED / ISSUED (-${qty})`,
-          remarkStr
-        );
-
-        return true;
       };
 
       const handleFileUpload = (e) => {
@@ -456,7 +390,7 @@
 
             const importedAssets = json.map((row, idx) => ({
               id: Date.now() + idx,
-              group: normalizeGroup(row["Group"] || row["group"] || "GENERAL"),
+              group: String(row["Group"] || row["group"] || "GENERAL").toUpperCase(),
               particulars: String(row["Particulars"] || row["particulars"] || "UNNAMED ITEM").toUpperCase(),
               brand: String(row["Brand"] || row["brand"] || "Dell"),
               serialNo: String(row["Serial No"] || row["serialNo"] || ""),
@@ -470,24 +404,20 @@
               minAlert: Number(row["Min Stock Alert"] || row["minAlert"] || 2),
               category: String(row["Category"] || row["category"] || "Consumable"),
               location: String(row["Location"] || row["location"] || "IT Stores"),
-              remark: String(row["Remarks"] || row["remark"] || ""),
               entryMonth: getCurrentMonthYear(),
               lastUpdated: getFormattedDateTime()
             }));
 
-            setAssets(prev => [...importedAssets, ...prev]);
-
             for (let item of importedAssets) {
-              try {
-                await fetch(FIREBASE_DB_URL, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(item)
-                });
-              } catch (e) {}
+              await fetch(FIREBASE_DB_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+              });
               await logStockHistory(item.particulars, 'EXCEL IMPORT', `Imported via Excel spreadsheet. Opening: ${item.openingQty}, Purchase: ${item.newPurchase}`);
             }
 
+            fetchAllData(false);
             showToast(`Successfully imported ${importedAssets.length} items from Excel!`, "success");
           } catch (err) {
             console.error(err);
@@ -498,49 +428,52 @@
         reader.readAsArrayBuffer(file);
       };
 
+      const handleLogin = (e) => {
+        e.preventDefault();
+        const matched = users.find(u =>
+          (String(u.username).trim().toLowerCase() === String(usernameInput).trim().toLowerCase() ||
+           String(u.name).trim().toLowerCase() === String(usernameInput).trim().toLowerCase()) &&
+          String(u.pin).trim() === String(pinInput).trim() &&
+          u.status === 'Active'
+        );
+
+        if (matched) {
+          setIsLoggedIn(true);
+          setLoggedInUser(matched);
+          setLoginError('');
+          showToast(`Authenticated as ${matched.name} (${matched.role})`, "success");
+        } else {
+          setLoginError('Invalid Username or Security PIN code.');
+        }
+      };
+
       const [formData, setFormData] = useState({
-        group: 'CABLE',
-        particulars: '',
-        brand: 'Dell',
-        customBrand: '',
-        serialNo: '',
-        vendor: '',
-        invoiceNo: '',
-        warranty: '',
-        cableLength: '',
-        measurementUnit: 'Piece',
-        openingQty: 0,
-        newPurchase: 0,
-        issueItems: 0,
-        shortItems: 0,
-        deadItems: 0,
-        minAlert: 2,
-        category: 'Consumable',
-        location: '',
-        remark: '',
-        entryMonth: getCurrentMonthYear(),
-        lastUpdated: getFormattedDateTime()
+        group: 'CABLE', particulars: '', brand: 'Dell', customBrand: '', serialNo: '',
+        vendor: '', invoiceNo: '', warranty: '', cableLength: '', measurementUnit: 'Piece',
+        openingQty: 0, newPurchase: 0, issueItems: 0, shortItems: 0, deadItems: 0,
+        minAlert: 2, category: 'Consumable', location: '',
+        entryMonth: getCurrentMonthYear(), lastUpdated: getFormattedDateTime()
       });
 
+      // ============================================================
+      // Fix #1: Single POST + immediate local state insert + double-click guard
+      // ============================================================
       const handleSaveAsset = async (e) => {
         e.preventDefault();
+        if (isSavingRef.current) return; // prevent double-click duplicate
+        isSavingRef.current = true;
+
         const timestamped = getFormattedDateTime();
         const finalBrand = formData.brand === 'Other' ? formData.customBrand : formData.brand;
-        const cleanGroup = normalizeGroup(formData.group);
-        const cleanParticulars = String(formData.particulars || '').trim().toUpperCase();
 
         if (editingAsset) {
           const diffPurchase = Number(formData.newPurchase || 0) - Number(editingAsset.newPurchase || 0);
           const diffIssue = Number(formData.issueItems || 0) - Number(editingAsset.issueItems || 0);
-          const targetKey = getRowUniqueKey(editingAsset);
 
           const updated = {
             ...editingAsset,
             ...formData,
-            group: cleanGroup,
-            particulars: cleanParticulars,
             brand: finalBrand,
-            highlighted: true,
             lastUpdated: timestamped
           };
           try {
@@ -551,14 +484,15 @@
                 body: JSON.stringify(updated)
               });
             }
-            setAssets(prev => prev.map(a => getRowUniqueKey(a) === targetKey ? updated : { ...a, highlighted: false }));
-            setHighlightedAssetKey(targetKey);
-            
+            setAssets(prev => prev.map(a =>
+              (a.id === editingAsset.id || a.firebaseKey === editingAsset.firebaseKey) ? updated : a
+            ));
+
             if (diffPurchase > 0) {
-              await logStockHistory(cleanParticulars, `NEW PURCHASE (+${diffPurchase})`, `Stock replenished with ${diffPurchase} new units. Total Purchase is now ${formData.newPurchase}. ${formData.remark ? `Remark: ${formData.remark}` : ''}`);
+              await logStockHistory(formData.particulars, `NEW PURCHASE (+${diffPurchase})`, `Stock replenished with ${diffPurchase} new units. Total Purchase is now ${formData.newPurchase}.`);
             }
             if (diffIssue > 0) {
-              await logStockHistory(cleanParticulars, `CONSUMED / ISSUED (-${diffIssue})`, `Stock consumed/issued increased by ${diffIssue} units. ${formData.remark ? `Remark: ${formData.remark}` : ''}`);
+              await logStockHistory(formData.particulars, `CONSUMED / ISSUED (-${diffIssue})`, `Stock consumed/issued increased by ${diffIssue} units. Total Issued is now ${formData.issueItems}.`);
             }
 
             showToast("Asset specification successfully updated!", "success");
@@ -569,30 +503,38 @@
           const newAsset = {
             id: Date.now(),
             ...formData,
-            group: cleanGroup,
-            particulars: cleanParticulars,
             brand: finalBrand,
-            highlighted: true,
             lastUpdated: timestamped
           };
           try {
-            const res = await fetch(FIREBASE_DB_URL, {
+            // Single POST — get real Firebase key back
+            const postRes = await fetch(FIREBASE_DB_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(newAsset)
             });
-            const created = await res.json();
-            const savedItem = { ...newAsset, firebaseKey: created && created.name ? created.name : undefined };
-            setAssets(prev => [savedItem, ...prev.map(a => ({ ...a, highlighted: false }))]);
-            setHighlightedAssetKey(getRowUniqueKey(savedItem));
-            await logStockHistory(cleanParticulars, 'INITIAL REGISTRATION', `New item registered under ${cleanGroup}. Opening Qty: ${newAsset.openingQty}, Purchase: ${newAsset.newPurchase}`);
+            const postData = await postRes.json();
+            const savedAsset = { ...newAsset, firebaseKey: postData?.name };
+
+            // Insert directly into local state — no refetch, no race
+            setAssets(prev => {
+              const exists = prev.some(a => a.firebaseKey === savedAsset.firebaseKey || a.id === savedAsset.id);
+              return exists ? prev : [savedAsset, ...prev];
+            });
+
+            await logStockHistory(newAsset.particulars, 'INITIAL REGISTRATION', `New item registered. Opening Qty: ${newAsset.openingQty}, Purchase: ${newAsset.newPurchase}`);
             showToast("New asset registered successfully!", "success");
           } catch(err) {
-            setAssets(prev => [newAsset, ...prev]);
+            const localAsset = { ...newAsset };
+            setAssets(prev => {
+              const exists = prev.some(a => a.id === localAsset.id);
+              return exists ? prev : [localAsset, ...prev];
+            });
             showToast("Asset saved locally.", "info");
           }
         }
 
+        isSavingRef.current = false;
         setIsModalOpen(false);
         setEditingAsset(null);
       };
@@ -638,10 +580,9 @@
         return { totalItems, totalIssued, totalShort, totalDead, lowStockCount };
       }, [assets]);
 
-      // Normalize group names so group-wise count & filtering always match all items
       const groupCounts = useMemo(() => {
         return assets.reduce((acc, curr) => {
-          const g = normalizeGroup(curr.group);
+          const g = curr.group || 'OTHER';
           acc[g] = (acc[g] || 0) + 1;
           return acc;
         }, {});
@@ -650,30 +591,27 @@
       const filteredAssets = useMemo(() => {
         return assets.filter(item => {
           const searchLower = searchQuery.toLowerCase();
-          const matchesSearch = !searchLower ||
-            (item.particulars || '').toLowerCase().includes(searchLower) ||
-            normalizeGroup(item.group).toLowerCase().includes(searchLower) ||
-            (item.serialNo || '').toLowerCase().includes(searchLower) ||
-            (item.brand || '').toLowerCase().includes(searchLower) ||
-            (item.remark || '').toLowerCase().includes(searchLower) ||
-            (item.location || '').toLowerCase().includes(searchLower);
+          const matchesSearch = (item.particulars || '').toLowerCase().includes(searchLower) ||
+                              (item.group || '').toLowerCase().includes(searchLower) ||
+                              (item.serialNo || '').toLowerCase().includes(searchLower) ||
+                              (item.brand || '').toLowerCase().includes(searchLower) ||
+                              (item.location || '').toLowerCase().includes(searchLower);
           const matchesLocation = locationFilter === 'All' || !locationFilter || (item.location || '').toLowerCase() === locationFilter.toLowerCase();
-          const matchesGroup = !selectedGroupFilter || normalizeGroup(item.group) === normalizeGroup(selectedGroupFilter);
+          const matchesGroup = !selectedGroupFilter || (item.group || '').toLowerCase() === selectedGroupFilter.toLowerCase();
           return matchesSearch && matchesLocation && matchesGroup;
         });
       }, [assets, searchQuery, locationFilter, selectedGroupFilter]);
 
       const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
       const paginatedAssets = useMemo(() => {
-        const safePage = Math.min(currentPage, totalPages);
-        return filteredAssets.slice((safePage - 1) * itemsPerPage, safePage * itemsPerPage);
-      }, [filteredAssets, currentPage, itemsPerPage, totalPages]);
+        return filteredAssets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+      }, [filteredAssets, currentPage, itemsPerPage]);
 
       return (
         <div className="flex h-screen bg-slate-100 text-slate-800 overflow-hidden font-sans">
-          
+
           {toast.show && (
-            <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold flex items-center gap-2.5 transition-all transform animate-in slide-in-from-bottom-5 ${
+            <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold flex items-center gap-2.5 transition-all transform ${
               toast.type === 'success' ? 'bg-slate-900 text-white border-emerald-500/40' :
               toast.type === 'error' ? 'bg-rose-900 text-white border-rose-500/40' :
               'bg-slate-900 text-white border-slate-700'
@@ -683,17 +621,17 @@
             </div>
           )}
 
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload} 
-            accept=".xlsx, .xls, .csv" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".xlsx, .xls, .csv"
+            className="hidden"
           />
 
           <aside className="w-72 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 border-r border-slate-800 shrink-0">
             <div className="space-y-4 flex flex-col h-full overflow-hidden">
-              
+
               <div className="flex items-center gap-3 px-2 py-3 border-b border-slate-800 shrink-0">
                 <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-brand-600/30">
                   <Icons.Stock />
@@ -724,8 +662,8 @@
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition cursor-pointer text-left ${
-                        isActive 
-                          ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/25' 
+                        isActive
+                          ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/25'
                           : 'text-slate-400 hover:bg-slate-800/80 hover:text-white'
                       }`}
                     >
@@ -739,7 +677,7 @@
               <div className="bg-slate-800/60 p-3 rounded-2xl border border-slate-700/60 space-y-2 shrink-0">
                 <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-400">
                   <span>Inventory Health</span>
-                  <span className="text-emerald-400 font-mono">{assets.length} Items</span>
+                  <span className="text-emerald-400 font-mono">99.8%</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="bg-slate-900/80 p-2 rounded-xl">
@@ -795,11 +733,11 @@
 
             {activeTab === 'inventory' && (
               <div className="flex-1 flex flex-col overflow-hidden space-y-4">
-                
+
                 <div className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs space-y-2.5">
                   <div className="flex justify-between items-center">
                     <div className="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
-                      <Icons.Stock /> Stock Control & Group-Wise Register ({assets.length} Total Items)
+                      <Icons.Stock /> Stock Control & Auto-Calculation Suite
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -825,8 +763,8 @@
 
                   <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
                     <button
-                      onClick={() => { setSelectedGroupFilter(''); setCurrentPage(1); }}
-                      className={`min-w-[140px] p-2.5 rounded-xl text-left border transition cursor-pointer shrink-0 ${
+                      onClick={() => setSelectedGroupFilter('')}
+                      className={`min-w-[130px] p-2.5 rounded-xl text-left border transition cursor-pointer ${
                         selectedGroupFilter === ''
                           ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -840,14 +778,14 @@
 
                     {Object.keys(groupCounts).map(grp => {
                       const count = groupCounts[grp];
-                      const isSelected = normalizeGroup(selectedGroupFilter) === grp;
+                      const isSelected = selectedGroupFilter.toLowerCase() === grp.toLowerCase();
                       return (
                         <button
                           key={grp}
-                          onClick={() => { setSelectedGroupFilter(grp); setCurrentPage(1); }}
-                          className={`min-w-[145px] p-2.5 rounded-xl text-left border transition cursor-pointer flex justify-between items-start shrink-0 ${
-                            isSelected 
-                              ? 'bg-brand-600 border-brand-600 text-white shadow-sm' 
+                          onClick={() => setSelectedGroupFilter(grp)}
+                          className={`min-w-[140px] p-2.5 rounded-xl text-left border transition cursor-pointer flex justify-between items-start ${
+                            isSelected
+                              ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
                               : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                           }`}
                         >
@@ -865,11 +803,9 @@
 
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-4">
                   <div className="flex items-center gap-3">
-                    <h1 className="text-sm font-extrabold text-slate-900 tracking-wide uppercase">
-                      Stock Register {selectedGroupFilter ? `— ${selectedGroupFilter}` : '(All Items)'}
-                    </h1>
+                    <h1 className="text-sm font-extrabold text-slate-900 tracking-wide uppercase">Stock Register (Auto-Updating Balance)</h1>
                     <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 font-mono text-xs rounded-full font-bold">
-                      {filteredAssets.length} / {assets.length} Records
+                      {filteredAssets.length} Records
                     </span>
                   </div>
 
@@ -878,18 +814,18 @@
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Icons.Search />
                       </span>
-                      <input 
+                      <input
                         type="text"
-                        placeholder="Search particulars, remark, tag..."
+                        placeholder="Search particulars, cable, tag..."
                         value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-brand-500 w-64"
                       />
                     </div>
 
                     <select
                       value={locationFilter}
-                      onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
+                      onChange={(e) => setLocationFilter(e.target.value)}
                       className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none"
                     >
                       <option value="All">Location: All</option>
@@ -899,31 +835,15 @@
                       <option value="Design Lab">Design Lab</option>
                     </select>
 
-                    <button 
+                    <button
                       onClick={() => {
                         setEditingAsset(null);
                         setFormData({
-                          group: selectedGroupFilter || 'CABLE',
-                          particulars: '',
-                          brand: 'Dell',
-                          customBrand: '',
-                          serialNo: '',
-                          vendor: '',
-                          invoiceNo: '',
-                          warranty: '',
-                          cableLength: '',
-                          measurementUnit: 'Piece',
-                          openingQty: 0,
-                          newPurchase: 0,
-                          issueItems: 0,
-                          shortItems: 0,
-                          deadItems: 0,
-                          minAlert: 2,
-                          category: 'Consumable',
-                          location: 'IT Stores',
-                          remark: '',
-                          entryMonth: getCurrentMonthYear(),
-                          lastUpdated: getFormattedDateTime()
+                          group: 'CABLE', particulars: '', brand: 'Dell', customBrand: '', serialNo: '',
+                          vendor: '', invoiceNo: '', warranty: '', cableLength: '', measurementUnit: 'Piece',
+                          openingQty: 0, newPurchase: 0, issueItems: 0, shortItems: 0, deadItems: 0,
+                          minAlert: 2, category: 'Consumable', location: 'IT Stores',
+                          entryMonth: getCurrentMonthYear(), lastUpdated: getFormattedDateTime()
                         });
                         setIsModalOpen(true);
                       }}
@@ -939,7 +859,7 @@
                     <table className="w-full text-left border-collapse table-compact text-xs">
                       <thead className="bg-slate-50 text-slate-600 uppercase font-extrabold text-[10px] sticky top-0 z-10 border-b border-slate-200">
                         <tr>
-                          <th className="p-3 w-44 text-center">Action</th>
+                          <th className="p-3 w-32 text-center">Action</th>
                           <th>Group / Particulars</th>
                           <th>Brand & Specification</th>
                           <th className="text-center">Opening</th>
@@ -950,14 +870,13 @@
                           <th className="text-center">Short</th>
                           <th className="text-center">Dead</th>
                           <th>Location</th>
-                          <th>Remarks (Whom & Department)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                         {loading ? (
-                          <tr><td colSpan="12" className="text-center py-14 text-slate-400 font-semibold">Loading stock records...</td></tr>
+                          <tr><td colSpan="11" className="text-center py-14 text-slate-400 font-semibold">Loading stock records...</td></tr>
                         ) : paginatedAssets.length === 0 ? (
-                          <tr><td colSpan="12" className="text-center py-14 text-slate-400 font-semibold">No assets found. Click "+ Register New Asset" to add items.</td></tr>
+                          <tr><td colSpan="11" className="text-center py-14 text-slate-400 font-semibold">No assets found. Click "+ Register New Asset" to add items.</td></tr>
                         ) : (
                           paginatedAssets.map((item) => {
                             const opening = Number(item.openingQty || 0);
@@ -966,52 +885,26 @@
                             const short = Number(item.shortItems || 0);
                             const dead = Number(item.deadItems || 0);
                             const minAlertQty = Number(item.minAlert || 2);
-                            
+
                             const bal = (opening + purch) - (issue + short + dead);
                             const isLow = bal <= minAlertQty;
-                            const rowKey = getRowUniqueKey(item);
-                            const isHighlighted = Boolean(item.highlighted || highlightedAssetKey === rowKey);
 
                             return (
-                              <tr
-                                key={rowKey}
-                                className={`transition ${
-                                  isHighlighted
-                                    ? 'bg-amber-100/80 ring-1 ring-inset ring-amber-400'
-                                    : isLow
-                                    ? 'bg-rose-50/30 hover:bg-slate-50/80'
-                                    : 'hover:bg-slate-50/80'
-                                }`}
-                              >
+                              <tr key={item.firebaseKey || `local-${item.id}`} className={`hover:bg-slate-50/80 transition ${isLow ? 'bg-amber-50/30' : ''}`}>
                                 <td className="p-2 text-center whitespace-nowrap">
                                   <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
                                     <button
-                                      onClick={() => {
-                                        setQuickIssueAsset(item);
-                                        setQuickIssueForm({
-                                          quantity: 1,
-                                          department: 'HR Department',
-                                          receiver: '',
-                                          extraNote: ''
-                                        });
-                                      }}
-                                      title="Issue Item (Deduct Stock & Add Remark)"
-                                      className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-bold transition"
-                                    >
-                                      Issue
-                                    </button>
-                                    <button 
                                       onClick={() => setViewModalItem(item)}
                                       title="Print Asset Slip"
                                       className="p-1 hover:bg-white text-brand-600 rounded-lg transition"
                                     >
                                       <Icons.Eye />
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={() => {
                                         setEditingAsset(item);
                                         setFormData({
-                                          group: normalizeGroup(item.group),
+                                          group: item.group || 'CABLE',
                                           particulars: item.particulars || '',
                                           brand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? item.brand : 'Other',
                                           customBrand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? '' : (item.brand || ''),
@@ -1029,7 +922,6 @@
                                           minAlert: item.minAlert || 2,
                                           category: item.category || 'Consumable',
                                           location: item.location || '',
-                                          remark: item.remark || '',
                                           entryMonth: item.entryMonth || getCurrentMonthYear(),
                                           lastUpdated: item.lastUpdated || getFormattedDateTime()
                                         });
@@ -1040,7 +932,7 @@
                                     >
                                       <Icons.Edit />
                                     </button>
-                                    <button 
+                                    <button
                                       onClick={() => handleDeleteAsset(item)}
                                       title="Delete"
                                       className="p-1 hover:bg-white text-rose-600 rounded-lg transition"
@@ -1050,10 +942,9 @@
                                   </div>
                                 </td>
                                 <td>
-                                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{normalizeGroup(item.group)}</div>
+                                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.group || 'GENERAL'}</div>
                                   <div className="font-extrabold text-slate-900 text-xs tracking-tight flex items-center gap-1.5">
                                     {item.particulars}
-                                    {isHighlighted && <span className="px-1.5 py-0.2 bg-amber-500 text-white font-bold text-[9px] rounded uppercase">Issued / Updated</span>}
                                     {isLow && <span className="px-1.5 py-0.2 bg-rose-500 text-white font-bold text-[9px] rounded uppercase animate-pulse">Low Stock</span>}
                                   </div>
                                   <div className="text-[10px] text-slate-400 font-mono">Updated: {item.lastUpdated || 'N/A'}</div>
@@ -1080,15 +971,6 @@
                                     {item.location || 'Unassigned'}
                                   </span>
                                 </td>
-                                <td className="max-w-xs">
-                                  {item.remark ? (
-                                    <span className="inline-block px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-800 text-[11px] font-semibold">
-                                      {item.remark}
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-400 italic text-[11px]">—</span>
-                                  )}
-                                </td>
                               </tr>
                             );
                           })
@@ -1099,7 +981,7 @@
 
                   <div className="p-3 bg-white border-t border-slate-200 flex flex-wrap justify-between items-center gap-3 text-xs text-slate-500">
                     <div className="flex items-center gap-3">
-                      <span>Showing {paginatedAssets.length} of {filteredAssets.length} items (Total in DB: {assets.length})</span>
+                      <span>Showing {paginatedAssets.length} of {filteredAssets.length} items</span>
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-slate-600">Rows:</span>
                         <select
@@ -1113,13 +995,12 @@
                           <option value="10">10</option>
                           <option value="25">25</option>
                           <option value="50">50</option>
-                          <option value="150">150</option>
                         </select>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
-                      <button 
+                      <button
                         onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                         disabled={currentPage === 1}
                         className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold disabled:opacity-40 text-slate-700 hover:bg-slate-50 transition"
@@ -1127,7 +1008,7 @@
                         Previous
                       </button>
                       <span className="font-mono font-bold text-slate-800 px-2">Page {currentPage} of {totalPages}</span>
-                      <button 
+                      <button
                         onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                         disabled={currentPage === totalPages}
                         className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold disabled:opacity-40 text-slate-700 hover:bg-slate-50 transition"
@@ -1145,22 +1026,19 @@
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
                   <div>
                     <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Temporary Asset & Departmental Issue Registry (HR / Units)</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Issuing items deducts once from that exact stock item, highlights its row, and logs department & receiver remarks.</p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Issuing items (e.g., HDMI Cable to HR) automatically logs the consumption.</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => setShowMovementReportModal(true)}
+                      className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+                    >
+                      <Icons.Report /> Movement History
+                    </button>
+                    <button
                       onClick={() => {
-                        const firstItem = assets[0];
                         setEditingTempItem(null);
-                        setTempForm({
-                          selectedAssetKey: firstItem ? getRowUniqueKey(firstItem) : '',
-                          assetName: firstItem ? firstItem.particulars : '',
-                          assetTagNo: firstItem ? (firstItem.serialNo || '') : '',
-                          department: 'HR Department',
-                          receiver: '',
-                          quantity: 1,
-                          status: 'Temporary Given'
-                        });
+                        setTempForm({ assetName: '', assetTagNo: '', department: 'HR Department', receiver: '', quantity: 1, status: 'Temporary Given' });
                         setIsTempModalOpen(true);
                       }}
                       className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition"
@@ -1196,7 +1074,7 @@
                         tempDispatches.map((item, idx) => {
                           const isReturn = (item.status || '').toLowerCase() === 'return back';
                           return (
-                            <tr key={item.firebaseKey || item.id} className="hover:bg-slate-50 transition">
+                            <tr key={item.firebaseKey || `local-${item.id}`} className="hover:bg-slate-50 transition">
                               <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
                               <td className="font-extrabold text-slate-900">{item.assetName}</td>
                               <td className="font-mono text-brand-600 font-bold">{item.assetTagNo}</td>
@@ -1206,8 +1084,8 @@
                               <td className="font-mono text-slate-500 text-[11px]">{item.issueDate}</td>
                               <td className="text-center">
                                 <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] border flex items-center gap-1 justify-center w-fit mx-auto ${
-                                  isReturn 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                  isReturn
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                     : 'bg-amber-50 text-amber-700 border-amber-200'
                                 }`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${isReturn ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
@@ -1222,15 +1100,13 @@
                                         const timestamped = getFormattedDateTime();
                                         const updated = { ...item, status: 'Return Back', returnDate: timestamped };
                                         if (item.firebaseKey) {
-                                          try {
-                                            await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, {
-                                              method: 'PUT',
-                                              headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify(updated)
-                                            });
-                                          } catch (e) {}
+                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, {
+                                            method: 'PUT',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(updated)
+                                          });
                                         }
-                                        setTempDispatches(tempDispatches.map(d => (d.id === item.id || d.firebaseKey === item.firebaseKey) ? updated : d));
+                                        setTempDispatches(prev => prev.map(d => (d.id === item.id || d.firebaseKey === item.firebaseKey) ? updated : d));
                                         await logStockHistory(item.assetName, 'RETURNED TO STORE (+)', `Item returned from ${item.department} to store.`);
                                         showToast("Item marked as returned to store!", "success");
                                       }}
@@ -1244,11 +1120,9 @@
                                     onClick={async () => {
                                       if (window.confirm("Delete this dispatch record?")) {
                                         if (item.firebaseKey) {
-                                          try {
-                                            await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
-                                          } catch (e) {}
+                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
                                         }
-                                        setTempDispatches(tempDispatches.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
+                                        setTempDispatches(prev => prev.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
                                         showToast("Dispatch record removed.", "info");
                                       }
                                     }}
@@ -1270,9 +1144,17 @@
 
             {activeTab === 'preventive_maint' && (
               <div className="flex-1 overflow-auto space-y-4">
-                <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs">
-                  <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Preventive Maintenance (PM) Schedule</h1>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Hardware specifications, network config, and periodic audit logs ({pmSchedules.length} schedules).</p>
+                <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex justify-between items-center">
+                  <div>
+                    <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Preventive Maintenance (PM) Schedule</h1>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">Hardware specifications, network config, and periodic audit logs.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowPmReportModal(true)}
+                    className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+                  >
+                    <Icons.Report /> Audit Trail ({pmAuditLogs.length})
+                  </button>
                 </header>
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 text-center text-xs text-slate-500 font-medium">
                   Preventive Maintenance 12-Month Calendar Schedule active and synchronized.
@@ -1344,7 +1226,7 @@
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                       {assets.map((item, idx) => (
-                        <tr key={getRowUniqueKey(item)} className="hover:bg-slate-50">
+                        <tr key={item.firebaseKey || `local-${item.id}`} className="hover:bg-slate-50">
                           <td className="p-3 font-mono text-slate-400">{idx + 1}</td>
                           <td className="font-extrabold text-slate-900">{item.particulars}</td>
                           <td className="font-mono text-slate-600">{item.brand} ({item.serialNo || 'NO-SERIAL'})</td>
@@ -1433,116 +1315,13 @@
 
           </main>
 
-          {/* DIRECT SINGLE-ITEM ISSUE MODAL */}
-          {quickIssueAsset && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
-                <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <div>
-                    <h3 className="font-extrabold text-sm text-slate-900">Issue Item: {quickIssueAsset.particulars}</h3>
-                    <p className="text-[11px] text-slate-500">
-                      Current Net Balance:{' '}
-                      <strong className="font-mono text-emerald-700">
-                        {(Number(quickIssueAsset.openingQty || 0) + Number(quickIssueAsset.newPurchase || 0)) - (Number(quickIssueAsset.issueItems || 0) + Number(quickIssueAsset.shortItems || 0) + Number(quickIssueAsset.deadItems || 0))}
-                      </strong>
-                    </p>
-                  </div>
-                  <button onClick={() => setQuickIssueAsset(null)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
-                </div>
-
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const ok = await applyIssueToSingleAsset(
-                      quickIssueAsset,
-                      quickIssueForm.quantity,
-                      quickIssueForm.department,
-                      quickIssueForm.receiver,
-                      quickIssueForm.extraNote
-                    );
-                    if (ok) {
-                      showToast(`Issued ${quickIssueForm.quantity} ${quickIssueAsset.particulars} to ${quickIssueForm.receiver} (${quickIssueForm.department}).`, "success");
-                      setQuickIssueAsset(null);
-                    }
-                  }}
-                  className="space-y-3.5 text-xs"
-                >
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Quantity to Issue *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={quickIssueForm.quantity}
-                        onChange={(e) => setQuickIssueForm({ ...quickIssueForm, quantity: Number(e.target.value) })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-mono font-bold text-amber-700"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-semibold text-slate-600 mb-1">Department *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. HR Department, OPD"
-                        value={quickIssueForm.department}
-                        onChange={(e) => setQuickIssueForm({ ...quickIssueForm, department: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Given To (Person Name) *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Mr. Sharma"
-                      value={quickIssueForm.receiver}
-                      onChange={(e) => setQuickIssueForm({ ...quickIssueForm, receiver: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Additional Note (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. For reception desk"
-                      value={quickIssueForm.extraNote}
-                      onChange={(e) => setQuickIssueForm({ ...quickIssueForm, extraNote: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setQuickIssueAsset(null)}
-                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-md transition"
-                    >
-                      Deduct Stock & Save Remark
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* STOCK HISTORY & MONTHLY AUDIT LOG MODAL */}
           {showHistoryModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-3xl w-full p-6 space-y-4 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-900">Monthly Stock Activity & History Log</h3>
-                    <p className="text-[11px] text-slate-500">Trace of every new purchase addition and departmental consumption</p>
+                    <p className="text-[11px] text-slate-500">Trace of every new purchase addition and departmental consumption (e.g. HDMI cable purchase / HR issue)</p>
                   </div>
                   <button onClick={() => setShowHistoryModal(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
@@ -1567,8 +1346,8 @@
                             <td className="font-bold text-slate-900">{h.itemName}</td>
                             <td>
                               <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                                (h.actionType || '').includes('NEW PURCHASE') ? 'bg-emerald-100 text-emerald-800' :
-                                (h.actionType || '').includes('CONSUMED') ? 'bg-amber-100 text-amber-800' :
+                                h.actionType.includes('NEW PURCHASE') ? 'bg-emerald-100 text-emerald-800' :
+                                h.actionType.includes('CONSUMED') ? 'bg-amber-100 text-amber-800' :
                                 'bg-indigo-100 text-indigo-800'
                               }`}>
                                 {h.actionType}
@@ -1591,7 +1370,6 @@
             </div>
           )}
 
-          {/* VIEW / PRINT MODAL */}
           {viewModalItem && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div id="printable-slip" className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-xl w-full p-8 space-y-6 text-slate-800">
@@ -1606,10 +1384,9 @@
 
                 <div className="grid grid-cols-2 gap-4 text-xs bg-slate-50 p-5 rounded-2xl border border-slate-200">
                   <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Particulars</span> <strong className="text-slate-900 text-sm">{viewModalItem.particulars}</strong></div>
-                  <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Asset Group</span> <strong className="text-slate-900">{normalizeGroup(viewModalItem.group)}</strong></div>
+                  <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Asset Group</span> <strong className="text-slate-900">{viewModalItem.group}</strong></div>
                   <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Brand & Specs</span> {viewModalItem.brand === 'Other' ? viewModalItem.customBrand : viewModalItem.brand}</div>
                   <div><span className="text-slate-400 font-bold block text-[10px] uppercase">Net Balance Stock</span> <span className="font-mono font-black text-emerald-600 text-sm">{(Number(viewModalItem.openingQty || 0) + Number(viewModalItem.newPurchase || 0)) - (Number(viewModalItem.issueItems || 0) + Number(viewModalItem.shortItems || 0) + Number(viewModalItem.deadItems || 0))} {viewModalItem.measurementUnit}</span></div>
-                  <div className="col-span-2"><span className="text-slate-400 font-bold block text-[10px] uppercase">Issue Remarks</span> <span className="font-semibold text-slate-800">{viewModalItem.remark || '—'}</span></div>
                 </div>
 
                 <div className="pt-8 border-t border-slate-200 grid grid-cols-2 gap-8 text-center text-xs">
@@ -1635,7 +1412,6 @@
             </div>
           )}
 
-          {/* ADD / EDIT ASSET MODAL */}
           {isModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8 text-slate-800">
@@ -1650,7 +1426,7 @@
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Asset Group Name *</label>
-                      <input 
+                      <input
                         type="text"
                         required
                         placeholder="e.g. CABLE, MOUSE, KEYBOARD"
@@ -1661,9 +1437,9 @@
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Item Particulars *</label>
-                      <input 
-                        type="text" 
-                        required 
+                      <input
+                        type="text"
+                        required
                         placeholder="e.g. HDMI CABLE 3M"
                         value={formData.particulars}
                         onChange={(e) => setFormData({ ...formData, particulars: e.target.value.toUpperCase() })}
@@ -1675,7 +1451,7 @@
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Brand Name *</label>
-                      <select 
+                      <select
                         value={formData.brand}
                         onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
@@ -1693,7 +1469,7 @@
                     {formData.brand === 'Other' && (
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Custom Brand *</label>
-                        <input 
+                        <input
                           type="text"
                           required
                           placeholder="Brand Name"
@@ -1706,7 +1482,7 @@
 
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Category *</label>
-                      <select 
+                      <select
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
@@ -1719,8 +1495,8 @@
 
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Assigned Location</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g. IT Stores"
                         value={formData.location}
                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -1732,8 +1508,8 @@
                   <div className="grid grid-cols-4 gap-3">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Serial / Asset Tag</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g. HD-3M-01"
                         value={formData.serialNo}
                         onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
@@ -1742,8 +1518,8 @@
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Cable Length (m)</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="e.g. 3.0"
                         value={formData.cableLength}
                         onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })}
@@ -1752,7 +1528,7 @@
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Unit of Measure</label>
-                      <select 
+                      <select
                         value={formData.measurementUnit}
                         onChange={(e) => setFormData({ ...formData, measurementUnit: e.target.value })}
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
@@ -1764,8 +1540,8 @@
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Min Stock Alert Qty *</label>
-                      <input 
-                        type="number" 
+                      <input
+                        type="number"
                         min="0"
                         required
                         value={formData.minAlert}
@@ -1775,17 +1551,6 @@
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Remarks (Whom / Department / Notes)</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Issued to Mr. Sharma (HR Department)"
-                      value={formData.remark}
-                      onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                    />
-                  </div>
-
                   <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                     <div className="text-[11px] font-extrabold text-brand-600 uppercase">
                       Stock Calculation Formula: Net Balance = (Opening + New Purchase) - (Issued + Short + Dead)
@@ -1793,8 +1558,8 @@
                     <div className="grid grid-cols-5 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Opening Qty</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="0"
                           value={formData.openingQty}
                           onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })}
@@ -1803,8 +1568,8 @@
                       </div>
                       <div>
                         <label className="block font-semibold text-brand-600 mb-1">New Purchase (+)</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="0"
                           value={formData.newPurchase}
                           onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })}
@@ -1813,8 +1578,8 @@
                       </div>
                       <div>
                         <label className="block font-semibold text-amber-600 mb-1">Issued / HR (-)</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="0"
                           value={formData.issueItems}
                           onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })}
@@ -1823,8 +1588,8 @@
                       </div>
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Short</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="0"
                           value={formData.shortItems}
                           onChange={(e) => setFormData({ ...formData, shortItems: Number(e.target.value) })}
@@ -1833,8 +1598,8 @@
                       </div>
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Dead</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="0"
                           value={formData.deadItems}
                           onChange={(e) => setFormData({ ...formData, deadItems: Number(e.target.value) })}
@@ -1845,14 +1610,14 @@
                   </div>
 
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setIsModalOpen(false)}
                       className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       type="submit"
                       className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition"
                     >
@@ -1864,7 +1629,6 @@
             </div>
           )}
 
-          {/* ISSUE ITEM MODAL (From Temporary Deployment Tab) */}
           {isTempModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
@@ -1876,69 +1640,80 @@
                 </div>
                 <form onSubmit={async (e) => {
                   e.preventDefault();
-                  const selectedItem = assets.find(a => getRowUniqueKey(a) === tempForm.selectedAssetKey) ||
-                                       assets.find(a => (a.particulars || '').toLowerCase() === (tempForm.assetName || '').trim().toLowerCase());
+                  const timestamped = getFormattedDateTime();
 
-                  if (selectedItem) {
-                    const ok = await applyIssueToSingleAsset(
-                      selectedItem,
-                      tempForm.quantity,
-                      tempForm.department,
-                      tempForm.receiver
+                  const newDispatch = {
+                    id: `td_${Date.now()}`,
+                    ...tempForm,
+                    issueDate: timestamped
+                  };
+
+                  try {
+                    // 1. Save dispatch to Firebase
+                    const dispRes = await fetch(FIREBASE_TEMP_URL, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(newDispatch)
+                    });
+                    const dispData = await dispRes.json();
+                    const savedDispatch = { ...newDispatch, firebaseKey: dispData?.name };
+
+                    // 2. Add to local dispatch state immediately
+                    setTempDispatches(prev => [savedDispatch, ...prev]);
+
+                    // 3. STRICT asset match — exact serialNo OR exact particulars
+                    const searchName = (tempForm.assetName || '').trim().toUpperCase();
+                    const searchTag  = (tempForm.assetTagNo || '').trim().toUpperCase();
+                    const foundAsset = assets.find(a =>
+                      (a.serialNo || '').trim().toUpperCase() === searchTag ||
+                      (a.particulars || '').trim().toUpperCase() === searchName
                     );
-                    if (ok) {
-                      showToast("Item issued once, row highlighted & remark saved!", "success");
-                      setIsTempModalOpen(false);
-                    }
-                  } else {
-                    const timestamped = getFormattedDateTime();
-                    const newDisp = {
-                      id: `td_${Date.now()}`,
-                      ...tempForm,
-                      issueDate: timestamped
-                    };
-                    try {
-                      await fetch(FIREBASE_TEMP_URL, {
-                        method: 'POST',
+
+                    if (foundAsset && foundAsset.firebaseKey) {
+                      const qty = Number(tempForm.quantity || 1);
+                      const updatedIssued = Number(foundAsset.issueItems || 0) + qty;
+
+                      // 4. PATCH Firebase
+                      await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${foundAsset.firebaseKey}.json`, {
+                        method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newDisp)
+                        body: JSON.stringify({ issueItems: updatedIssued, lastUpdated: timestamped })
                       });
-                    } catch (e) {}
-                    setTempDispatches(prev => [newDisp, ...prev]);
-                    showToast("Dispatch recorded.", "info");
-                    setIsTempModalOpen(false);
+
+                      // 5. IMMEDIATE local state update — no refetch, no race
+                      setAssets(prev => prev.map(a =>
+                        a.firebaseKey === foundAsset.firebaseKey
+                          ? { ...a, issueItems: updatedIssued, lastUpdated: timestamped }
+                          : a
+                      ));
+
+                      await logStockHistory(foundAsset.particulars, `CONSUMED / ISSUED (-${qty})`, `Issued ${qty} unit(s) to ${tempForm.department} (Receiver: ${tempForm.receiver})`);
+                      showToast(`Issued ${qty} unit(s) of "${foundAsset.particulars}". Balance updated.`, "success");
+                    } else {
+                      await logStockHistory(tempForm.assetName, `CONSUMED / ISSUED (-${tempForm.quantity})`, `Issued ${tempForm.quantity} unit(s) to ${tempForm.department}. ⚠ No matching stock record — balance NOT auto-updated.`);
+                      showToast(`⚠ Dispatch saved, but no matching item found for "${tempForm.assetName}". Please check exact name/tag.`, "error");
+                    }
+                  } catch(err) {
+                    setTempDispatches(prev => [{ ...newDispatch }, ...prev]);
+                    showToast("Dispatch saved locally. Check network.", "info");
                   }
+
+                  setIsTempModalOpen(false);
                 }} className="space-y-3.5 text-xs">
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">Select Exact Stock Item *</label>
-                    <select
+                    <label className="block font-semibold text-slate-600 mb-1">Item Name / Particulars *</label>
+                    <input
+                      type="text"
                       required
-                      value={tempForm.selectedAssetKey}
-                      onChange={(e) => {
-                        const chosen = assets.find(a => getRowUniqueKey(a) === e.target.value);
-                        setTempForm({
-                          ...tempForm,
-                          selectedAssetKey: e.target.value,
-                          assetName: chosen ? chosen.particulars : '',
-                          assetTagNo: chosen ? (chosen.serialNo || '') : ''
-                        });
-                      }}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900"
-                    >
-                      <option value="">-- Choose Stock Item --</option>
-                      {assets.map(a => {
-                        const bal = (Number(a.openingQty || 0) + Number(a.newPurchase || 0)) - (Number(a.issueItems || 0) + Number(a.shortItems || 0) + Number(a.deadItems || 0));
-                        return (
-                          <option key={getRowUniqueKey(a)} value={getRowUniqueKey(a)}>
-                            [{normalizeGroup(a.group)}] {a.particulars} ({a.brand}) — Available: {bal}
-                          </option>
-                        );
-                      })}
-                    </select>
+                      placeholder="e.g. HDMI CABLE 3M"
+                      value={tempForm.assetName}
+                      onChange={(e) => setTempForm({ ...tempForm, assetName: e.target.value.toUpperCase() })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
+                    />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-600 mb-1">Asset Tag No / Serial *</label>
-                    <input 
+                    <input
                       type="text"
                       required
                       placeholder="e.g. HD-3M-01"
@@ -1950,7 +1725,7 @@
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Department (e.g. HR) *</label>
-                      <input 
+                      <input
                         type="text"
                         required
                         placeholder="HR Department"
@@ -1961,7 +1736,7 @@
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Quantity to Deduct *</label>
-                      <input 
+                      <input
                         type="number"
                         min="1"
                         required
@@ -1973,7 +1748,7 @@
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-600 mb-1">Receiver Name *</label>
-                    <input 
+                    <input
                       type="text"
                       required
                       placeholder="e.g. Mr. Sharma (HR)"
@@ -1983,14 +1758,14 @@
                     />
                   </div>
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setIsTempModalOpen(false)}
                       className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
                     >
                       Cancel
                     </button>
-                    <button 
+                    <button
                       type="submit"
                       className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition"
                     >
