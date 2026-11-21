@@ -13,16 +13,8 @@
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            brand: {
-              50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5',
-              700: '#4338ca', 800: '#3730a3', 900: '#312e81',
-            }
-          }
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+          colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' } }
         }
       }
     }
@@ -35,19 +27,11 @@
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-    .table-compact th, .table-compact td {
-      padding: 9px 12px !important;
-      line-height: 1.3 !important;
-    }
-
+    .table-compact th, .table-compact td { padding: 9px 12px !important; line-height: 1.3 !important; }
     @media print {
       body * { visibility: hidden; }
       #printable-slip, #printable-slip * { visibility: visible; }
-      #printable-slip {
-        position: fixed; left: 0; top: 0; width: 100%; margin: 0; padding: 24px;
-        background: white; color: black; box-shadow: none !important; border: none !important;
-      }
+      #printable-slip { position: fixed; left: 0; top: 0; width: 100%; margin: 0; padding: 24px; background: white; color: black; box-shadow: none !important; border: none !important; }
       .no-print { display: none !important; }
     }
   </style>
@@ -144,8 +128,8 @@
       const [toast, setToast] = useState({ show: false, msg: '', type: 'info' });
 
       const fileInputRef = useRef(null);
-      const fetchAllDataRef = useRef(null); // Fix #4: stable interval reference
-      const isSavingRef = useRef(false);    // Fix #1: prevent double-click duplicate saves
+      const fetchAllDataRef = useRef(null);
+      const isSavingRef = useRef(false);
 
       const [tempDispatches, setTempDispatches] = useState([]);
       const [isTempModalOpen, setIsTempModalOpen] = useState(false);
@@ -167,33 +151,16 @@
       const [showPmReportModal, setShowPmReportModal] = useState(false);
 
       const [pmForm, setPmForm] = useState({
-        department: 'General Registration',
-        equipmentName: 'Desktop PC Workstation',
-        cpuBrand: 'Dell',
-        cpuProcessor: 'Intel Core i5-12400 (2.50GHz)',
-        cpuTag: 'CPU-TAG-101',
-        monitorBrand: 'Dell',
-        monitorTag: 'MON-TAG-101',
-        printerBrand: 'HP',
-        printerModel: 'HP LaserJet Pro M126nw',
-        printerTag: 'PRN-TAG-202',
-        printerIP: '192.168.1.150',
-        systemIP: '192.168.1.50',
-        systemMac: '00:1A:2B:3C:4D:5E',
-        ramType: 'DDR4',
-        ramCapacityValue: '16',
-        ramCapacityUnit: 'GB',
-        hddType: 'SSD',
-        hddCapacityValue: '512',
-        hddCapacityUnit: 'GB',
-        msOffice: 'Office 2021 Pro Plus',
-        outlook: 'Configured & Synced',
-        backup: 'Active Daily',
-        antiVirus: 'Quick Heal Total Security (Updated)',
-        status: 'Scheduled',
-        dueDate: '2026-01-05',
-        targetMonth: 'Jan',
-        slotRange: '01 to 10 January'
+        department: 'General Registration', equipmentName: 'Desktop PC Workstation',
+        cpuBrand: 'Dell', cpuProcessor: 'Intel Core i5-12400 (2.50GHz)', cpuTag: 'CPU-TAG-101',
+        monitorBrand: 'Dell', monitorTag: 'MON-TAG-101',
+        printerBrand: 'HP', printerModel: 'HP LaserJet Pro M126nw', printerTag: 'PRN-TAG-202', printerIP: '192.168.1.150',
+        systemIP: '192.168.1.50', systemMac: '00:1A:2B:3C:4D:5E',
+        ramType: 'DDR4', ramCapacityValue: '16', ramCapacityUnit: 'GB',
+        hddType: 'SSD', hddCapacityValue: '512', hddCapacityUnit: 'GB',
+        msOffice: 'Office 2021 Pro Plus', outlook: 'Configured & Synced', backup: 'Active Daily',
+        antiVirus: 'Quick Heal Total Security (Updated)', status: 'Scheduled', dueDate: '2026-01-05',
+        targetMonth: 'Jan', slotRange: '01 to 10 January'
       });
 
       const sampleFallbackUsers = [
@@ -205,9 +172,7 @@
       const [users, setUsers] = useState(sampleFallbackUsers);
       const [isUserModalOpen, setIsUserModalOpen] = useState(false);
       const [editingUser, setEditingUser] = useState(null);
-      const [userForm, setUserForm] = useState({
-        name: '', username: '', pin: '', role: 'Store Keeper', department: 'IT Operations', status: 'Active'
-      });
+      const [userForm, setUserForm] = useState({ name: '', username: '', pin: '', role: 'Store Keeper', department: 'IT Operations', status: 'Active' });
 
       const monthsList = [
         { code: 'Jan', name: 'January', slots: ['01 to 10 January', '11 to 20 January', '21 to 31 January'] },
@@ -260,22 +225,43 @@
       ];
 
       // ============================================================
-      // Fix #2: Deduplicate on fetch — purane duplicate records UI me nahi dikhenge
+      // SAFE DEDUPE — only merges records with EXACT serialNo match
+      // (empty serialNo never merged → purana data 100% safe)
       // ============================================================
       const dedupeAssets = (list) => {
+        const safeList = Array.isArray(list) ? list.filter(Boolean) : [];
         const seen = new Map();
-        list.forEach(item => {
-          const sig = `${(item.particulars || '').trim().toUpperCase()}|${(item.brand || '').trim().toUpperCase()}|${(item.serialNo || '').trim().toUpperCase()}`;
-          const existing = seen.get(sig);
-          if (!existing) {
+        const result = [];
+
+        safeList.forEach(item => {
+          const serial = String(item.serialNo || '').trim();
+          const particulars = String(item.particulars || '').trim();
+          const brand = String(item.brand || '').trim();
+
+          // RULE: Only dedupe if serialNo is NON-EMPTY and it's a genuine duplicate
+          // (same non-empty serial + same particulars + same brand)
+          if (serial && particulars) {
+            const sig = `${particulars.toUpperCase()}|${brand.toUpperCase()}|${serial.toUpperCase()}`;
+            const existing = seen.get(sig);
+            if (existing) {
+              // Keep the one with the most recent lastUpdated
+              const itemTime = new Date(item.lastUpdated || 0).getTime() || 0;
+              const existingTime = new Date(existing.lastUpdated || 0).getTime() || 0;
+              if (itemTime > existingTime) {
+                // Replace in result array
+                const idx = result.findIndex(r => r === existing);
+                if (idx >= 0) result[idx] = item;
+                seen.set(sig, item);
+              }
+              return; // skip this duplicate
+            }
             seen.set(sig, item);
-          } else {
-            const itemTime = new Date(item.lastUpdated || 0).getTime() || 0;
-            const existingTime = new Date(existing.lastUpdated || 0).getTime() || 0;
-            if (itemTime > existingTime) seen.set(sig, item);
           }
+          // If serialNo is empty → ALWAYS keep (no dedupe)
+          result.push(item);
         });
-        return Array.from(seen.values());
+
+        return result;
       };
 
       const fetchAllData = async (silent = true) => {
@@ -293,6 +279,7 @@
           if (resAssets.status === 'fulfilled' && resAssets.value) {
             const loaded = Object.keys(resAssets.value).map(k => ({ ...resAssets.value[k], firebaseKey: k }));
             const deduped = dedupeAssets(loaded);
+            console.log(`[Assets] Fetched: ${loaded.length}, After dedupe: ${deduped.length}`);
             setAssets(deduped.length > 0 ? deduped : sampleFallbackAssets);
           } else if (assets.length === 0) {
             setAssets(sampleFallbackAssets);
@@ -335,12 +322,8 @@
         }
       };
 
-      // Keep ref synced so interval always uses latest closure
       fetchAllDataRef.current = fetchAllData;
 
-      // ============================================================
-      // Fix #4: Stable interval via ref (no stale closure)
-      // ============================================================
       useEffect(() => {
         fetchAllDataRef.current(true);
         const intervalId = setInterval(() => {
@@ -455,12 +438,9 @@
         entryMonth: getCurrentMonthYear(), lastUpdated: getFormattedDateTime()
       });
 
-      // ============================================================
-      // Fix #1: Single POST + immediate local state insert + double-click guard
-      // ============================================================
       const handleSaveAsset = async (e) => {
         e.preventDefault();
-        if (isSavingRef.current) return; // prevent double-click duplicate
+        if (isSavingRef.current) return;
         isSavingRef.current = true;
 
         const timestamped = getFormattedDateTime();
@@ -470,12 +450,7 @@
           const diffPurchase = Number(formData.newPurchase || 0) - Number(editingAsset.newPurchase || 0);
           const diffIssue = Number(formData.issueItems || 0) - Number(editingAsset.issueItems || 0);
 
-          const updated = {
-            ...editingAsset,
-            ...formData,
-            brand: finalBrand,
-            lastUpdated: timestamped
-          };
+          const updated = { ...editingAsset, ...formData, brand: finalBrand, lastUpdated: timestamped };
           try {
             if (editingAsset.firebaseKey) {
               await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${editingAsset.firebaseKey}.json`, {
@@ -500,14 +475,8 @@
             showToast("Error updating record in database.", "error");
           }
         } else {
-          const newAsset = {
-            id: Date.now(),
-            ...formData,
-            brand: finalBrand,
-            lastUpdated: timestamped
-          };
+          const newAsset = { id: Date.now(), ...formData, brand: finalBrand, lastUpdated: timestamped };
           try {
-            // Single POST — get real Firebase key back
             const postRes = await fetch(FIREBASE_DB_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -516,7 +485,6 @@
             const postData = await postRes.json();
             const savedAsset = { ...newAsset, firebaseKey: postData?.name };
 
-            // Insert directly into local state — no refetch, no race
             setAssets(prev => {
               const exists = prev.some(a => a.firebaseKey === savedAsset.firebaseKey || a.id === savedAsset.id);
               return exists ? prev : [savedAsset, ...prev];
@@ -543,9 +511,7 @@
         if (window.confirm(`Permanently remove "${item.particulars}" from active registry?`)) {
           try {
             if (item.firebaseKey) {
-              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${item.firebaseKey}.json`, {
-                method: 'DELETE'
-              });
+              await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${item.firebaseKey}.json`, { method: 'DELETE' });
             }
             await logStockHistory(item.particulars, 'DELETED ITEM', `Asset particulars "${item.particulars}" deleted from active stock register.`);
             setAssets(prev => prev.filter(a => a.id !== item.id && a.firebaseKey !== item.firebaseKey));
@@ -557,12 +523,7 @@
       };
 
       const summaryMetrics = useMemo(() => {
-        let totalItems = 0;
-        let totalIssued = 0;
-        let totalShort = 0;
-        let totalDead = 0;
-        let lowStockCount = 0;
-
+        let totalItems = 0, totalIssued = 0, totalShort = 0, totalDead = 0, lowStockCount = 0;
         assets.forEach(a => {
           const op = Number(a.openingQty || 0);
           const pur = Number(a.newPurchase || 0);
@@ -576,7 +537,6 @@
           totalDead += dd;
           if (bal <= Number(a.minAlert || 2)) lowStockCount++;
         });
-
         return { totalItems, totalIssued, totalShort, totalDead, lowStockCount };
       }, [assets]);
 
@@ -621,17 +581,10 @@
             </div>
           )}
 
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept=".xlsx, .xls, .csv"
-            className="hidden"
-          />
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx, .xls, .csv" className="hidden" />
 
           <aside className="w-72 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 border-r border-slate-800 shrink-0">
             <div className="space-y-4 flex flex-col h-full overflow-hidden">
-
               <div className="flex items-center gap-3 px-2 py-3 border-b border-slate-800 shrink-0">
                 <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-brand-600/30">
                   <Icons.Stock />
@@ -658,17 +611,9 @@
                   const IconComponent = tab.icon;
                   const isActive = activeTab === tab.id;
                   return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition cursor-pointer text-left ${
-                        isActive
-                          ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/25'
-                          : 'text-slate-400 hover:bg-slate-800/80 hover:text-white'
-                      }`}
-                    >
-                      <IconComponent />
-                      <span>{tab.label}</span>
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition cursor-pointer text-left ${isActive ? 'bg-brand-600 text-white font-bold shadow-md shadow-brand-600/25' : 'text-slate-400 hover:bg-slate-800/80 hover:text-white'}`}>
+                      <IconComponent /><span>{tab.label}</span>
                     </button>
                   );
                 })}
@@ -676,8 +621,7 @@
 
               <div className="bg-slate-800/60 p-3 rounded-2xl border border-slate-700/60 space-y-2 shrink-0">
                 <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-400">
-                  <span>Inventory Health</span>
-                  <span className="text-emerald-400 font-mono">99.8%</span>
+                  <span>Inventory Health</span><span className="text-emerald-400 font-mono">99.8%</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="bg-slate-900/80 p-2 rounded-xl">
@@ -686,9 +630,7 @@
                   </div>
                   <div className="bg-slate-900/80 p-2 rounded-xl">
                     <div className="text-[10px] text-slate-400">Low Stock</div>
-                    <div className={`text-sm font-extrabold font-mono ${summaryMetrics.lowStockCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                      {summaryMetrics.lowStockCount}
-                    </div>
+                    <div className={`text-sm font-extrabold font-mono ${summaryMetrics.lowStockCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{summaryMetrics.lowStockCount}</div>
                   </div>
                 </div>
               </div>
@@ -705,25 +647,14 @@
                     <div className="text-[10px] text-indigo-400 font-medium truncate">{loggedInUser ? loggedInUser.role : 'Administrator'}</div>
                   </div>
                 </div>
-                <button
-                  onClick={() => fetchAllData(false)}
-                  disabled={isSyncing}
-                  title="Manual Sync"
-                  className={`p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition ${isSyncing ? 'animate-spin text-brand-400' : ''}`}
-                >
+                <button onClick={() => fetchAllData(false)} disabled={isSyncing}
+                  className={`p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700 transition ${isSyncing ? 'animate-spin text-brand-400' : ''}`}>
                   <Icons.Refresh />
                 </button>
               </div>
 
-              <button
-                onClick={() => {
-                  setIsLoggedIn(false);
-                  setLoggedInUser(null);
-                  setPinInput('');
-                  setUsernameInput('');
-                }}
-                className="w-full py-2 bg-slate-800 hover:bg-rose-950/50 hover:text-rose-300 text-slate-400 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border border-slate-700/60"
-              >
+              <button onClick={() => { setIsLoggedIn(false); setLoggedInUser(null); setPinInput(''); setUsernameInput(''); }}
+                className="w-full py-2 bg-slate-800 hover:bg-rose-950/50 hover:text-rose-300 text-slate-400 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 border border-slate-700/60">
                 <Icons.SignOut /> Sign Out
               </button>
             </div>
@@ -733,67 +664,43 @@
 
             {activeTab === 'inventory' && (
               <div className="flex-1 flex flex-col overflow-hidden space-y-4">
-
                 <div className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs space-y-2.5">
                   <div className="flex justify-between items-center">
                     <div className="text-xs font-extrabold uppercase tracking-wider text-slate-600 flex items-center gap-2">
                       <Icons.Stock /> Stock Control & Auto-Calculation Suite
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowHistoryModal(true)}
-                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
-                      >
+                      <button onClick={() => setShowHistoryModal(true)}
+                        className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
                         <Icons.Report /> Stock History / Log ({stockHistory.length})
                       </button>
-                      <button
-                        onClick={() => fileInputRef.current.click()}
-                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
-                      >
+                      <button onClick={() => fileInputRef.current.click()}
+                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
                         <Icons.Upload /> Import Excel
                       </button>
-                      <button
-                        onClick={() => exportToExcel(`Stock_Register_${Date.now()}.xlsx`, assets)}
-                        className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
-                      >
+                      <button onClick={() => exportToExcel(`Stock_Register_${Date.now()}.xlsx`, assets)}
+                        className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
                         <Icons.Download /> Export Excel
                       </button>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-thin">
-                    <button
-                      onClick={() => setSelectedGroupFilter('')}
-                      className={`min-w-[130px] p-2.5 rounded-xl text-left border transition cursor-pointer ${
-                        selectedGroupFilter === ''
-                          ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
+                    <button onClick={() => setSelectedGroupFilter('')}
+                      className={`min-w-[130px] p-2.5 rounded-xl text-left border transition cursor-pointer ${selectedGroupFilter === '' ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}>
                       <div className="text-xs font-black uppercase">ALL GROUPS</div>
-                      <div className={`text-[10px] font-semibold mt-0.5 ${selectedGroupFilter === '' ? 'text-brand-100' : 'text-slate-500'}`}>
-                        {assets.length} items logged
-                      </div>
+                      <div className={`text-[10px] font-semibold mt-0.5 ${selectedGroupFilter === '' ? 'text-brand-100' : 'text-slate-500'}`}>{assets.length} items logged</div>
                     </button>
 
                     {Object.keys(groupCounts).map(grp => {
                       const count = groupCounts[grp];
                       const isSelected = selectedGroupFilter.toLowerCase() === grp.toLowerCase();
                       return (
-                        <button
-                          key={grp}
-                          onClick={() => setSelectedGroupFilter(grp)}
-                          className={`min-w-[140px] p-2.5 rounded-xl text-left border transition cursor-pointer flex justify-between items-start ${
-                            isSelected
-                              ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
-                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                          }`}
-                        >
+                        <button key={grp} onClick={() => setSelectedGroupFilter(grp)}
+                          className={`min-w-[140px] p-2.5 rounded-xl text-left border transition cursor-pointer flex justify-between items-start ${isSelected ? 'bg-brand-600 border-brand-600 text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}>
                           <div>
                             <div className="text-xs font-black uppercase tracking-tight">{grp}</div>
-                            <div className={`text-[10px] font-semibold mt-0.5 ${isSelected ? 'text-brand-100' : 'text-slate-500'}`}>
-                              {count} assets
-                            </div>
+                            <div className={`text-[10px] font-semibold mt-0.5 ${isSelected ? 'text-brand-100' : 'text-slate-500'}`}>{count} assets</div>
                           </div>
                         </button>
                       );
@@ -804,30 +711,18 @@
                 <header className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs flex flex-wrap justify-between items-center gap-4">
                   <div className="flex items-center gap-3">
                     <h1 className="text-sm font-extrabold text-slate-900 tracking-wide uppercase">Stock Register (Auto-Updating Balance)</h1>
-                    <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 font-mono text-xs rounded-full font-bold">
-                      {filteredAssets.length} Records
-                    </span>
+                    <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 font-mono text-xs rounded-full font-bold">{filteredAssets.length} Records</span>
                   </div>
 
                   <div className="flex items-center gap-2.5">
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Icons.Search />
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="Search particulars, cable, tag..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-brand-500 w-64"
-                      />
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Icons.Search /></span>
+                      <input type="text" placeholder="Search particulars, cable, tag..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-brand-500 w-64" />
                     </div>
 
-                    <select
-                      value={locationFilter}
-                      onChange={(e) => setLocationFilter(e.target.value)}
-                      className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none"
-                    >
+                    <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}
+                      className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none">
                       <option value="All">Location: All</option>
                       <option value="IT Stores">IT Stores</option>
                       <option value="Server Room">Server Room</option>
@@ -835,20 +730,18 @@
                       <option value="Design Lab">Design Lab</option>
                     </select>
 
-                    <button
-                      onClick={() => {
-                        setEditingAsset(null);
-                        setFormData({
-                          group: 'CABLE', particulars: '', brand: 'Dell', customBrand: '', serialNo: '',
-                          vendor: '', invoiceNo: '', warranty: '', cableLength: '', measurementUnit: 'Piece',
-                          openingQty: 0, newPurchase: 0, issueItems: 0, shortItems: 0, deadItems: 0,
-                          minAlert: 2, category: 'Consumable', location: 'IT Stores',
-                          entryMonth: getCurrentMonthYear(), lastUpdated: getFormattedDateTime()
-                        });
-                        setIsModalOpen(true);
-                      }}
-                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 transition flex items-center gap-1.5"
-                    >
+                    <button onClick={() => {
+                      setEditingAsset(null);
+                      setFormData({
+                        group: 'CABLE', particulars: '', brand: 'Dell', customBrand: '', serialNo: '',
+                        vendor: '', invoiceNo: '', warranty: '', cableLength: '', measurementUnit: 'Piece',
+                        openingQty: 0, newPurchase: 0, issueItems: 0, shortItems: 0, deadItems: 0,
+                        minAlert: 2, category: 'Consumable', location: 'IT Stores',
+                        entryMonth: getCurrentMonthYear(), lastUpdated: getFormattedDateTime()
+                      });
+                      setIsModalOpen(true);
+                    }}
+                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 transition flex items-center gap-1.5">
                       <Icons.Plus /> Register New Asset / Purchase
                     </button>
                   </div>
@@ -885,7 +778,6 @@
                             const short = Number(item.shortItems || 0);
                             const dead = Number(item.deadItems || 0);
                             const minAlertQty = Number(item.minAlert || 2);
-
                             const bal = (opening + purch) - (issue + short + dead);
                             const isLow = bal <= minAlertQty;
 
@@ -893,52 +785,25 @@
                               <tr key={item.firebaseKey || `local-${item.id}`} className={`hover:bg-slate-50/80 transition ${isLow ? 'bg-amber-50/30' : ''}`}>
                                 <td className="p-2 text-center whitespace-nowrap">
                                   <div className="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                                    <button
-                                      onClick={() => setViewModalItem(item)}
-                                      title="Print Asset Slip"
-                                      className="p-1 hover:bg-white text-brand-600 rounded-lg transition"
-                                    >
-                                      <Icons.Eye />
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setEditingAsset(item);
-                                        setFormData({
-                                          group: item.group || 'CABLE',
-                                          particulars: item.particulars || '',
-                                          brand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? item.brand : 'Other',
-                                          customBrand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? '' : (item.brand || ''),
-                                          serialNo: item.serialNo || '',
-                                          vendor: item.vendor || '',
-                                          invoiceNo: item.invoiceNo || '',
-                                          warranty: item.warranty || '',
-                                          cableLength: item.cableLength || '',
-                                          measurementUnit: item.measurementUnit || 'Piece',
-                                          openingQty: item.openingQty || 0,
-                                          newPurchase: item.newPurchase || 0,
-                                          issueItems: item.issueItems || 0,
-                                          shortItems: item.shortItems || 0,
-                                          deadItems: item.deadItems || 0,
-                                          minAlert: item.minAlert || 2,
-                                          category: item.category || 'Consumable',
-                                          location: item.location || '',
-                                          entryMonth: item.entryMonth || getCurrentMonthYear(),
-                                          lastUpdated: item.lastUpdated || getFormattedDateTime()
-                                        });
-                                        setIsModalOpen(true);
-                                      }}
-                                      title="Update / Add Purchase / Issue"
-                                      className="p-1 hover:bg-white text-indigo-600 rounded-lg transition"
-                                    >
-                                      <Icons.Edit />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteAsset(item)}
-                                      title="Delete"
-                                      className="p-1 hover:bg-white text-rose-600 rounded-lg transition"
-                                    >
-                                      <Icons.Trash />
-                                    </button>
+                                    <button onClick={() => setViewModalItem(item)} title="Print Asset Slip" className="p-1 hover:bg-white text-brand-600 rounded-lg transition"><Icons.Eye /></button>
+                                    <button onClick={() => {
+                                      setEditingAsset(item);
+                                      setFormData({
+                                        group: item.group || 'CABLE', particulars: item.particulars || '',
+                                        brand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? item.brand : 'Other',
+                                        customBrand: ['Dell','HP','Lenovo','Cisco','Logitech','Honeywell'].includes(item.brand) ? '' : (item.brand || ''),
+                                        serialNo: item.serialNo || '', vendor: item.vendor || '', invoiceNo: item.invoiceNo || '',
+                                        warranty: item.warranty || '', cableLength: item.cableLength || '',
+                                        measurementUnit: item.measurementUnit || 'Piece', openingQty: item.openingQty || 0,
+                                        newPurchase: item.newPurchase || 0, issueItems: item.issueItems || 0,
+                                        shortItems: item.shortItems || 0, deadItems: item.deadItems || 0,
+                                        minAlert: item.minAlert || 2, category: item.category || 'Consumable',
+                                        location: item.location || '', entryMonth: item.entryMonth || getCurrentMonthYear(),
+                                        lastUpdated: item.lastUpdated || getFormattedDateTime()
+                                      });
+                                      setIsModalOpen(true);
+                                    }} title="Update" className="p-1 hover:bg-white text-indigo-600 rounded-lg transition"><Icons.Edit /></button>
+                                    <button onClick={() => handleDeleteAsset(item)} title="Delete" className="p-1 hover:bg-white text-rose-600 rounded-lg transition"><Icons.Trash /></button>
                                   </div>
                                 </td>
                                 <td>
@@ -951,25 +816,19 @@
                                 </td>
                                 <td>
                                   <div className="font-semibold text-slate-800">{item.brand === 'Other' ? item.customBrand : item.brand}</div>
-                                  <div className="text-[10px] text-slate-400 font-mono">
-                                    {item.serialNo ? `S/N: ${item.serialNo}` : 'No Serial'} {item.cableLength && `| ${item.cableLength}m`}
-                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-mono">{item.serialNo ? `S/N: ${item.serialNo}` : 'No Serial'} {item.cableLength && `| ${item.cableLength}m`}</div>
                                 </td>
                                 <td className="text-center font-mono text-slate-700 font-semibold">{opening}</td>
                                 <td className="text-center font-mono text-brand-600 font-bold bg-brand-50/40">+{purch}</td>
                                 <td className="text-center font-mono text-amber-600 font-bold bg-amber-50/40">-{issue}</td>
                                 <td className="text-center font-mono font-black text-sm bg-slate-100">
-                                  <span className={`px-2 py-0.5 rounded-md ${isLow ? 'bg-rose-100 text-rose-800 font-extrabold' : 'text-emerald-700 bg-emerald-50'}`}>
-                                    {bal}
-                                  </span>
+                                  <span className={`px-2 py-0.5 rounded-md ${isLow ? 'bg-rose-100 text-rose-800 font-extrabold' : 'text-emerald-700 bg-emerald-50'}`}>{bal}</span>
                                 </td>
                                 <td className="text-center font-mono text-slate-500 font-bold">{minAlertQty}</td>
                                 <td className="text-center font-mono text-rose-600 font-bold">{short}</td>
                                 <td className="text-center font-mono text-slate-400">{dead}</td>
                                 <td>
-                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${item.location ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-slate-400 italic'}`}>
-                                    {item.location || 'Unassigned'}
-                                  </span>
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${item.location ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'text-slate-400 italic'}`}>{item.location || 'Unassigned'}</span>
                                 </td>
                               </tr>
                             );
@@ -984,37 +843,18 @@
                       <span>Showing {paginatedAssets.length} of {filteredAssets.length} items</span>
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-slate-600">Rows:</span>
-                        <select
-                          value={itemsPerPage}
-                          onChange={(e) => {
-                            setItemsPerPage(Number(e.target.value));
-                            setCurrentPage(1);
-                          }}
-                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800 outline-none"
-                        >
-                          <option value="10">10</option>
-                          <option value="25">25</option>
-                          <option value="50">50</option>
+                        <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                          className="px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg font-bold text-slate-800 outline-none">
+                          <option value="10">10</option><option value="25">25</option><option value="50">50</option>
                         </select>
                       </div>
                     </div>
-
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold disabled:opacity-40 text-slate-700 hover:bg-slate-50 transition"
-                      >
-                        Previous
-                      </button>
+                      <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}
+                        className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold disabled:opacity-40 text-slate-700 hover:bg-slate-50 transition">Previous</button>
                       <span className="font-mono font-bold text-slate-800 px-2">Page {currentPage} of {totalPages}</span>
-                      <button
-                        onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold disabled:opacity-40 text-slate-700 hover:bg-slate-50 transition"
-                      >
-                        Next
-                      </button>
+                      <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}
+                        className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white font-bold disabled:opacity-40 text-slate-700 hover:bg-slate-50 transition">Next</button>
                     </div>
                   </div>
                 </div>
@@ -1029,20 +869,16 @@
                     <p className="text-xs text-slate-500 font-medium mt-0.5">Issuing items (e.g., HDMI Cable to HR) automatically logs the consumption.</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowMovementReportModal(true)}
-                      className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
-                    >
+                    <button onClick={() => setShowMovementReportModal(true)}
+                      className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
                       <Icons.Report /> Movement History
                     </button>
-                    <button
-                      onClick={() => {
-                        setEditingTempItem(null);
-                        setTempForm({ assetName: '', assetTagNo: '', department: 'HR Department', receiver: '', quantity: 1, status: 'Temporary Given' });
-                        setIsTempModalOpen(true);
-                      }}
-                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition"
-                    >
+                    <button onClick={() => {
+                      setEditingTempItem(null);
+                      setTempForm({ assetName: '', assetTagNo: '', department: 'HR Department', receiver: '', quantity: 1, status: 'Temporary Given' });
+                      setIsTempModalOpen(true);
+                    }}
+                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition">
                       <Icons.Plus /> Issue Item to Department (HR / Other)
                     </button>
                   </div>
@@ -1052,24 +888,14 @@
                   <table className="w-full text-left border-collapse table-compact text-xs">
                     <thead className="bg-slate-50 text-slate-600 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
                       <tr>
-                        <th className="p-3">#</th>
-                        <th>Asset Name</th>
-                        <th>Asset Tag No</th>
-                        <th>Department (e.g. HR)</th>
-                        <th>Receiver Name</th>
-                        <th className="text-center">Qty Issued</th>
-                        <th>Issue Date</th>
-                        <th className="text-center">Status</th>
-                        <th className="text-center">Actions</th>
+                        <th className="p-3">#</th><th>Asset Name</th><th>Asset Tag No</th><th>Department (e.g. HR)</th>
+                        <th>Receiver Name</th><th className="text-center">Qty Issued</th><th>Issue Date</th>
+                        <th className="text-center">Status</th><th className="text-center">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                       {tempDispatches.length === 0 ? (
-                        <tr>
-                          <td colSpan="9" className="text-center py-14 text-slate-400 font-medium">
-                            No departmental dispatches registered.
-                          </td>
-                        </tr>
+                        <tr><td colSpan="9" className="text-center py-14 text-slate-400 font-medium">No departmental dispatches registered.</td></tr>
                       ) : (
                         tempDispatches.map((item, idx) => {
                           const isReturn = (item.status || '').toLowerCase() === 'return back';
@@ -1083,11 +909,7 @@
                               <td className="text-center font-mono font-bold text-amber-600">-{item.quantity}</td>
                               <td className="font-mono text-slate-500 text-[11px]">{item.issueDate}</td>
                               <td className="text-center">
-                                <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] border flex items-center gap-1 justify-center w-fit mx-auto ${
-                                  isReturn
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                                }`}>
+                                <span className={`px-2.5 py-1 rounded-full font-bold text-[10px] border flex items-center gap-1 justify-center w-fit mx-auto ${isReturn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${isReturn ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                                   {item.status || 'Temporary Given'}
                                 </span>
@@ -1095,39 +917,31 @@
                               <td className="text-center whitespace-nowrap">
                                 <div className="inline-flex items-center gap-1.5">
                                   {!isReturn && (
-                                    <button
-                                      onClick={async () => {
-                                        const timestamped = getFormattedDateTime();
-                                        const updated = { ...item, status: 'Return Back', returnDate: timestamped };
-                                        if (item.firebaseKey) {
-                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, {
-                                            method: 'PUT',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify(updated)
-                                          });
-                                        }
-                                        setTempDispatches(prev => prev.map(d => (d.id === item.id || d.firebaseKey === item.firebaseKey) ? updated : d));
-                                        await logStockHistory(item.assetName, 'RETURNED TO STORE (+)', `Item returned from ${item.department} to store.`);
-                                        showToast("Item marked as returned to store!", "success");
-                                      }}
-                                      title="Mark as Returned to Store"
-                                      className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 text-[10px] font-bold flex items-center gap-1 transition"
-                                    >
+                                    <button onClick={async () => {
+                                      const timestamped = getFormattedDateTime();
+                                      const updated = { ...item, status: 'Return Back', returnDate: timestamped };
+                                      if (item.firebaseKey) {
+                                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, {
+                                          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated)
+                                        });
+                                      }
+                                      setTempDispatches(prev => prev.map(d => (d.id === item.id || d.firebaseKey === item.firebaseKey) ? updated : d));
+                                      await logStockHistory(item.assetName, 'RETURNED TO STORE (+)', `Item returned from ${item.department} to store.`);
+                                      showToast("Item marked as returned to store!", "success");
+                                    }}
+                                      className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 text-[10px] font-bold flex items-center gap-1 transition">
                                       <Icons.Check /> Return
                                     </button>
                                   )}
-                                  <button
-                                    onClick={async () => {
-                                      if (window.confirm("Delete this dispatch record?")) {
-                                        if (item.firebaseKey) {
-                                          await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
-                                        }
-                                        setTempDispatches(prev => prev.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
-                                        showToast("Dispatch record removed.", "info");
+                                  <button onClick={async () => {
+                                    if (window.confirm("Delete this dispatch record?")) {
+                                      if (item.firebaseKey) {
+                                        await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/temp_dispatches/${item.firebaseKey}.json`, { method: 'DELETE' });
                                       }
-                                    }}
-                                    className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg transition"
-                                  >
+                                      setTempDispatches(prev => prev.filter(d => d.id !== item.id && d.firebaseKey !== item.firebaseKey));
+                                      showToast("Dispatch record removed.", "info");
+                                    }
+                                  }} className="p-1.5 bg-slate-100 hover:bg-rose-50 text-rose-600 rounded-lg transition">
                                     <Icons.Trash />
                                   </button>
                                 </div>
@@ -1149,10 +963,8 @@
                     <h1 className="text-sm font-extrabold tracking-wide uppercase text-slate-900">Preventive Maintenance (PM) Schedule</h1>
                     <p className="text-xs text-slate-500 font-medium mt-0.5">Hardware specifications, network config, and periodic audit logs.</p>
                   </div>
-                  <button
-                    onClick={() => setShowPmReportModal(true)}
-                    className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
-                  >
+                  <button onClick={() => setShowPmReportModal(true)}
+                    className="px-3 py-2 bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
                     <Icons.Report /> Audit Trail ({pmAuditLogs.length})
                   </button>
                 </header>
@@ -1191,16 +1003,11 @@
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Official Ledger Export Operations</h3>
                   <div className="flex gap-3">
-                    <button
-                      onClick={() => exportToExcel(`Master_IT_Ledger_${Date.now()}.xlsx`, assets)}
-                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
-                    >
+                    <button onClick={() => exportToExcel(`Master_IT_Ledger_${Date.now()}.xlsx`, assets)}
+                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm">
                       <Icons.Download /> Download Complete Ledger (Excel .xlsx)
                     </button>
-                    <button
-                      onClick={() => window.print()}
-                      className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-2"
-                    >
+                    <button onClick={() => window.print()} className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-2">
                       Print Summary Sheet
                     </button>
                   </div>
@@ -1216,13 +1023,7 @@
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
                   <table className="w-full text-left border-collapse table-compact text-xs">
                     <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] border-b border-slate-200">
-                      <tr>
-                        <th className="p-3">#</th>
-                        <th>Asset Particulars</th>
-                        <th>Brand & Serial Number</th>
-                        <th>Category</th>
-                        <th className="text-center">Lifecycle Health</th>
-                      </tr>
+                      <tr><th className="p-3">#</th><th>Asset Particulars</th><th>Brand & Serial Number</th><th>Category</th><th className="text-center">Lifecycle Health</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                       {assets.map((item, idx) => (
@@ -1274,20 +1075,12 @@
             {activeTab === 'users' && (
               <div className="flex-1 overflow-auto space-y-4">
                 <header className="bg-white border border-slate-200/90 text-slate-900 p-4 rounded-2xl shadow-xs flex justify-between items-center">
-                  <div>
-                    <h1 className="text-sm font-extrabold tracking-wide uppercase">7. Role-Based Access Control (RBAC) & System Users</h1>
-                  </div>
+                  <div><h1 className="text-sm font-extrabold tracking-wide uppercase">7. Role-Based Access Control (RBAC) & System Users</h1></div>
                 </header>
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
                   <table className="w-full text-left border-collapse table-compact text-xs">
                     <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] border-b border-slate-200">
-                      <tr>
-                        <th className="p-3">#</th>
-                        <th>User Name</th>
-                        <th>Login ID</th>
-                        <th>Privilege Role</th>
-                        <th className="text-center">Status</th>
-                      </tr>
+                      <tr><th className="p-3">#</th><th>User Name</th><th>Login ID</th><th>Privilege Role</th><th className="text-center">Status</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                       {users.map((u, i) => (
@@ -1295,16 +1088,8 @@
                           <td className="p-3 font-mono text-slate-400">{i + 1}</td>
                           <td className="font-extrabold text-slate-900">{u.name}</td>
                           <td className="font-mono text-brand-600 font-bold">@{u.username}</td>
-                          <td>
-                            <span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-[10px] border border-indigo-200">
-                              {u.role}
-                            </span>
-                          </td>
-                          <td className="text-center">
-                            <span className="px-2.5 py-0.5 rounded-full font-bold text-[10px] border bg-emerald-50 text-emerald-700 border-emerald-200">
-                              Active
-                            </span>
-                          </td>
+                          <td><span className="px-2.5 py-0.5 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-[10px] border border-indigo-200">{u.role}</span></td>
+                          <td className="text-center"><span className="px-2.5 py-0.5 rounded-full font-bold text-[10px] border bg-emerald-50 text-emerald-700 border-emerald-200">Active</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -1321,7 +1106,7 @@
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-900">Monthly Stock Activity & History Log</h3>
-                    <p className="text-[11px] text-slate-500">Trace of every new purchase addition and departmental consumption (e.g. HDMI cable purchase / HR issue)</p>
+                    <p className="text-[11px] text-slate-500">Trace of every new purchase addition and departmental consumption</p>
                   </div>
                   <button onClick={() => setShowHistoryModal(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
@@ -1329,12 +1114,7 @@
                 <div className="max-h-96 overflow-auto border border-slate-200 rounded-2xl">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead className="bg-slate-100 text-slate-700 uppercase font-bold text-[10px] sticky top-0 border-b border-slate-200">
-                      <tr>
-                        <th className="p-3">Timestamp</th>
-                        <th>Item Particulars</th>
-                        <th>Action Type</th>
-                        <th>Details</th>
-                      </tr>
+                      <tr><th className="p-3">Timestamp</th><th>Item Particulars</th><th>Action Type</th><th>Details</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium">
                       {stockHistory.length === 0 ? (
@@ -1345,11 +1125,7 @@
                             <td className="p-3 font-mono text-slate-500 text-[11px]">{h.timestamp}</td>
                             <td className="font-bold text-slate-900">{h.itemName}</td>
                             <td>
-                              <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
-                                h.actionType.includes('NEW PURCHASE') ? 'bg-emerald-100 text-emerald-800' :
-                                h.actionType.includes('CONSUMED') ? 'bg-amber-100 text-amber-800' :
-                                'bg-indigo-100 text-indigo-800'
-                              }`}>
+                              <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${h.actionType.includes('NEW PURCHASE') ? 'bg-emerald-100 text-emerald-800' : h.actionType.includes('CONSUMED') ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'}`}>
                                 {h.actionType}
                               </span>
                             </td>
@@ -1362,9 +1138,7 @@
                 </div>
 
                 <div className="flex justify-end pt-2">
-                  <button onClick={() => setShowHistoryModal(false)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">
-                    Close History Log
-                  </button>
+                  <button onClick={() => setShowHistoryModal(false)} className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs">Close History Log</button>
                 </div>
               </div>
             </div>
@@ -1390,23 +1164,13 @@
                 </div>
 
                 <div className="pt-8 border-t border-slate-200 grid grid-cols-2 gap-8 text-center text-xs">
-                  <div>
-                    <div className="h-10 border-b border-dashed border-slate-300"></div>
-                    <div className="mt-2 font-bold text-slate-600">Store Officer Signature</div>
-                  </div>
-                  <div>
-                    <div className="h-10 border-b border-dashed border-slate-300"></div>
-                    <div className="mt-2 font-bold text-slate-600">Authorized Receiver Signature</div>
-                  </div>
+                  <div><div className="h-10 border-b border-dashed border-slate-300"></div><div className="mt-2 font-bold text-slate-600">Store Officer Signature</div></div>
+                  <div><div className="h-10 border-b border-dashed border-slate-300"></div><div className="mt-2 font-bold text-slate-600">Authorized Receiver Signature</div></div>
                 </div>
 
                 <div className="no-print flex justify-end gap-2 pt-4">
-                  <button onClick={() => window.print()} className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md transition">
-                    Print Official Slip
-                  </button>
-                  <button onClick={() => setViewModalItem(null)} className="px-4 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-300 transition">
-                    Dismiss
-                  </button>
+                  <button onClick={() => window.print()} className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md transition">Print Official Slip</button>
+                  <button onClick={() => setViewModalItem(null)} className="px-4 py-2.5 rounded-xl bg-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-300 transition">Dismiss</button>
                 </div>
               </div>
             </div>
@@ -1416,9 +1180,7 @@
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4 my-8 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-extrabold text-sm text-slate-900">
-                    {editingAsset ? 'Update Stock & Purchase Entry' : 'Register New Asset / Stock Purchase'}
-                  </h3>
+                  <h3 className="font-extrabold text-sm text-slate-900">{editingAsset ? 'Update Stock & Purchase Entry' : 'Register New Asset / Stock Purchase'}</h3>
                   <button onClick={() => setIsModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
 
@@ -1426,128 +1188,59 @@
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Asset Group Name *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. CABLE, MOUSE, KEYBOARD"
-                        value={formData.group}
-                        onChange={(e) => setFormData({ ...formData, group: e.target.value.toUpperCase() })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900"
-                      />
+                      <input type="text" required placeholder="e.g. CABLE, MOUSE, KEYBOARD" value={formData.group} onChange={(e) => setFormData({ ...formData, group: e.target.value.toUpperCase() })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900" />
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Item Particulars *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. HDMI CABLE 3M"
-                        value={formData.particulars}
-                        onChange={(e) => setFormData({ ...formData, particulars: e.target.value.toUpperCase() })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900"
-                      />
+                      <input type="text" required placeholder="e.g. HDMI CABLE 3M" value={formData.particulars} onChange={(e) => setFormData({ ...formData, particulars: e.target.value.toUpperCase() })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-bold text-slate-900" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Brand Name *</label>
-                      <select
-                        value={formData.brand}
-                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                      >
-                        <option value="Dell">Dell</option>
-                        <option value="HP">HP</option>
-                        <option value="Lenovo">Lenovo</option>
-                        <option value="Cisco">Cisco</option>
-                        <option value="Logitech">Logitech</option>
-                        <option value="Honeywell">Honeywell</option>
+                      <select value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900">
+                        <option value="Dell">Dell</option><option value="HP">HP</option><option value="Lenovo">Lenovo</option>
+                        <option value="Cisco">Cisco</option><option value="Logitech">Logitech</option><option value="Honeywell">Honeywell</option>
                         <option value="Other">Other (Custom)</option>
                       </select>
                     </div>
-
                     {formData.brand === 'Other' && (
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Custom Brand *</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="Brand Name"
-                          value={formData.customBrand}
-                          onChange={(e) => setFormData({ ...formData, customBrand: e.target.value })}
-                          className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold"
-                        />
+                        <input type="text" required placeholder="Brand Name" value={formData.customBrand} onChange={(e) => setFormData({ ...formData, customBrand: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold" />
                       </div>
                     )}
-
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Category *</label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                      >
-                        <option value="Consumable">Consumable</option>
-                        <option value="Non-Consumable">Non-Consumable</option>
-                        <option value="Fixed Assets">Fixed Assets</option>
+                      <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900">
+                        <option value="Consumable">Consumable</option><option value="Non-Consumable">Non-Consumable</option><option value="Fixed Assets">Fixed Assets</option>
                       </select>
                     </div>
-
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Assigned Location</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. IT Stores"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                      />
+                      <input type="text" placeholder="e.g. IT Stores" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-4 gap-3">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Serial / Asset Tag</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. HD-3M-01"
-                        value={formData.serialNo}
-                        onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900"
-                      />
+                      <input type="text" placeholder="e.g. HD-3M-01" value={formData.serialNo} onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900" />
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Cable Length (m)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 3.0"
-                        value={formData.cableLength}
-                        onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900"
-                      />
+                      <input type="text" placeholder="e.g. 3.0" value={formData.cableLength} onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900" />
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Unit of Measure</label>
-                      <select
-                        value={formData.measurementUnit}
-                        onChange={(e) => setFormData({ ...formData, measurementUnit: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                      >
-                        <option value="Piece">Piece</option>
-                        <option value="Meter">Meter</option>
-                        <option value="GB">GB</option>
+                      <select value={formData.measurementUnit} onChange={(e) => setFormData({ ...formData, measurementUnit: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900">
+                        <option value="Piece">Piece</option><option value="Meter">Meter</option><option value="GB">GB</option>
                       </select>
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Min Stock Alert Qty *</label>
-                      <input
-                        type="number"
-                        min="0"
-                        required
-                        value={formData.minAlert}
-                        onChange={(e) => setFormData({ ...formData, minAlert: Number(e.target.value) })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 font-bold"
-                      />
+                      <input type="number" min="0" required value={formData.minAlert} onChange={(e) => setFormData({ ...formData, minAlert: Number(e.target.value) })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 font-bold" />
                     </div>
                   </div>
 
@@ -1558,69 +1251,30 @@
                     <div className="grid grid-cols-5 gap-3">
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Opening Qty</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={formData.openingQty}
-                          onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-900"
-                        />
+                        <input type="number" min="0" value={formData.openingQty} onChange={(e) => setFormData({ ...formData, openingQty: Number(e.target.value) })} className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-900" />
                       </div>
                       <div>
                         <label className="block font-semibold text-brand-600 mb-1">New Purchase (+)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={formData.newPurchase}
-                          onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })}
-                          className="w-full p-2 bg-white border border-brand-300 rounded-lg font-mono font-bold text-brand-600"
-                        />
+                        <input type="number" min="0" value={formData.newPurchase} onChange={(e) => setFormData({ ...formData, newPurchase: Number(e.target.value) })} className="w-full p-2 bg-white border border-brand-300 rounded-lg font-mono font-bold text-brand-600" />
                       </div>
                       <div>
                         <label className="block font-semibold text-amber-600 mb-1">Issued / HR (-)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={formData.issueItems}
-                          onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })}
-                          className="w-full p-2 bg-white border border-amber-300 rounded-lg font-mono font-bold text-amber-600"
-                        />
+                        <input type="number" min="0" value={formData.issueItems} onChange={(e) => setFormData({ ...formData, issueItems: Number(e.target.value) })} className="w-full p-2 bg-white border border-amber-300 rounded-lg font-mono font-bold text-amber-600" />
                       </div>
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Short</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={formData.shortItems}
-                          onChange={(e) => setFormData({ ...formData, shortItems: Number(e.target.value) })}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-rose-600"
-                        />
+                        <input type="number" min="0" value={formData.shortItems} onChange={(e) => setFormData({ ...formData, shortItems: Number(e.target.value) })} className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-rose-600" />
                       </div>
                       <div>
                         <label className="block font-semibold text-slate-600 mb-1">Dead</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={formData.deadItems}
-                          onChange={(e) => setFormData({ ...formData, deadItems: Number(e.target.value) })}
-                          className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-400"
-                        />
+                        <input type="number" min="0" value={formData.deadItems} onChange={(e) => setFormData({ ...formData, deadItems: Number(e.target.value) })} className="w-full p-2 bg-white border border-slate-300 rounded-lg font-mono font-bold text-slate-400" />
                       </div>
                     </div>
                   </div>
 
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition"
-                    >
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition">Cancel</button>
+                    <button type="submit" className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition">
                       {editingAsset ? 'Update Stock & Record History' : 'Save New Purchase'}
                     </button>
                   </div>
@@ -1633,35 +1287,22 @@
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-slate-800">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-3">
-                  <h3 className="font-extrabold text-sm text-slate-900">
-                    Issue Item to Department (e.g. HR Department)
-                  </h3>
+                  <h3 className="font-extrabold text-sm text-slate-900">Issue Item to Department (e.g. HR Department)</h3>
                   <button onClick={() => setIsTempModalOpen(false)} className="font-bold text-slate-400 hover:text-slate-700">✕</button>
                 </div>
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   const timestamped = getFormattedDateTime();
-
-                  const newDispatch = {
-                    id: `td_${Date.now()}`,
-                    ...tempForm,
-                    issueDate: timestamped
-                  };
+                  const newDispatch = { id: `td_${Date.now()}`, ...tempForm, issueDate: timestamped };
 
                   try {
-                    // 1. Save dispatch to Firebase
                     const dispRes = await fetch(FIREBASE_TEMP_URL, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify(newDispatch)
+                      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newDispatch)
                     });
                     const dispData = await dispRes.json();
                     const savedDispatch = { ...newDispatch, firebaseKey: dispData?.name };
-
-                    // 2. Add to local dispatch state immediately
                     setTempDispatches(prev => [savedDispatch, ...prev]);
 
-                    // 3. STRICT asset match — exact serialNo OR exact particulars
                     const searchName = (tempForm.assetName || '').trim().toUpperCase();
                     const searchTag  = (tempForm.assetTagNo || '').trim().toUpperCase();
                     const foundAsset = assets.find(a =>
@@ -1673,18 +1314,13 @@
                       const qty = Number(tempForm.quantity || 1);
                       const updatedIssued = Number(foundAsset.issueItems || 0) + qty;
 
-                      // 4. PATCH Firebase
                       await fetch(`https://it-asset-system-31cb8-default-rtdb.firebaseio.com/assets/${foundAsset.firebaseKey}.json`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
+                        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ issueItems: updatedIssued, lastUpdated: timestamped })
                       });
 
-                      // 5. IMMEDIATE local state update — no refetch, no race
                       setAssets(prev => prev.map(a =>
-                        a.firebaseKey === foundAsset.firebaseKey
-                          ? { ...a, issueItems: updatedIssued, lastUpdated: timestamped }
-                          : a
+                        a.firebaseKey === foundAsset.firebaseKey ? { ...a, issueItems: updatedIssued, lastUpdated: timestamped } : a
                       ));
 
                       await logStockHistory(foundAsset.particulars, `CONSUMED / ISSUED (-${qty})`, `Issued ${qty} unit(s) to ${tempForm.department} (Receiver: ${tempForm.receiver})`);
@@ -1697,80 +1333,33 @@
                     setTempDispatches(prev => [{ ...newDispatch }, ...prev]);
                     showToast("Dispatch saved locally. Check network.", "info");
                   }
-
                   setIsTempModalOpen(false);
                 }} className="space-y-3.5 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-600 mb-1">Item Name / Particulars *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. HDMI CABLE 3M"
-                      value={tempForm.assetName}
-                      onChange={(e) => setTempForm({ ...tempForm, assetName: e.target.value.toUpperCase() })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900"
-                    />
+                    <input type="text" required placeholder="e.g. HDMI CABLE 3M" value={tempForm.assetName} onChange={(e) => setTempForm({ ...tempForm, assetName: e.target.value.toUpperCase() })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900" />
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-600 mb-1">Asset Tag No / Serial *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. HD-3M-01"
-                      value={tempForm.assetTagNo}
-                      onChange={(e) => setTempForm({ ...tempForm, assetTagNo: e.target.value.toUpperCase() })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-mono font-bold text-slate-900"
-                    />
+                    <input type="text" required placeholder="e.g. HD-3M-01" value={tempForm.assetTagNo} onChange={(e) => setTempForm({ ...tempForm, assetTagNo: e.target.value.toUpperCase() })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-mono font-bold text-slate-900" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Department (e.g. HR) *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="HR Department"
-                        value={tempForm.department}
-                        onChange={(e) => setTempForm({ ...tempForm, department: e.target.value })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-semibold"
-                      />
+                      <input type="text" required placeholder="HR Department" value={tempForm.department} onChange={(e) => setTempForm({ ...tempForm, department: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-semibold" />
                     </div>
                     <div>
                       <label className="block font-semibold text-slate-600 mb-1">Quantity to Deduct *</label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={tempForm.quantity}
-                        onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })}
-                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-mono font-bold text-amber-600"
-                      />
+                      <input type="number" min="1" required value={tempForm.quantity} onChange={(e) => setTempForm({ ...tempForm, quantity: Number(e.target.value) })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-mono font-bold text-amber-600" />
                     </div>
                   </div>
                   <div>
                     <label className="block font-semibold text-slate-600 mb-1">Receiver Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Mr. Sharma (HR)"
-                      value={tempForm.receiver}
-                      onChange={(e) => setTempForm({ ...tempForm, receiver: e.target.value })}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-semibold"
-                    />
+                    <input type="text" required placeholder="e.g. Mr. Sharma (HR)" value={tempForm.receiver} onChange={(e) => setTempForm({ ...tempForm, receiver: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-semibold" />
                   </div>
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setIsTempModalOpen(false)}
-                      className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition"
-                    >
-                      Confirm Issue & Deduct Stock
-                    </button>
+                    <button type="button" onClick={() => setIsTempModalOpen(false)} className="px-4 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-600 hover:bg-slate-100 transition">Cancel</button>
+                    <button type="submit" className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-md shadow-brand-600/20 transition">Confirm Issue & Deduct Stock</button>
                   </div>
                 </form>
               </div>
