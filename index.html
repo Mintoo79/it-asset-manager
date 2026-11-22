@@ -252,6 +252,10 @@
 
           if (resMaster.status === 'fulfilled' && resMaster.value) {
             setMasterData(resMaster.value);
+          } else {
+            const defaultMaster = { groups: [{name: 'IT Peripherals'}, {name: 'Cable'}], locations: [{name: 'Server Room'}, {name: 'A Block'}], brands: [{name: 'Dell'}, {name: 'HP'}], units: [{name: 'Piece'}, {name: 'Meter'}], itemNames: [{name: 'Mouse'}, {name: 'Keyboard'}], departments: [{name: 'IT'}, {name: 'HR'}] };
+            setMasterData(defaultMaster);
+            await fetch(FIREBASE_MASTER_URL, { method: 'PUT', body: JSON.stringify(defaultMaster) });
           }
 
           if (resAudit.status === 'fulfilled' && resAudit.value) {
@@ -415,7 +419,7 @@
               <span className={`w-2 h-2 rounded-full ${toast.type === 'success' ? 'bg-emerald-400' : toast.type === 'error' ? 'bg-rose-400' : 'bg-brand-400'}`}></span><span>{toast.msg}</span>
             </div>
           )}
-          <input type="file" ref={fileInputRef} onChange={() => {}} accept=".xlsx, .xls, .csv" className="hidden" />
+          <input type="file" ref={fileInputRef} onChange={(e) => { /* excel import logic */ }} accept=".xlsx, .xls, .csv" className="hidden" />
 
           <aside className="w-72 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 border-r border-slate-800 shrink-0">
             <div className="space-y-4 flex flex-col h-full overflow-hidden">
@@ -527,37 +531,7 @@
                       </tbody>
                     </table>
                   </div>
-                  <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs font-semibold text-slate-600">
-                    <div>Page <span className="font-bold text-slate-900">{currentPage}</span> of <span className="font-bold text-slate-900">{totalPages}</span></div>
-                    <div className="flex items-center gap-2">
-                      <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-3 py-1 bg-white border border-slate-300 rounded-lg disabled:opacity-40">Prev</button>
-                      <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="px-3 py-1 bg-white border border-slate-300 rounded-lg disabled:opacity-40">Next</button>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            )}
-
-            {activeTab === 'temp_deploy' && (
-              <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200 flex-1 overflow-auto space-y-4">
-                <div className="flex justify-between items-center border-b pb-3">
-                  <h2 className="text-sm font-extrabold uppercase">Temporary Deployment ({tempDispatches.length} Records)</h2>
-                </div>
-                <table className="w-full text-xs text-left border rounded-xl overflow-hidden">
-                  <thead className="bg-slate-100"><tr><th className="p-3">Asset</th><th>Tag</th><th>Department</th><th>Receiver</th><th className="text-center">Qty</th><th>Status</th></tr></thead>
-                  <tbody className="divide-y">
-                    {tempDispatches.map((t, i) => (
-                      <tr key={t.firebaseKey || i} className="hover:bg-slate-50">
-                        <td className="p-3 font-bold">{t.assetName}</td>
-                        <td className="font-mono">{t.assetTagNo}</td>
-                        <td>{t.department}</td>
-                        <td>{t.receiver}</td>
-                        <td className="text-center font-mono font-bold">{t.quantity}</td>
-                        <td><span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">{t.status}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             )}
 
@@ -582,6 +556,7 @@
                           {(masterData[currentMasterType] || []).map((item, idx) => (
                             <tr key={idx} className="hover:bg-slate-50"><td className="p-3 font-bold text-slate-700">{item.name}</td><td className="p-3 text-emerald-600 font-semibold">Active</td></tr>
                           ))}
+                          {(masterData[currentMasterType] || []).length === 0 && <tr><td colSpan="2" className="p-4 text-center text-slate-400">No items added yet.</td></tr>}
                         </tbody>
                       </table>
                     </div>
@@ -620,7 +595,7 @@
             {activeTab === 'safety' && (
               <div className="bg-white p-6 rounded-2xl shadow-sm space-y-4">
                 <h2 className="text-lg font-extrabold border-b pb-2 flex items-center gap-2">Data Safety & Audit Logs</h2>
-                <p className="text-xs text-slate-500">Before and after snapshots of every asset modification.</p>
+                <p className="text-xs text-slate-500">Before and after snapshots of every asset modification. If you ever lose data, you can find the old snapshot here.</p>
                 <div className="border rounded-xl max-h-[60vh] overflow-auto">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-slate-800 text-white sticky top-0 z-10"><tr><th className="p-3">Time</th><th>Action</th><th>Particulars (Before)</th><th>Particulars (After)</th></tr></thead>
