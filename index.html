@@ -8,7 +8,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS for Excel Export / Import -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- SQL.js Library for SQL Playground -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
   <script>
     tailwind.config = {
@@ -19,7 +21,9 @@
             mono: ['JetBrains Mono', 'monospace'],
           },
           colors: {
-            brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81' }
+            brand: {
+              50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81',
+            }
           }
         }
       }
@@ -73,8 +77,8 @@
       Report: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>,
       Shield: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>,
       Building: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>,
-      Users: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>,
       Database: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>,
+      Users: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>,
       Search: () => <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>,
       Plus: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>,
       Edit: () => <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
@@ -120,7 +124,7 @@
       const [selectedGroupFilter, setSelectedGroupFilter] = useState('');
       const [currentPage, setCurrentPage] = useState(1);
       const [itemsPerPage, setItemsPerPage] = useState(10);
-      
+
       const [assets, setAssets] = useState([]);
       const [stockHistory, setStockHistory] = useState([]);
       const [loading, setLoading] = useState(true);
@@ -143,9 +147,28 @@
 
       const [tempDispatches, setTempDispatches] = useState([]);
       const [isTempModalOpen, setIsTempModalOpen] = useState(false);
+      const [editingTempItem, setEditingTempItem] = useState(null);
+      const [showMovementReportModal, setShowMovementReportModal] = useState(false);
+      const [showStockReportModal, setShowStockReportModal] = useState(false);
       const [showHistoryModal, setShowHistoryModal] = useState(false);
-      
+
       const [tempForm, setTempForm] = useState({ assetName: '', assetTagNo: '', department: '', receiver: '', quantity: 1, status: 'Temporary Given' });
+
+      const [pmSchedules, setPmSchedules] = useState([]);
+      const [pmAuditLogs, setPmAuditLogs] = useState([]);
+      const [isPmModalOpen, setIsPmModalOpen] = useState(false);
+      const [editingPmItem, setEditingPmItem] = useState(null);
+      const [pmSelectedMonth, setPmSelectedMonth] = useState('Jan');
+      const [pmSelectedSlot, setPmSelectedSlot] = useState('01 to 10 January');
+      const [showPmReportModal, setShowPmReportModal] = useState(false);
+
+      const [pmForm, setPmForm] = useState({
+        department: 'General Registration', equipmentName: 'Desktop PC Workstation', cpuBrand: 'Dell', cpuProcessor: 'Intel Core i5-12400 (2.50GHz)', cpuTag: 'CPU-TAG-101',
+        monitorBrand: 'Dell', monitorTag: 'MON-TAG-101', printerBrand: 'HP', printerModel: 'HP LaserJet Pro M126nw', printerTag: 'PRN-TAG-202',
+        printerIP: '192.168.1.150', systemIP: '192.168.1.50', systemMac: '00:1A:2B:3C:4D:5E', ramType: 'DDR4', ramCapacityValue: '16', ramCapacityUnit: 'GB',
+        hddType: 'SSD', hddCapacityValue: '512', hddCapacityUnit: 'GB', msOffice: 'Office 2021 Pro Plus', outlook: 'Configured & Synced',
+        backup: 'Active Daily', antiVirus: 'Quick Heal Total Security (Updated)', status: 'Scheduled', dueDate: '2026-01-05', targetMonth: 'Jan', slotRange: '01 to 10 January'
+      });
 
       const sampleFallbackUsers = [
         { id: 1, name: 'Super Admin', username: 'admin', pin: '1234', role: 'Super Administrator', department: 'IT Management', status: 'Active' },
@@ -153,6 +176,21 @@
         { id: 3, name: 'Dr. Alok Sharma', username: 'alok', pin: '1122', role: 'Department Head', department: 'General Registration', status: 'Active' }
       ];
       const [users, setUsers] = useState(sampleFallbackUsers);
+
+      const monthsList = [
+        { code: 'Jan', name: 'January', slots: ['01 to 10 January', '11 to 20 January', '21 to 31 January'] },
+        { code: 'Feb', name: 'February', slots: ['01 to 10 February', '11 to 20 February', '21 to 28 February'] },
+        { code: 'Mar', name: 'March', slots: ['01 to 10 March', '11 to 20 March', '21 to 31 March'] },
+        { code: 'Apr', name: 'April', slots: ['01 to 10 April', '11 to 20 April', '21 to 30 April'] },
+        { code: 'May', name: 'May', slots: ['01 to 10 May', '11 to 20 May', '21 to 31 May'] },
+        { code: 'Jun', name: 'June', slots: ['01 to 10 June', '11 to 20 June', '21 to 30 June'] },
+        { code: 'Jul', name: 'July', slots: ['01 to 10 July', '11 to 20 July', '21 to 31 July'] },
+        { code: 'Aug', name: 'August', slots: ['01 to 10 August', '11 to 20 August', '21 to 31 August'] },
+        { code: 'Sep', name: 'September', slots: ['01 to 10 September', '11 to 20 September', '21 to 30 September'] },
+        { code: 'Oct', name: 'October', slots: ['01 to 10 October', '11 to 20 October', '21 to 31 October'] },
+        { code: 'Nov', name: 'November', slots: ['01 to 10 November', '11 to 20 November', '21 to 30 November'] },
+        { code: 'Dec', name: 'December', slots: ['01 to 10 December', '11 to 20 December', '21 to 31 December'] }
+      ];
 
       const showToast = (msg, type = 'info') => {
         setToast({ show: true, msg, type });
@@ -181,9 +219,11 @@
       const fetchAllData = async (silent = true) => {
         if (!silent) setIsSyncing(true);
         try {
-          const [resAssets, resTemp, resUsers, resHist, resMaster, resAudit] = await Promise.allSettled([
+          const [resAssets, resTemp, resPm, resLogs, resUsers, resHist, resMaster, resAudit] = await Promise.allSettled([
             fetch(FIREBASE_DB_URL).then(r => r.json()),
             fetch(FIREBASE_TEMP_URL).then(r => r.json()),
+            fetch(FIREBASE_PM_URL).then(r => r.json()),
+            fetch(FIREBASE_PM_LOGS_URL).then(r => r.json()),
             fetch(FIREBASE_USERS_URL).then(r => r.json()),
             fetch(FIREBASE_HISTORY_URL).then(r => r.json()),
             fetch(FIREBASE_MASTER_URL).then(r => r.json()),
@@ -199,6 +239,12 @@
           if (resTemp.status === 'fulfilled' && resTemp.value) {
             setTempDispatches(Object.keys(resTemp.value).map(k => ({ ...resTemp.value[k], firebaseKey: k })));
           }
+          if (resPm.status === 'fulfilled' && resPm.value) {
+            setPmSchedules(Object.keys(resPm.value).map(k => ({ ...resPm.value[k], firebaseKey: k })));
+          }
+          if (resLogs.status === 'fulfilled' && resLogs.value) {
+            setPmAuditLogs(Object.keys(resLogs.value).map(k => ({ ...resLogs.value[k], firebaseKey: k })));
+          }
           if (resUsers.status === 'fulfilled' && resUsers.value) {
             const loadedUsers = Object.keys(resUsers.value).map(k => ({ ...resUsers.value[k], firebaseKey: k }));
             setUsers(loadedUsers.length > 0 ? loadedUsers : sampleFallbackUsers);
@@ -206,10 +252,6 @@
 
           if (resMaster.status === 'fulfilled' && resMaster.value) {
             setMasterData(resMaster.value);
-          } else {
-            const defaultMaster = { groups: [{name: 'IT Peripherals'}, {name: 'Cable'}], locations: [{name: 'Server Room'}, {name: 'A Block'}], brands: [{name: 'Dell'}, {name: 'HP'}], units: [{name: 'Piece'}, {name: 'Meter'}], itemNames: [{name: 'Mouse'}, {name: 'Keyboard'}], departments: [{name: 'IT'}, {name: 'HR'}] };
-            setMasterData(defaultMaster);
-            await fetch(FIREBASE_MASTER_URL, { method: 'PUT', body: JSON.stringify(defaultMaster) });
           }
 
           if (resAudit.status === 'fulfilled' && resAudit.value) {
@@ -245,7 +287,7 @@
           sqlDb.run(`CREATE TABLE assets (id INTEGER, "group" TEXT, particulars TEXT, brand TEXT, location TEXT, openingQty INTEGER, newPurchase INTEGER, issueItems INTEGER, shortItems INTEGER, deadItems INTEGER);`);
           assets.forEach(a => {
             sqlDb.run(`INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-              a.id || 0, a.group || '', a.particulars || '', a.brand || '', a.location || '', 
+              a.id || 0, a.group || '', a.particulars || '', a.brand || '', a.location || '',
               a.openingQty || 0, a.newPurchase || 0, a.issueItems || 0, a.shortItems || 0, a.deadItems || 0
             ]);
           });
@@ -259,8 +301,8 @@
 
       const handleLogin = (e) => {
         e.preventDefault();
-        const matched = users.find(u => 
-          (String(u.username).trim().toLowerCase() === String(usernameInput).trim().toLowerCase() || String(u.name).trim().toLowerCase() === String(usernameInput).trim().toLowerCase()) && 
+        const matched = users.find(u =>
+          (String(u.username).trim().toLowerCase() === String(usernameInput).trim().toLowerCase() || String(u.name).trim().toLowerCase() === String(usernameInput).trim().toLowerCase()) &&
           String(u.pin).trim() === String(pinInput).trim() && u.status === 'Active'
         );
         if (matched) { setIsLoggedIn(true); setLoggedInUser(matched); setLoginError(''); showToast(`Authenticated as ${matched.name}`, "success"); }
@@ -366,25 +408,6 @@
       const totalPages = Math.ceil(filteredAssets.length / itemsPerPage) || 1;
       const paginatedAssets = useMemo(() => filteredAssets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage), [filteredAssets, currentPage, itemsPerPage]);
 
-      if (!isLoggedIn) {
-        return (
-          <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 space-y-6">
-              <div className="text-center">
-                <h1 className="text-2xl font-extrabold text-slate-900">IT Asset Portal</h1>
-                <p className="text-xs text-slate-500 mt-1">Login with Username & PIN</p>
-              </div>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <input type="text" placeholder="Username (e.g. admin)" value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} className="w-full p-3 border rounded-xl text-sm" required />
-                <input type="password" placeholder="PIN (e.g. 1234)" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full p-3 border rounded-xl text-sm" required />
-                {loginError && <p className="text-xs text-rose-500 font-bold">{loginError}</p>}
-                <button type="submit" className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">Login</button>
-              </form>
-            </div>
-          </div>
-        );
-      }
-
       return (
         <div className="flex h-screen bg-slate-100 text-slate-800 overflow-hidden font-sans">
           {toast.show && (
@@ -392,7 +415,7 @@
               <span className={`w-2 h-2 rounded-full ${toast.type === 'success' ? 'bg-emerald-400' : toast.type === 'error' ? 'bg-rose-400' : 'bg-brand-400'}`}></span><span>{toast.msg}</span>
             </div>
           )}
-          <input type="file" ref={fileInputRef} onChange={(e) => { }} accept=".xlsx, .xls, .csv" className="hidden" />
+          <input type="file" ref={fileInputRef} onChange={() => {}} accept=".xlsx, .xls, .csv" className="hidden" />
 
           <aside className="w-72 bg-slate-900 text-slate-300 flex flex-col justify-between p-4 border-r border-slate-800 shrink-0">
             <div className="space-y-4 flex flex-col h-full overflow-hidden">
@@ -452,7 +475,7 @@
           </aside>
 
           <main className="flex-1 flex flex-col overflow-hidden bg-slate-100 p-6 space-y-4">
-            
+
             {activeTab === 'inventory' && (
               <div className="flex-1 flex flex-col overflow-hidden space-y-4">
                 <div className="bg-white border border-slate-200/90 p-4 rounded-2xl shadow-xs space-y-2.5">
@@ -504,7 +527,37 @@
                       </tbody>
                     </table>
                   </div>
+                  <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs font-semibold text-slate-600">
+                    <div>Page <span className="font-bold text-slate-900">{currentPage}</span> of <span className="font-bold text-slate-900">{totalPages}</span></div>
+                    <div className="flex items-center gap-2">
+                      <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="px-3 py-1 bg-white border border-slate-300 rounded-lg disabled:opacity-40">Prev</button>
+                      <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="px-3 py-1 bg-white border border-slate-300 rounded-lg disabled:opacity-40">Next</button>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'temp_deploy' && (
+              <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200 flex-1 overflow-auto space-y-4">
+                <div className="flex justify-between items-center border-b pb-3">
+                  <h2 className="text-sm font-extrabold uppercase">Temporary Deployment ({tempDispatches.length} Records)</h2>
+                </div>
+                <table className="w-full text-xs text-left border rounded-xl overflow-hidden">
+                  <thead className="bg-slate-100"><tr><th className="p-3">Asset</th><th>Tag</th><th>Department</th><th>Receiver</th><th className="text-center">Qty</th><th>Status</th></tr></thead>
+                  <tbody className="divide-y">
+                    {tempDispatches.map((t, i) => (
+                      <tr key={t.firebaseKey || i} className="hover:bg-slate-50">
+                        <td className="p-3 font-bold">{t.assetName}</td>
+                        <td className="font-mono">{t.assetTagNo}</td>
+                        <td>{t.department}</td>
+                        <td>{t.receiver}</td>
+                        <td className="text-center font-mono font-bold">{t.quantity}</td>
+                        <td><span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">{t.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
@@ -529,7 +582,6 @@
                           {(masterData[currentMasterType] || []).map((item, idx) => (
                             <tr key={idx} className="hover:bg-slate-50"><td className="p-3 font-bold text-slate-700">{item.name}</td><td className="p-3 text-emerald-600 font-semibold">Active</td></tr>
                           ))}
-                          {(masterData[currentMasterType] || []).length === 0 && <tr><td colSpan="2" className="p-4 text-center text-slate-400">No items added yet.</td></tr>}
                         </tbody>
                       </table>
                     </div>
@@ -568,7 +620,7 @@
             {activeTab === 'safety' && (
               <div className="bg-white p-6 rounded-2xl shadow-sm space-y-4">
                 <h2 className="text-lg font-extrabold border-b pb-2 flex items-center gap-2">Data Safety & Audit Logs</h2>
-                <p className="text-xs text-slate-500">Before and after snapshots of every asset modification. If you ever lose data, you can find the old snapshot here.</p>
+                <p className="text-xs text-slate-500">Before and after snapshots of every asset modification.</p>
                 <div className="border rounded-xl max-h-[60vh] overflow-auto">
                   <table className="w-full text-xs text-left">
                     <thead className="bg-slate-800 text-white sticky top-0 z-10"><tr><th className="p-3">Time</th><th>Action</th><th>Particulars (Before)</th><th>Particulars (After)</th></tr></thead>
@@ -583,15 +635,6 @@
                       ))}
                     </tbody>
                   </table>
-                </div>
-              </div>
-            )}
-
-            {['temp_deploy', 'preventive_maint', 'stock_ledger', 'asset_lifecycle', 'vendors', 'users'].includes(activeTab) && (
-              <div className="flex-1 flex items-center justify-center bg-white rounded-2xl border">
-                <div className="text-center space-y-2">
-                  <h2 className="text-lg font-bold text-slate-800 capitalize">{activeTab.replace('_', ' ')} Board</h2>
-                  <p className="text-xs text-slate-500">This section is present in your original code and remains unchanged. Use this for now.</p>
                 </div>
               </div>
             )}
@@ -643,17 +686,6 @@
                         </select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      <div><label className="block font-semibold text-slate-600 mb-1">Serial / Asset Tag</label><input type="text" placeholder="e.g. HD-3M-01" value={formData.serialNo} onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900" /></div>
-                      <div><label className="block font-semibold text-slate-600 mb-1">Cable Length (m)</label><input type="text" placeholder="e.g. 3.0" value={formData.cableLength} onChange={(e) => setFormData({ ...formData, cableLength: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900" /></div>
-                      <div>
-                        <label className="block font-semibold text-slate-600 mb-1">Unit</label>
-                        <select value={formData.measurementUnit} onChange={(e) => setFormData({ ...formData, measurementUnit: e.target.value })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl outline-none font-semibold text-slate-900">
-                          {(masterData.units || []).map((u, i) => <option key={i} value={u.name}>{u.name}</option>)}
-                        </select>
-                      </div>
-                      <div><label className="block font-semibold text-slate-600 mb-1">Min Alert Qty *</label><input type="number" min="0" required value={formData.minAlert} onChange={(e) => setFormData({ ...formData, minAlert: Number(e.target.value) })} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-slate-900 font-bold" /></div>
-                    </div>
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                       <div className="text-[11px] font-extrabold text-brand-600 uppercase">Formula: Net Balance = (Opening + New Purchase) - (Issued + Short + Dead)</div>
                       <div className="grid grid-cols-5 gap-3">
@@ -672,13 +704,13 @@
                 </div>
               </div>
             )}
+
           </main>
         </div>
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    ReactDOM.render(<App />, document.getElementById('root'));
   </script>
 </body>
 </html>
